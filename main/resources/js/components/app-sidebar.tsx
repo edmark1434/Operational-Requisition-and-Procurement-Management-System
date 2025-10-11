@@ -10,10 +10,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard, requisitions, inventory, purchases, suppliers, returns, audit, users } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, NotepadTextIcon, Package, ShoppingCart, Contact, SquareArrowDownIcon, LucideLogs, User } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -21,6 +21,41 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Requisitions',
+        href: requisitions(),
+        icon: NotepadTextIcon,
+    },
+    {
+        title: 'Inventory',
+        href: inventory(),
+        icon: Package,
+    },
+    {
+        title: 'Purchases',
+        href: purchases(),
+        icon: ShoppingCart,
+    },
+    {
+        title: 'Suppliers',
+        href: suppliers(),
+        icon: Contact,
+    },
+    {
+        title: 'Returns',
+        href: returns(),
+        icon: SquareArrowDownIcon,
+    },
+    {
+        title: 'Audit Logs',
+        href: audit(),
+        icon: LucideLogs,
+    },
+    {
+        title: 'Users',
+        href: users(),
+        icon: User,
     },
 ];
 
