@@ -1,0 +1,107 @@
+[
+    {
+        "ID": 1,
+        "CREATED_AT": "2024-05-15T09:00:00Z",
+        "UPDATED_AT": "2024-05-15T11:30:00Z",
+        "STATUS": "Approved",
+        "REMARKS": "Q4 Tech refresh for Marketing team. Needs to be delivered by Friday.",
+        "USER_ID": "U001",
+        "REQUESTOR": "John Doe",
+        "PRIORITY": "High",
+        "NOTES": "Urgent request for new marketing campaign",
+        "ITEMS": [
+            {
+                "NAME": "4K Ultra HD Monitor (27 inch)",
+                "QUANTITY": 2,
+                "UNIT_PRICE": 350.00
+            },
+            {
+                "NAME": "Ergonomic Mechanical Keyboard",
+                "QUANTITY": 2,
+                "UNIT_PRICE": 75.50
+            }
+        ],
+        "TOTAL_AMOUNT": 851.00
+    },
+    {
+        "ID": 2,
+        "CREATED_AT": "2024-05-15T10:15:00Z",
+        "UPDATED_AT": "2024-05-15T10:15:00Z",
+        "STATUS": "Submitted",
+        "REMARKS": "Urgent replacement for a crashed development workstation.",
+        "USER_ID": "U002",
+        "REQUESTOR": "Jane Smith",
+        "PRIORITY": "Urgent",
+        "NOTES": "Developer workstation crashed, need immediate replacement",
+        "ITEMS": [
+            {
+                "NAME": "1TB NVMe SSD Drive",
+                "QUANTITY": 1,
+                "UNIT_PRICE": 120.99
+            }
+        ],
+        "TOTAL_AMOUNT": 120.99
+    },
+    {
+        "ID": 3,
+        "CREATED_AT": "2024-05-16T14:30:00Z",
+        "UPDATED_AT": "2024-05-16T14:30:00Z",
+        "STATUS": "Draft",
+        "REMARKS": "Initial inventory check for new hires in June.",
+        "USER_ID": "U001",
+        "REQUESTOR": "John Doe",
+        "PRIORITY": "Normal",
+        "NOTES": "Preparing for new team members starting next month",
+        "ITEMS": [
+            {
+                "NAME": "Gel Pen Pack (12 count)",
+                "QUANTITY": 10,
+                "UNIT_PRICE": 15.00
+            }
+        ],
+        "TOTAL_AMOUNT": 150.00
+    },
+    {
+        "ID": 4,
+        "CREATED_AT": "2024-05-17T08:45:00Z",
+        "UPDATED_AT": "2024-05-17T15:00:00Z",
+        "STATUS": "Rejected",
+        "REMARKS": "Exceeded budget for hardware. Please resubmit with lower-cost alternatives.",
+        "USER_ID": "U003",
+        "REQUESTOR": "Mike Johnson",
+        "PRIORITY": "High",
+        "NOTES": "Executive office setup",
+        "ITEMS": [
+            {
+                "NAME": "Standing Desk Converter",
+                "QUANTITY": 1,
+                "UNIT_PRICE": 180.00
+            },
+            {
+                "NAME": "4K Ultra HD Monitor (27 inch)",
+                "QUANTITY": 1,
+                "UNIT_PRICE": 350.00
+            }
+        ],
+        "TOTAL_AMOUNT": 530.00
+    },
+    {
+        "ID": 5,
+        "CREATED_AT": "2024-05-17T11:00:00Z",
+        "UPDATED_AT": "2024-05-17T11:00:00Z",
+        "STATUS": "Submitted",
+        "REMARKS": "Monthly re-order for general office supplies.",
+        "USER_ID": "U002",
+        "REQUESTOR": "Jane Smith",
+        "PRIORITY": "Low",
+        "NOTES": "Regular monthly supplies",
+        "ITEMS": [
+            {
+                "NAME": "Gel Pen Pack (12 count)",
+                "QUANTITY": 5,
+                "UNIT_PRICE": 15.00
+            }
+        ],
+        "TOTAL_AMOUNT": 75.00
+    }
+]

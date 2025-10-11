@@ -1,0 +1,44 @@
+[
+    {
+        "ID": 1,
+        "REQ_ID": 1,
+        "ITEM_ID": 1,
+        "QUANTITY": 2
+    },
+    {
+        "ID": 2,
+        "REQ_ID": 1,
+        "ITEM_ID": 2,
+        "QUANTITY": 2
+    },
+    {
+        "ID": 3,
+        "REQ_ID": 2,
+        "ITEM_ID": 3,
+        "QUANTITY": 1
+    },
+    {
+        "ID": 4,
+        "REQ_ID": 3,
+        "ITEM_ID": 5,
+        "QUANTITY": 10
+    },
+    {
+        "ID": 5,
+        "REQ_ID": 4,
+        "ITEM_ID": 4,
+        "QUANTITY": 1
+    },
+    {
+        "ID": 6,
+        "REQ_ID": 4,
+        "ITEM_ID": 1,
+        "QUANTITY": 1
+    },
+    {
+        "ID": 7,
+        "REQ_ID": 5,
+        "ITEM_ID": 5,
+        "QUANTITY": 5
+    }
+]
