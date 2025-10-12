@@ -11,14 +11,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('tabs/dashboard');
     })->name('dashboard');
-//    ---------------------------------------------------------------------
+//    --------------------------------------------------------------------- REQUISITION
     Route::get('requisitions', function () {
         return Inertia::render('tabs/req/requisitions');
     })->name('requisitions');
-
+//    --------------------------------------------------------------------- REQUISITION FORM
     Route::get('requisitionform', function () {
-        return Inertia::render('tabs/req/requisitionform');
+        return Inertia::render('tabs/req/RequisitionForm/RequisitionForm');
     })->name('requisitionform');
+//    --------------------------------------------------------------------- REQUISITION EDIT
+    Route::get('requisitions/{id}/edit', function ($id) {
+        return Inertia::render('tabs/req/RequisitionForm/RequisitionEdit', [
+            'requisitionId' => (int)$id
+        ]);
+    })->name('requisitionedit');
 //    ---------------------------------------------------------------------
     Route::get('inventory', function () {
         return Inertia::render('tabs/inv/inventory');
