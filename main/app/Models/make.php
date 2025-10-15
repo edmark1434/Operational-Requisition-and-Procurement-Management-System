@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class role extends Model
+class make extends Model
 {
-    protected $table = 'role';
-    protected $fillable = ['name', 'description'];
+    protected $table = 'make';
+    protected $fillable = ['name'];
     public $timestamps = false;
 }

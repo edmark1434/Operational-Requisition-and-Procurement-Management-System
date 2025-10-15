@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('requisition', function (Blueprint $table) {
             $table->id();
-            $table->dateTime('created_at');
+            $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
             $table->enum('status', ['PENDING', 'REJECTED', 'APPROVED', 'DELIVERED', 'RECEIVED']);
             $table->string('remarks')->nullable();

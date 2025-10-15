@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('return', function (Blueprint $table) {
             $table->id();
-            $table->dateTime('created_at');
+            $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->date('return_date')->nullable();
             $table->enum('status', ['PENDING', 'REJECTED', 'DELIVERED', 'RECEIVED']);
             $table->string('remarks')->nullable();
