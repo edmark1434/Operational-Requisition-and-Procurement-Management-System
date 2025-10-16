@@ -3,51 +3,99 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+$routes = [
+    'r01' => 'tabs/01-Dashboard',
+    'r02' => 'tabs/02-Requisitions',
+    'r03' => 'tabs/03-Inventory',
+    'r04' => 'tabs/04-Purchases',
+    'r05' => 'tabs/05-Suppliers',
+    'r06' => 'tabs/06-Returns',
+    'r07' => 'tabs/07-AuditLogs',
+    'r08' => 'tabs/08-Users',
+];
+
+
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('tabs/dashboard');
+
+Route::middleware(['auth', 'verified'])->group(function () use ($routes) {
+//  ==================================================================================
+//  RO1 - DASHBOARD ROUTES
+
+    //Dashboard
+    Route::get('dashboard', function () use ($routes) {
+        return Inertia::render("{$routes['r01']}/dashboard");
     })->name('dashboard');
-//    --------------------------------------------------------------------- REQUISITION
-    Route::get('requisitions', function () {
-        return Inertia::render('tabs/req/requisitions');
+
+//  ==================================================================================
+//  RO2 - REQUISITION ROUTES
+
+    //Requisitions
+    Route::get('requisitions', function () use ($routes) {
+        return Inertia::render("{$routes['r02']}/RequisitionMain/Requisitions");
     })->name('requisitions');
-//    --------------------------------------------------------------------- REQUISITION FORM
-    Route::get('requisitionform', function () {
-        return Inertia::render('tabs/req/RequisitionForm/RequisitionForm');
+
+    //Requisition Form
+    Route::get('requisitionform', function () use ($routes) {
+        return Inertia::render("{$routes['r02']}/RequisitionForm/RequisitionForm");
     })->name('requisitionform');
-//    --------------------------------------------------------------------- REQUISITION EDIT
-    Route::get('requisitions/{id}/edit', function ($id) {
-        return Inertia::render('tabs/req/RequisitionForm/RequisitionEdit', [
+
+    //Requisition Edit
+    Route::get('requisitions/{id}/edit', function ($id) use ($routes) {
+        return Inertia::render("{$routes['r02']}/RequisitionForm/RequisitionEdit", [
             'requisitionId' => (int)$id
         ]);
     })->name('requisitionedit');
-//    ---------------------------------------------------------------------
-    Route::get('inventory', function () {
-        return Inertia::render('tabs/inv/inventory');
+
+
+//  ==================================================================================
+//  R03 - INVENTORY ROUTES
+
+    //Inventory
+    Route::get('inventory', function () use ($routes) {
+        return Inertia::render("{$routes['r03']}/inventory");
     })->name('inventory');
 
-    Route::get('purchases', function () {
-        return Inertia::render('tabs/prc/purchases');
+//  ==================================================================================
+//  R04 - PURCHASES ROUTES
+
+    //Purchases
+    Route::get('purchases', function () use ($routes) {
+        return Inertia::render("{$routes['r04']}/purchases");
     })->name('purchases');
 
-    Route::get('suppliers', function () {
-        return Inertia::render('tabs/suppliers');
+//  ==================================================================================
+//  R05 - SUPPLIERS ROUTES
+
+    //Suppliers
+    Route::get('suppliers', function () use ($routes) {
+        return Inertia::render("{$routes['r05']}/suppliers");
     })->name('suppliers');
 
-    Route::get('returns', function () {
-        return Inertia::render('tabs/returns');
+//  ==================================================================================
+//  R06 - RETURNS ROUTES
+
+    //Returns
+    Route::get('returns', function () use ($routes) {
+        return Inertia::render("{$routes['r06']}/returns");
     })->name('returns');
 
-    Route::get('audit', function () {
-        return Inertia::render('tabs/audit');
+//  ==================================================================================
+//  R07 - AUDIT LOGS ROUTES
+
+    //Audit
+    Route::get('audit', function () use ($routes) {
+        return Inertia::render("{$routes['r07']}/audit");
     })->name('audit');
 
-    Route::get('users', function () {
-        return Inertia::render('tabs/users');
+//  ==================================================================================
+//  R08 - USERS ROUTES
+
+    //Users
+    Route::get('users', function () use ($routes) {
+        return Inertia::render("{$routes['r08']}/users");
     })->name('users');
 });
 
