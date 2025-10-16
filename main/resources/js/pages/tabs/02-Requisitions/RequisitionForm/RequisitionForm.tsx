@@ -21,7 +21,7 @@ import RequisitionPreviewModal from './RequisitionPreviewModal';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Requisitions / Requisition Form',
+        title: 'RequisitionMain / Requisition Form',
         href: requisitionform().url,
     },
 ];
@@ -412,6 +412,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                     onClose={() => setShowPreview(false)}
                     onConfirm={handleConfirmSubmit}
                     formData={previewData}
+
                 />
             </div>
         </AppLayout>
