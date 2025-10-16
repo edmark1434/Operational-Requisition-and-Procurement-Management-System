@@ -15,16 +15,16 @@ export default function RequisitionPreviewModal({
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-sidebar-border">
                 {/* Header */}
-                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="p-6 border-b border-sidebar-border bg-white dark:bg-sidebar">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                             Requisition Preview
                         </h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -37,7 +37,7 @@ export default function RequisitionPreviewModal({
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-6">
+                <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
                     {/* Basic Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
@@ -78,9 +78,9 @@ export default function RequisitionPreviewModal({
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Notes
                             </label>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+                            <div className="text-sm text-gray-900 dark:text-gray-300 bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
                                 {formData.notes}
-                            </p>
+                            </div>
                         </div>
                     )}
 
@@ -93,11 +93,11 @@ export default function RequisitionPreviewModal({
                             {formData?.items?.map((item: any, index: number) => (
                                 <div
                                     key={item.id}
-                                    className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
+                                    className="flex items-center justify-between p-4 border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent"
                                 >
                                     <div className="flex-1">
                                         <div className="flex items-start gap-3">
-                                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
                                                 {(formData?.items?.length || 0) - index}
                                             </span>
                                             <div>
@@ -105,9 +105,9 @@ export default function RequisitionPreviewModal({
                                                     {item.description}
                                                 </p>
                                                 <div className="flex gap-4 mt-1">
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        Category: {item.category}
-                                                    </p>
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
+                                                        {item.category}
+                                                    </span>
                                                     <p className="text-xs text-gray-600 dark:text-gray-400">
                                                         Quantity: {item.quantity}
                                                     </p>
@@ -132,11 +132,11 @@ export default function RequisitionPreviewModal({
                 </div>
 
                 {/* Footer with Actions */}
-                <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                <div className="p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                     <div className="flex justify-between items-center">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
+                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
                         >
                             Back to Edit
                         </button>
