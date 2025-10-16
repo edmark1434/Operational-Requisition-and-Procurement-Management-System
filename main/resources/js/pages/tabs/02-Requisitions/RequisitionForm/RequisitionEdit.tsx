@@ -43,7 +43,7 @@ interface ValidationErrors {
 
 const breadcrumbs = (requisitionId: number): BreadcrumbItem[] => [
     {
-        title: 'Requisitions',
+        title: 'RequisitionMain',
         href: requisitions().url,
     },
     {
