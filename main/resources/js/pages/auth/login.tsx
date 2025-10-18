@@ -7,52 +7,53 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import { register } from '@/routes';
-import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
-
 interface LoginProps {
     status?: string;
     canResetPassword: boolean;
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+
     return (
         <AuthLayout
             title="Log in to your account"
-            description="Enter your email and password below to log in"
+            description="Enter your username and password below to log in"
         >
             <Head title="Log in" />
 
             <Form
-                {...AuthenticatedSessionController.store.form()}
+                method="post"
+                action="/login"
                 resetOnSuccess={['password']}
                 className="flex flex-col gap-6"
             >
                 {({ processing, errors }) => (
                     <>
                         <div className="grid gap-6">
+                            {/* Username field */}
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="username">Username</Label>
                                 <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
+                                    id="username"
+                                    type="text"
+                                    name="username"
                                     required
                                     autoFocus
                                     tabIndex={1}
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
+                                    autoComplete="username"
+                                    placeholder="Enter your username"
                                 />
-                                <InputError message={errors.email} />
                             </div>
 
+                            {/* Password field */}
                             <div className="grid gap-2">
                                 <div className="flex items-center">
                                     <Label htmlFor="password">Password</Label>
                                     {canResetPassword && (
                                         <TextLink
-                                            href={request()}
+                                            //href
                                             className="ml-auto text-sm"
                                             tabIndex={5}
                                         >
@@ -69,9 +70,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     autoComplete="current-password"
                                     placeholder="Password"
                                 />
-                                <InputError message={errors.password} />
                             </div>
-
+                            <InputError message={errors.credentials} />
+                            {/* Remember me */}
                             <div className="flex items-center space-x-3">
                                 <Checkbox
                                     id="remember"
@@ -81,6 +82,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>
 
+                            {/* Submit button */}
                             <Button
                                 type="submit"
                                 className="mt-4 w-full"
@@ -95,6 +97,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             </Button>
                         </div>
 
+                        {/* Register link */}
                         <div className="text-center text-sm text-muted-foreground">
                             Don't have an account?{' '}
                             <TextLink href={register()} tabIndex={5}>

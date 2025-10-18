@@ -13,32 +13,40 @@ return new class extends Migration
     {
        Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 100)->unique();
+            $table->string('fullname', 100);
+            $table->string('username', 100)->unique();
             $table->string('password', 255);
+            $table->rememberToken();
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
         });
         DB::unprepared("
-            CREATE OR REPLACE FUNCTION get_users(p_id INT DEFAULT NULL)
+            CREATE OR REPLACE FUNCTION get_users(p_id INT DEFAULT NULL,p_username VARCHAR DEFAULT NULL)
             RETURNS SETOF users AS $$
             BEGIN
                 RETURN QUERY
                 SELECT * FROM users
-                WHERE id = COALESCE(p_id, id)
+                WHERE id = COALESCE(p_id, id) AND username = COALESCE(p_username, username)
                 ORDER BY id;
             END;
             $$ LANGUAGE plpgsql;
         ");
-
         DB::unprepared("
-            CREATE OR REPLACE PROCEDURE create_user(
-                p_name VARCHAR,
+            CREATE OR REPLACE FUNCTION create_user(
+                p_fullname VARCHAR,
+                p_username VARCHAR,
                 p_password VARCHAR
             )
+            RETURNS TABLE(
+                id BIGINT,
+                fullname VARCHAR,
+                username VARCHAR
+            ) 
             LANGUAGE plpgsql
             AS $$
             BEGIN
-                INSERT INTO users (name, password)
-                VALUES (p_name, p_password);
+                INSERT INTO users (fullname,username, password)
+                VALUES (p_fullname,p_username, p_password);
+                RETURN QUERY SELECT u.id,u.fullname, u.username FROM users AS u WHERE u.username = p_username;
             END;
             $$;
         ");
@@ -46,7 +54,8 @@ return new class extends Migration
         DB::unprepared("
             CREATE OR REPLACE PROCEDURE update_user(
                 p_id INT,
-                p_name VARCHAR DEFAULT NULL,
+                p_fullname VARCHAR DEFAULT NULL,
+                p_username VARCHAR DEFAULT NULL,
                 p_password VARCHAR DEFAULT NULL
             )
             LANGUAGE plpgsql
@@ -54,7 +63,8 @@ return new class extends Migration
             BEGIN
                 UPDATE users
                 SET
-                    name = COALESCE(p_name, name),
+                    fullname = COALESCE(p_fullname, fullname),
+                    username = COALESCE(p_username, username),
                     password = COALESCE(p_password, password)
                 WHERE id = p_id;
             END;
@@ -72,7 +82,7 @@ return new class extends Migration
         ");
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
+            $table->string('username')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });

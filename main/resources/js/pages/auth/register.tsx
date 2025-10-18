@@ -17,6 +17,7 @@ export default function Register() {
             description="Enter your details below to create your account"
         >
             <Head title="Register" />
+
             <Form
                 {...RegisteredUserController.store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
@@ -26,38 +27,38 @@ export default function Register() {
                 {({ processing, errors }) => (
                     <>
                         <div className="grid gap-6">
+                            {/* Name */}
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="name">Full Name</Label>
                                 <Input
-                                    id="name"
+                                    id="fullname"
                                     type="text"
                                     required
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="name"
-                                    name="name"
-                                    placeholder="Full name"
+                                    name="fullname"
+                                    placeholder="Your full name"
                                 />
-                                <InputError
-                                    message={errors.name}
-                                    className="mt-2"
-                                />
+                                <InputError message={errors.fullname} />
                             </div>
 
+                            {/* Username (replaces email) */}
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="username">Username</Label>
                                 <Input
-                                    id="email"
-                                    type="email"
+                                    id="username"
+                                    type="text"
                                     required
                                     tabIndex={2}
-                                    autoComplete="email"
-                                    name="email"
-                                    placeholder="email@example.com"
+                                    autoComplete="username"
+                                    name="username"
+                                    placeholder="Enter a unique username"
                                 />
-                                <InputError message={errors.email} />
+                                <InputError message={errors.username} />
                             </div>
 
+                            {/* Password */}
                             <div className="grid gap-2">
                                 <Label htmlFor="password">Password</Label>
                                 <Input
@@ -72,9 +73,10 @@ export default function Register() {
                                 <InputError message={errors.password} />
                             </div>
 
+                            {/* Confirm Password */}
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
-                                    Confirm password
+                                    Confirm Password
                                 </Label>
                                 <Input
                                     id="password_confirmation"
@@ -85,11 +87,10 @@ export default function Register() {
                                     name="password_confirmation"
                                     placeholder="Confirm password"
                                 />
-                                <InputError
-                                    message={errors.password_confirmation}
-                                />
+                                <InputError message={errors.password_confirmation} />
                             </div>
 
+                            {/* Submit Button */}
                             <Button
                                 type="submit"
                                 className="mt-2 w-full"
