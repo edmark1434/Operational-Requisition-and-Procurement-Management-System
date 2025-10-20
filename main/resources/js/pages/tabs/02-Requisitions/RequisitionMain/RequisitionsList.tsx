@@ -12,7 +12,7 @@ interface RequisitionsListProps {
 export default function RequisitionsList({ requisitions, onRequisitionClick }: RequisitionsListProps) {
     if (requisitions.length === 0) {
         return (
-            <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-white dark:bg-sidebar">
+            <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
                 <div className="h-full overflow-y-auto">
                     <div className="p-4 text-center py-12">
                         <div className="text-gray-400 dark:text-gray-600 mb-4">
@@ -38,7 +38,7 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
     }
 
     return (
-        <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-white dark:bg-sidebar">
+        <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
             <div className="h-full overflow-y-auto">
                 <div className="p-4">
                     <div className="space-y-3">

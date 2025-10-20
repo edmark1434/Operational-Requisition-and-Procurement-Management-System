@@ -28,7 +28,7 @@ export default function SearchAndFilters({
                                              resultsCount
                                          }: SearchAndFiltersProps) {
     return (
-        <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-6">
+        <div className="bg-sidebar dark:bg-sidebar rounded-lg border border-sidebar-border p-6">
             <div className="space-y-4">
                 {/* Enhanced Search */}
                 <div className="relative">
