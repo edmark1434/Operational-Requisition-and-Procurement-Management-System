@@ -219,7 +219,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         }
 
         const finalRequestor = requestorType === 'self'
-            ? auth.user.name
+            ? auth.user.fullname
             : selectedUser || otherRequestor;
 
         const formData = {
