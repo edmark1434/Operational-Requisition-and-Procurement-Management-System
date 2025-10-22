@@ -12,6 +12,8 @@
 /vendor
 .DS_Store
 .env
+.env.example
+/config/database.php
 .env.backup
 .env.production
 .phpactor.json
