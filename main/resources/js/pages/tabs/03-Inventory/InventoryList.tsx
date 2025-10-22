@@ -39,7 +39,6 @@ export default function InventoryList({ inventory, onItemClick, viewMode }: Inve
                                     key={item.ID}
                                     item={item}
                                     onClick={() => onItemClick(item)}
-                                    onEdit={() => onItemClick(item, true)}
                                 />
                             ))}
                         </div>
@@ -62,7 +61,6 @@ export default function InventoryList({ inventory, onItemClick, viewMode }: Inve
                             key={item.ID}
                             item={item}
                             onClick={() => onItemClick(item)}
-                            onEdit={() => onItemClick(item, true)}
                             viewMode={viewMode}
                         />
                     ))}
@@ -73,10 +71,9 @@ export default function InventoryList({ inventory, onItemClick, viewMode }: Inve
 }
 
 // Condensed List Item Component
-function CondensedListItem({ item, onClick, onEdit }: {
+function CondensedListItem({ item, onClick }: {
     item: any;
     onClick: () => void;
-    onEdit: () => void;
 }) {
     const stockStatus = item.CURRENT_STOCK === 0 ? 'out-of-stock' :
         item.CURRENT_STOCK < 10 ? 'low-stock' : 'in-stock';
@@ -161,17 +158,14 @@ function CondensedListItem({ item, onClick, onEdit }: {
                             View Details
                         </button>
                     )}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit();
-                        }}
+                    <Link
+                        href={`/inventory/${item.ID}/edit`}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>
@@ -179,10 +173,9 @@ function CondensedListItem({ item, onClick, onEdit }: {
 }
 
 // Inventory Card Component for Comfortable and Compact views
-function InventoryCard({ item, onClick, onEdit, viewMode }: {
+function InventoryCard({ item, onClick, viewMode }: {
     item: any;
     onClick: () => void;
-    onEdit: () => void;
     viewMode: 'comfortable' | 'compact';
 }) {
     const stockStatus = item.CURRENT_STOCK === 0 ? 'out-of-stock' :
@@ -199,17 +192,14 @@ function InventoryCard({ item, onClick, onEdit, viewMode }: {
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                         #{item.ID}
                     </span>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit();
-                        }}
+                    <Link
+                        href={`/inventory/${item.ID}/edit`}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
                     >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                    </button>
+                    </Link>
                 </div>
 
                 {/* Item Name - Compact */}
@@ -280,17 +270,14 @@ function InventoryCard({ item, onClick, onEdit, viewMode }: {
                     #{item.ID}
                 </span>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit();
-                        }}
+                    <Link
+                        href={`/inventory/${item.ID}/edit`}
                         className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1 rounded"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                    </button>
+                    </Link>
                 </div>
             </div>
 
