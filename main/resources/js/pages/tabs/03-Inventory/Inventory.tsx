@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -12,8 +12,6 @@ import InventoryStats from './InventoryStats';
 import SearchAndFilters from './SearchAndFilters';
 import InventoryList from './InventoryList';
 import InventoryDetailModal from './InventoryDetailModal';
-import AddItemModal from './AddItemModal';
-import EditItemModal from './EditItemModal';
 
 // Import utilities
 import { transformInventoryData } from './utils';
@@ -32,8 +30,6 @@ export default function Inventory() {
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedItem, setSelectedItem] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [inventory, setInventory] = useState(transformInventoryData());
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
@@ -43,32 +39,9 @@ export default function Inventory() {
         statuses
     } = useInventoryFilters(inventory, searchTerm, categoryFilter, statusFilter);
 
-    const handleAddItem = (newItem: any) => {
-        const maxId = Math.max(...inventory.map(item => item.ID), 0);
-        setInventory(prev => [...prev, {
-            ...newItem,
-            ID: maxId + 1,
-            CREATED_AT: new Date().toISOString(),
-            UPDATED_AT: new Date().toISOString()
-        }]);
-    };
-
-    const handleEditItem = (id: number, updatedItem: any) => {
-        setInventory(prev =>
-            prev.map(item =>
-                item.ID === id ? {
-                    ...updatedItem,
-                    ID: id,
-                    UPDATED_AT: new Date().toISOString()
-                } : item
-            )
-        );
-    };
-
     const handleDeleteItem = (id: number) => {
         setInventory(prev => prev.filter(item => item.ID !== id));
         setIsDetailModalOpen(false);
-        setIsEditModalOpen(false);
     };
 
     const openDetailModal = (item: any) => {
@@ -76,20 +49,8 @@ export default function Inventory() {
         setIsDetailModalOpen(true);
     };
 
-    const openEditModal = (item: any) => {
-        setSelectedItem(item);
-        setIsEditModalOpen(true);
-        setIsDetailModalOpen(false);
-    };
-
-    const openAddModal = () => {
-        setIsAddModalOpen(true);
-    };
-
     const closeAllModals = () => {
         setIsDetailModalOpen(false);
-        setIsAddModalOpen(false);
-        setIsEditModalOpen(false);
         setSelectedItem(null);
     };
 
@@ -100,15 +61,15 @@ export default function Inventory() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
-                    <button
-                        onClick={openAddModal}
+                    <Link
+                        href="/inventory/add"
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                         Add New Item
-                    </button>
+                    </Link>
                 </div>
 
                 {/* Stats */}
@@ -142,27 +103,10 @@ export default function Inventory() {
                         item={selectedItem}
                         isOpen={isDetailModalOpen}
                         onClose={closeAllModals}
-                        onEdit={() => openEditModal(selectedItem)}
-                        onDelete={handleDeleteItem}
-                    />
-                )}
-
-                {/* Add Item Modal */}
-                {isAddModalOpen && (
-                    <AddItemModal
-                        isOpen={isAddModalOpen}
-                        onClose={closeAllModals}
-                        onSave={handleAddItem}
-                    />
-                )}
-
-                {/* Edit Item Modal */}
-                {isEditModalOpen && (
-                    <EditItemModal
-                        item={selectedItem}
-                        isOpen={isEditModalOpen}
-                        onClose={closeAllModals}
-                        onSave={handleEditItem}
+                        onEdit={() => {
+                            // Redirect to edit page
+                            window.location.href = `/inventory/${selectedItem.ID}/edit`;
+                        }}
                         onDelete={handleDeleteItem}
                     />
                 )}
