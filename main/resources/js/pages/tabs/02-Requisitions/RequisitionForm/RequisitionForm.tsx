@@ -21,7 +21,7 @@ import RequisitionPreviewModal from './RequisitionPreviewModal';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'RequisitionMain / Requisition Form',
+        title: 'Requisitions / Form',
         href: requisitionform().url,
     },
 ];
