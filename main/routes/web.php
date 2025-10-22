@@ -38,7 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($routes) {
     })->name('requisitions');
 
     //Requisition Form
-    Route::get('requisitionform', function () use ($routes) {
+    Route::get('requisitions/form', function () use ($routes) {
         return Inertia::render("{$routes['r02']}/RequisitionForm/RequisitionForm");
     })->name('requisitionform');
 
@@ -58,16 +58,14 @@ Route::middleware(['auth', 'verified'])->group(function () use ($routes) {
         return Inertia::render("{$routes['r03']}/Inventory");
     })->name('inventory');
 
-    //Inventory - View item details
-    Route::get('inventory/{id}', function ($id) use ($routes) {
-        return Inertia::render("{$routes['r03']}/InventoryDetailModal", [
-            'itemId' => (int)$id
-        ]);
-    })->name('inventoryview');
+    //Inventory - Add Item
+    Route::get('inventory/add', function () use ($routes) {
+        return Inertia::render("{$routes['r03']}/ItemAdd");
+    })->name('inventoryadd');
 
     //Inventory - Edit item
     Route::get('inventory/{id}/edit', function ($id) use ($routes) {
-        return Inertia::render("{$routes['r03']}/EditItemModal", [
+        return Inertia::render("{$routes['r03']}/ItemEdit", [
             'itemId' => (int)$id
         ]);
     })->name('inventoryedit');
