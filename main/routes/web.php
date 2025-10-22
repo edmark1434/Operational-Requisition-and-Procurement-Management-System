@@ -55,8 +55,22 @@ Route::middleware(['auth', 'verified'])->group(function () use ($routes) {
 
     //Inventory
     Route::get('inventory', function () use ($routes) {
-        return Inertia::render("{$routes['r03']}/inventory");
+        return Inertia::render("{$routes['r03']}/Inventory");
     })->name('inventory');
+
+    //Inventory - View item details
+    Route::get('inventory/{id}', function ($id) use ($routes) {
+        return Inertia::render("{$routes['r03']}/InventoryDetailModal", [
+            'itemId' => (int)$id
+        ]);
+    })->name('inventoryview');
+
+    //Inventory - Edit item
+    Route::get('inventory/{id}/edit', function ($id) use ($routes) {
+        return Inertia::render("{$routes['r03']}/EditItemModal", [
+            'itemId' => (int)$id
+        ]);
+    })->name('inventoryedit');
 
 //  ==================================================================================
 //  R04 - PURCHASES ROUTES
