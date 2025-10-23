@@ -16,7 +16,7 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-//Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard',[Dashboard::class,'index'])->name('dashboard');
 //    --------------------------------------------------------------------- REQUISITION
     Route::get('requisitions',[Requisition::class,'index'])->name('requisitions');
@@ -36,7 +36,7 @@ Route::get('/', function () {
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
     Route::get('users',[Users::class,'index'])->name('users');
-//});
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
