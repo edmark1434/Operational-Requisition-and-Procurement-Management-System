@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -61,7 +62,7 @@ return new class extends Migration
             AS $$
             BEGIN
                 UPDATE supplier
-                SET 
+                SET
                     name = COALESCE(p_name, name),
                     contact_info = COALESCE(p_contact_info, contact_info),
                     allows_cash = COALESCE(p_allows_cash, allows_cash),

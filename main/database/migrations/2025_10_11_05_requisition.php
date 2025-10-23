@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -32,7 +33,7 @@ return new class extends Migration
             BEGIN
                 RETURN QUERY
                 SELECT * FROM requisition
-                WHERE 
+                WHERE
                     id = COALESCE(p_id, id) AND
                     user_id = COALESCE(p_user_id, user_id) AND
                     status = COALESCE(p_status, status)
