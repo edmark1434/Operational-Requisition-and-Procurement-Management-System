@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -22,7 +23,7 @@ return new class extends Migration
             BEGIN
                 RETURN QUERY
                 SELECT * FROM role_permission
-                WHERE 
+                WHERE
                     id = COALESCE(p_id, id) AND
                     role_id = COALESCE(p_role_id, role_id) AND
                     perm_id = COALESCE(p_perm_id, perm_id)

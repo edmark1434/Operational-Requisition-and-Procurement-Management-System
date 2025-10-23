@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class make extends Model
+class Category extends Model
 {
-    protected $table = 'make';
+    use HasFactory;
+    protected $table = 'category';
     protected $fillable = ['name'];
     public $timestamps = false;
 }

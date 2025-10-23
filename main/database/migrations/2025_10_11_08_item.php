@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('item', function (Blueprint $table) {
             $table->id();
-            $table->integer('barcode')->unique()->nullable();
+            $table->string('barcode',20)->unique()->nullable();
             $table->string('name', 100);
             $table->string('dimensions', 50)->nullable();
             $table->decimal('unit_price', 10, 2);
@@ -31,7 +32,7 @@ return new class extends Migration
             BEGIN
                 RETURN QUERY
                 SELECT * FROM item
-                WHERE 
+                WHERE
                     id = COALESCE(p_id, id) AND
                     category_id = COALESCE(p_category_id, category_id) AND
                     make_id = COALESCE(p_make_id, make_id)
