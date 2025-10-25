@@ -18,16 +18,24 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard',[Dashboard::class,'index'])->name('dashboard');
-//    --------------------------------------------------------------------- REQUISITION
-    Route::get('requisitions',[RequisitionController::class,'index'])->name('requisitions');
-//    --------------------------------------------------------------------- REQUISITION FORM
-    Route::get('requisitionform',[RequisitionController::class,'requisitionForm'])->name('requisitionform');
-//    --------------------------------------------------------------------- REQUISITION EDIT
-    Route::get('requisitions/{id}/edit',[RequisitionController::class,'requisitionEdit'])->name('requisitionedit');
 //    ---------------------------------------------------------------------
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
         //Inventory - Add Item
     Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');
+
+
+// REQUISITION PART!
+    Route::get('requisitions',[RequisitionController::class,'index'])->name('requisitions');
+
+    //    --------------------------------------------------------------------- REQUISITION FORM
+    Route::get('requisitionform',[RequisitionController::class,'requisitionForm'])->name('requisitionform');
+
+    Route::post('requisitionform', [RequisitionController::class, 'store'])->name('requisition.store');
+
+    //    --------------------------------------------------------------------- REQUISITION EDIT
+    Route::get('requisitions/{id}/edit',[RequisitionController::class,'requisitionEdit'])->name('requisitionedit');
+
+
 
     //Inventory - Edit item
     Route::get('inventory/{id}/edit',[Inventory::class,"edit"])->name('inventoryedit');

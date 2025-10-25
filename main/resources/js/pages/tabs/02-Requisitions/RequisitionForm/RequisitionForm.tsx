@@ -242,20 +242,45 @@ export default function RequisitionForm({ auth }: { auth: any }) {
 
     const handleConfirmSubmit = () => {
         // Generate new requisition ID (in real app, this would come from backend)
-        const newReqId = Math.max(...requisitionsData.map(req => req.REQ_ID), 0) + 1;
+        // REMOVE all the data manipulation and creation here, the backend will handle it.
+        // REMOVE: const newReqId = ...
+        // REMOVE: const requisitionData = ...
+        // REMOVE: const newRequisitionItemsData = ...
 
-        // Prepare requisition data
-        const requisitionData = {
-            REQ_ID: newReqId,
-            DATE_REQUESTED: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            DATE_UPDATED: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            STATUS: "Pending", // Default status
-            NOTES: previewData.notes,
-            PRIORITY: previewData.priority.charAt(0).toUpperCase() + previewData.priority.slice(1),
-            US_ID: previewData.us_id || auth.user.id,
-            REQUESTOR: previewData.requestor,
-            REASON: ""
+        // The data prepared in handleSubmit is in previewData.
+        // We'll use the items and other fields from it.
+        const submissionData = {
+            // user_id will be handled by the controller using auth()
+            requestor: previewData.requestor,
+            priority: previewData.priority,
+            notes: previewData.notes,
+            // The controller will also handle setting the default 'PENDING' status
+
+            // Pass the items array so the controller can save them as line items
+            items: previewData.items.map((item: any) => ({
+                itemId: item.itemId, // Null if not matched to a system item
+                quantity: parseInt(item.quantity),
+                category: item.category,
+                description: item.description, // Pass description for custom items
+                unit_price: parseFloat(item.unit_price) // Assuming you'll save this too
+            })),
         };
+
+        // 🚀 Inertia POST Request to Laravel Controller
+        router.post('/requisition/store', submissionData, {
+            onSuccess: () => {
+                alert('Requisition submitted successfully!');
+                setShowPreview(false);
+                clearForm();
+            },
+            onError: (errors) => {
+                // Handle server-side validation errors or other issues
+                console.error('Submission failed:', errors);
+                alert('Requisition submission failed. Check console for details.');
+                setShowPreview(false);
+            }
+        });
+    };
 
         // Prepare requisition items data
         const newRequisitionItemsData = previewData.items.map((item: any, index: number) => ({
