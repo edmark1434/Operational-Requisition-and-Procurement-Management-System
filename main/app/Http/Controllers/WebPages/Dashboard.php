@@ -8,8 +8,9 @@ use Illuminate\Http\Request;
 
 class Dashboard extends Controller
 {
+    protected $base_path = "tabs/01-Dashboard";
     public function index()
     {
-        return Inertia::render('tabs/dashboard');
+        return Inertia::render($this->base_path . '/dashboard');
     }
 }

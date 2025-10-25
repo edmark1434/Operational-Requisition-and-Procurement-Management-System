@@ -7,8 +7,9 @@ use Illuminate\Http\Request;
 
 class Users extends Controller
 {
+    protected $base_path = "tabs/08-Users";
     public function index()
     {
-        return Inertia::render('tabs/users');
+        return Inertia::render($this->base_path .'/users');
     }
 }

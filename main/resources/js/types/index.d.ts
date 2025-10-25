@@ -43,3 +43,4 @@ export interface User {
     fullname: string;
     [key: string]: unknown; // This allows for additional properties...
 }
+

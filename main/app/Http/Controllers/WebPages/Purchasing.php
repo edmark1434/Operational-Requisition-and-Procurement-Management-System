@@ -8,9 +8,10 @@ use Illuminate\Http\Request;
 
 class Purchasing extends Controller
 {
+    protected $base_path = "tabs/04-Purchases";
     public function index()
     {
-        return Inertia::render('tabs/prc/purchases');
+        return Inertia::render($this->base_path .'/purchases');
     }
 }
 

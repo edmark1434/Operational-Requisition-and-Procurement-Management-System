@@ -1,9 +1,10 @@
-// RequisitionEdit.tsx - Updated version
+// import { PlaceholderPattern } from "@/components/ui/placeholder-pattern";
 import AppLayout from '@/layouts/app-layout';
-import { requisitions } from '@/routes';
+import { requisitions, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+// import { UserInfo } from '@/components/user-info';
 
 // Import your datasets
 import itemsData from "@/pages/datasets/items";
@@ -18,10 +19,12 @@ import RequisitionDetails from './RequisitionDetails';
 import RequestedItems from './RequestedItems';
 import RequisitionPreviewModal from './RequisitionPreviewModal';
 
-interface RequisitionEditProps {
-    auth: any;
-    requisitionId: number;
-}
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Requisitions / Form',
+        href: requisitionform().url,
+    },
+];
 
 interface RequisitionItem {
     id: string;
@@ -32,7 +35,6 @@ interface RequisitionItem {
     total: string;
     isSaved: boolean;
     itemId?: number;
-    originalItemId?: number;
 }
 
 interface ValidationErrors {
@@ -41,30 +43,19 @@ interface ValidationErrors {
     [key: string]: string | undefined;
 }
 
-const breadcrumbs = (requisitionId: number): BreadcrumbItem[] => [
-    {
-        title: 'Requisitions',
-        href: requisitions().url,
-    },
-    {
-        title: `Edit Requisition #${requisitionId}`,
-        href: `/requisitions/${requisitionId}/edit`,
-    },
-];
-
-export default function RequisitionEdit({ auth, requisitionId }: RequisitionEditProps) {
+export default function RequisitionForm({ auth }: { auth: any }) {
     const [requestorType, setRequestorType] = useState<'self' | 'other'>('self');
     const [otherRequestor, setOtherRequestor] = useState('');
     const [selectedUser, setSelectedUser] = useState('');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [priority, setPriority] = useState('normal');
     const [notes, setNotes] = useState('');
-    const [items, setItems] = useState<RequisitionItem[]>([]);
+    const [items, setItems] = useState<RequisitionItem[]>([
+        { id: '1', category: '', description: '', quantity: '', unit_price: '', total: '', isSaved: false }
+    ]);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [originalRequisition, setOriginalRequisition] = useState<any>(null);
 
     // Use actual users from dataset
     const systemUsers = usersData.map(user => ({
@@ -90,84 +81,6 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         barcode: item.BARCODE
     }));
 
-    // Load requisition data on component mount
-    useEffect(() => {
-        loadRequisitionData();
-    }, [requisitionId]);
-
-    const loadRequisitionData = () => {
-        setIsLoading(true);
-
-        try {
-            // Find the requisition to edit
-            const requisition = requisitionsData.find(req => req.REQ_ID === requisitionId);
-
-            if (!requisition) {
-                console.error(`Requisition #${requisitionId} not found`);
-                alert('Requisition not found!');
-                router.visit(requisitions().url);
-                return;
-            }
-
-            setOriginalRequisition(requisition);
-
-            // Set basic form data
-            setPriority(requisition.PRIORITY.toLowerCase());
-            setNotes(requisition.NOTES || '');
-
-            // Determine requestor type and set requestor fields
-            const isSelf = requisition.US_ID === auth.user.id;
-            setRequestorType(isSelf ? 'self' : 'other');
-
-            if (isSelf) {
-                setSelectedUser('');
-                setOtherRequestor('');
-            } else {
-                // Check if requestor is in system users
-                const userInSystem = systemUsers.find(user =>
-                    user.name.toLowerCase() === requisition.REQUESTOR.toLowerCase()
-                );
-
-                if (userInSystem) {
-                    setSelectedUser(userInSystem.name);
-                    setOtherRequestor('');
-                } else {
-                    setSelectedUser('');
-                    setOtherRequestor(requisition.REQUESTOR);
-                }
-            }
-
-            // Load requisition items
-            const requisitionItems = requisitionItemsData
-                .filter(item => item.REQ_ID === requisitionId)
-                .map(reqItem => {
-                    const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
-                    const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
-
-                    return {
-                        id: `existing_${reqItem.REQT_ID}`,
-                        category: reqItem.CATEGORY || category?.NAME || '',
-                        description: itemDetails?.NAME || 'Unknown Item',
-                        quantity: reqItem.QUANTITY.toString(),
-                        unit_price: itemDetails?.UNIT_PRICE?.toString() || '0',
-                        total: ((itemDetails?.UNIT_PRICE || 0) * reqItem.QUANTITY).toFixed(2),
-                        isSaved: true,
-                        itemId: reqItem.ITEM_ID,
-                        originalItemId: reqItem.ITEM_ID
-                    };
-                });
-
-            setItems(requisitionItems);
-        } catch (error) {
-            console.error('Error loading requisition data:', error);
-            alert('Error loading requisition data!');
-            router.visit(requisitions().url);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Reuse all the existing functions from your RequisitionForm
     const addNewItem = () => {
         const newItem = {
             id: Date.now().toString(),
@@ -256,6 +169,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         });
     };
 
+    // Add the editItem function
     const editItem = (id: string) => {
         setItems(prev => prev.map(item =>
             item.id === id
@@ -305,68 +219,71 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         }
 
         const finalRequestor = requestorType === 'self'
-            ? auth.user.name
+            ? auth.user.fullname
             : selectedUser || otherRequestor;
 
         const formData = {
-            requisitionId,
             requestor: finalRequestor,
             priority,
             notes,
             items: items.map(item => ({
                 ...item,
-                itemId: item.itemId || null,
-                originalItemId: item.originalItemId
+                itemId: item.itemId || null
             })),
             total_amount: getTotalAmount(),
             us_id: requestorType === 'self' ? auth.user.id :
                 selectedUser ? parseInt(selectedUser) : null
         };
 
+        // Show preview instead of submitting directly
         setPreviewData(formData);
         setShowPreview(true);
     };
 
     const handleConfirmSubmit = () => {
-        // Prepare updated requisition data
-        const updatedRequisitionData = {
-            REQ_ID: requisitionId,
-            DATE_REQUESTED: originalRequisition.DATE_REQUESTED,
+        // Generate new requisition ID (in real app, this would come from backend)
+        const newReqId = Math.max(...requisitionsData.map(req => req.REQ_ID), 0) + 1;
+
+        // Prepare requisition data
+        const requisitionData = {
+            REQ_ID: newReqId,
+            DATE_REQUESTED: new Date().toISOString().slice(0, 19).replace('T', ' '),
             DATE_UPDATED: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            STATUS: originalRequisition.STATUS, // Keep original status
+            STATUS: "Pending", // Default status
             NOTES: previewData.notes,
             PRIORITY: previewData.priority.charAt(0).toUpperCase() + previewData.priority.slice(1),
             US_ID: previewData.us_id || auth.user.id,
             REQUESTOR: previewData.requestor,
-            REASON: originalRequisition.REASON
+            REASON: ""
         };
 
-        // Prepare updated requisition items data
-        const updatedRequisitionItems = previewData.items.map((item: any, index: number) => ({
-            REQT_ID: item.id.startsWith('existing_')
-                ? parseInt(item.id.replace('existing_', ''))
-                : 7000 + index + 1,
-            REQ_ID: requisitionId,
-            ITEM_ID: item.itemId || null,
+        // Prepare requisition items data
+        const newRequisitionItemsData = previewData.items.map((item: any, index: number) => ({
+            REQT_ID: 7000 + index + 1, // Simple incremental IDs
+            REQ_ID: newReqId,
+            ITEM_ID: item.itemId || null, // Link to actual item if exists
             QUANTITY: parseInt(item.quantity),
             CATEGORY: item.category
         }));
 
-        console.log('Updated Requisition Data:', updatedRequisitionData);
-        console.log('Updated Requisition Items:', updatedRequisitionItems);
+        console.log('Requisition Data:', requisitionData);
+        console.log('Requisition Items:', newRequisitionItemsData);
 
-        // In a real application, you would send PATCH request to your backend
-        alert('Requisition updated successfully!');
+        // In a real application, you would send this data to your backend
+        // For now, we'll just log it and show success message
+        alert('Requisition submitted successfully!');
         setShowPreview(false);
-
-        // Redirect back to requisitions list
-        router.visit(requisitions().url);
+        clearForm();
     };
 
-    const handleCancel = () => {
-        if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-            router.visit(requisitions().url);
-        }
+    const clearForm = () => {
+        setRequestorType('self');
+        setOtherRequestor('');
+        setSelectedUser('');
+        setPriority('normal');
+        setNotes('');
+        setItems([{ id: '1', category: '', description: '', quantity: '', unit_price: '', total: '', isSaved: false }]);
+        setValidationErrors({});
     };
 
     const hasError = (itemId: string, field: 'description' | 'quantity' | 'category') => {
@@ -381,44 +298,21 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         return false;
     };
 
+    // Auto-suggest items based on description input
     const getItemSuggestions = (description: string) => {
         if (!description.trim()) return [];
         return systemItems.filter(item =>
             item.name.toLowerCase().includes(description.toLowerCase())
-        ).slice(0, 5);
+        ).slice(0, 5); // Show max 5 suggestions
     };
 
-    if (isLoading) {
-        return (
-            <AppLayout breadcrumbs={breadcrumbs(requisitionId)}>
-                <Head title="Edit Requisition" />
-                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-2xl font-bold">Edit Requisition</h1>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading requisition data...</p>
-                        </div>
-                    </div>
-                </div>
-            </AppLayout>
-        );
-    }
-
     return (
-        <AppLayout breadcrumbs={breadcrumbs(requisitionId)}>
-            <Head title="Edit Requisition" />
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Requisition Form" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
 
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold">Edit Requisition</h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Editing Requisition #{requisitionId}
-                        </p>
-                    </div>
+                    <h1 className="text-2xl font-bold">Requisition Form</h1>
                     <Link
                         href={requisitions().url}
                         className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
@@ -431,13 +325,13 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                {/* Header Section - Updated colors and removed warning */}
-                                <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
+                                {/* Header Section */}
+                                <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20">
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                        Edit Requisition #{requisitionId}
+                                        New Requisition Form
                                     </h2>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Update the requisition details below.
+                                        Complete the form below to submit a new requisition
                                     </p>
                                 </div>
 
@@ -484,7 +378,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                                             addNewItem={addNewItem}
                                             hasError={hasError}
                                             getItemSuggestions={getItemSuggestions}
-                                            editItem={editItem}
+                                            editItem={editItem} // Add this prop
                                         />
                                     </div>
 
@@ -493,16 +387,16 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                                         <div className="flex gap-3">
                                             <button
                                                 type="button"
-                                                onClick={handleCancel}
+                                                onClick={clearForm}
                                                 className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
                                             >
-                                                Cancel
+                                                Clear Form
                                             </button>
                                             <button
                                                 type="submit"
                                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
                                             >
-                                                Update Requisition
+                                                Submit Requisition
                                             </button>
                                         </div>
                                     </div>
@@ -518,6 +412,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                     onClose={() => setShowPreview(false)}
                     onConfirm={handleConfirmSubmit}
                     formData={previewData}
+
                 />
             </div>
         </AppLayout>
