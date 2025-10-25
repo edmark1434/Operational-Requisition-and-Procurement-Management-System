@@ -7,7 +7,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Response;
 
 class PasswordController extends Controller
@@ -30,10 +32,11 @@ class PasswordController extends Controller
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        $request->user()->update([
-            'password' => Hash::make($validated['password']),
-        ]);
+        $id = $request->user()->id;
 
-        return back();
+        DB::statement('CALL update_user(?,?,?,?)',[$id,null,null,Hash::make($validated['password'])]);
+        
+        Auth::setUser($request->user()->fresh());
+        return back()->with('success', 'Password updated successfully!');;
     }
 }

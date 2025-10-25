@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -49,11 +50,11 @@ return new class extends Migration
             AS $$
             BEGIN
                 INSERT INTO purchase (
-                    purchase_date, total_cost, receipt_no, receipt_photo, 
+                    purchase_date, total_cost, receipt_no, receipt_photo,
                     payment_type, req_id, supplier_id
                 )
                 VALUES (
-                    p_purchase_date, p_total_cost, p_receipt_no, p_receipt_photo, 
+                    p_purchase_date, p_total_cost, p_receipt_no, p_receipt_photo,
                     p_payment_type, p_req_id, p_supplier_id
                 );
             END;
@@ -75,7 +76,7 @@ return new class extends Migration
             AS $$
             BEGIN
                 UPDATE purchase
-                SET 
+                SET
                     purchase_date = COALESCE(p_purchase_date, purchase_date),
                     total_cost = COALESCE(p_total_cost, total_cost),
                     receipt_no = COALESCE(p_receipt_no, receipt_no),

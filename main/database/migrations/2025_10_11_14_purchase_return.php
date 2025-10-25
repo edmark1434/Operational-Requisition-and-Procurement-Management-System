@@ -17,7 +17,7 @@ return new class extends Migration
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->date('return_date')->nullable();
             $table->enum('status', ['PENDING', 'REJECTED', 'DELIVERED', 'RECEIVED']);
-            $table->string('remarks')->nullable();
+            $table->text('remarks')->nullable();
             $table->foreignId('purchase_id')->constrained('purchase')->cascadeOnDelete();
         });
 

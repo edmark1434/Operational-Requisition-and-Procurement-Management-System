@@ -22,7 +22,7 @@ return new class extends Migration
                 'SUPPLIER_UPDATE',
                 'PERMISSION_UPDATE'
             ]);
-            $table->string('description', 255);
+            $table->text('description');
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
         });
