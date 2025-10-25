@@ -30,7 +30,7 @@ const items = [
         CURRENT_STOCK: 150,
         MAKE_ID: 3, // OfficePro
         CATEGORY_ID: 6, // Office Supplies
-        SUPPLIER_ID: 3 // Office World Suppliers
+        SUPPLIER_ID: 3 // Office World SupplierController
     },
     {
         ITEM_ID: 1004,
@@ -85,7 +85,7 @@ const items = [
         CURRENT_STOCK: 8,
         MAKE_ID: 6, // ErgoWorks
         CATEGORY_ID: 6, // Office Supplies
-        SUPPLIER_ID: 3 // Office World Suppliers
+        SUPPLIER_ID: 3 // Office World SupplierController
     },
     {
         ITEM_ID: 1009,
@@ -129,7 +129,7 @@ const items = [
         CURRENT_STOCK: 42,
         MAKE_ID: 3, // OfficePro
         CATEGORY_ID: 6, // Office Supplies
-        SUPPLIER_ID: 3 // Office World Suppliers
+        SUPPLIER_ID: 3 // Office World SupplierController
     },
     {
         ITEM_ID: 1013,
