@@ -1,13 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\WebPages;
+namespace App\Http\Controllers\Supplier;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
-use Illuminate\Http\Request;
 
-class Suppliers extends Controller
+class SupplierController extends Controller
 {
-    protected $base_path = "tabs/05-Suppliers";
+    protected $base_path = "tabs/05-SupplierController";
     public function index()
     {
         return Inertia::render($this->base_path .'/suppliers');
