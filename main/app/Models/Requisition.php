@@ -9,7 +9,8 @@ class Requisition extends Model
 {
     use HasFactory;
     protected $table = 'requisition';
-    protected $fillable = ['status', 'remarks', 'user_id','requestor','notes'];
+    // Add 'priority' and 'description' to the fillable array
+    protected $fillable = ['status', 'remarks', 'user_id','requestor','notes', 'priority', 'description'];
     public $timestamps = true;
     public const STATUS = ['PENDING', 'REJECTED', 'APPROVED', 'DELIVERED', 'RECEIVED'];
 }
