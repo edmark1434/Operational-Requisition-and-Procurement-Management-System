@@ -26,6 +26,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('requisitions/{id}/edit',[Requisition::class,'requisitionEdit'])->name('requisitionedit');
 //    ---------------------------------------------------------------------
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
+        //Inventory - Add Item
+    Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');
+
+    //Inventory - Edit item
+    Route::get('inventory/{id}/edit',[Inventory::class,"edit"])->name('inventoryedit');
 
     Route::get('purchases',[Purchasing::class,'index'])->name('purchases');
 
@@ -36,6 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
     Route::get('users',[Users::class,'index'])->name('users');
+
 });
 
 require __DIR__.'/settings.php';
