@@ -1,16 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
+use App\Http\Controllers\Requisition\RequisitionController;
+use App\Http\Controllers\Supplier\SupplierController;
+use App\Http\Controllers\WebPages\Audit;
 use App\Http\Controllers\WebPages\Dashboard;
-use App\Http\Controllers\WebPages\Auth;
 use App\Http\Controllers\WebPages\Inventory;
 use App\Http\Controllers\WebPages\Purchasing;
-use App\Http\Controllers\Requisition\RequisitionController;
 use App\Http\Controllers\WebPages\Returns;
-use App\Http\Controllers\WebPages\Suppliers;
 use App\Http\Controllers\WebPages\Users;
-use App\Http\Controllers\WebPages\Audit;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -42,7 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('purchases',[Purchasing::class,'index'])->name('purchases');
 
-    Route::get('suppliers',[Suppliers::class,'index'])->name('suppliers');
+    Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
 
     Route::get('returns',[Returns::class,'index'])->name('returns');
 
