@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { requisitions, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 // import { UserInfo } from '@/components/user-info';
 
@@ -241,46 +241,39 @@ export default function RequisitionForm({ auth }: { auth: any }) {
     };
 
     const handleConfirmSubmit = () => {
-        // Generate new requisition ID (in real app, this would come from backend)
-        // REMOVE all the data manipulation and creation here, the backend will handle it.
-        // REMOVE: const newReqId = ...
-        // REMOVE: const requisitionData = ...
-        // REMOVE: const newRequisitionItemsData = ...
-
-        // The data prepared in handleSubmit is in previewData.
-        // We'll use the items and other fields from it.
+        // 1. Prepare the data payload for the Laravel backend
         const submissionData = {
-            // user_id will be handled by the controller using auth()
             requestor: previewData.requestor,
             priority: previewData.priority,
             notes: previewData.notes,
-            // The controller will also handle setting the default 'PENDING' status
-
-            // Pass the items array so the controller can save them as line items
+            // Map items to the structure the backend expects
             items: previewData.items.map((item: any) => ({
-                itemId: item.itemId, // Null if not matched to a system item
+                itemId: item.itemId,
                 quantity: parseInt(item.quantity),
                 category: item.category,
-                description: item.description, // Pass description for custom items
-                unit_price: parseFloat(item.unit_price) // Assuming you'll save this too
+                description: item.description,
+                unit_price: parseFloat(item.unit_price)
             })),
+            // Pass the user ID if the requestor is 'other' or the system couldn't resolve it
+            us_id: previewData.us_id
         };
 
-        // 🚀 Inertia POST Request to Laravel Controller
-        router.post('/requisition/store', submissionData, {
+        // 2. 🚀 Inertia POST Request to the Laravel controller
+        // This sends the data to your 'requisition.store' route
+        router.post(route('requisition.store'), submissionData, {
             onSuccess: () => {
+                // This runs if the Laravel controller returns a successful redirect
                 alert('Requisition submitted successfully!');
                 setShowPreview(false);
                 clearForm();
             },
             onError: (errors) => {
-                // Handle server-side validation errors or other issues
+                // This runs if the Laravel controller throws validation errors or another exception
                 console.error('Submission failed:', errors);
                 alert('Requisition submission failed. Check console for details.');
                 setShowPreview(false);
             }
         });
-    };
 
         // Prepare requisition items data
         const newRequisitionItemsData = previewData.items.map((item: any, index: number) => ({
