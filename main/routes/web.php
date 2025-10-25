@@ -6,7 +6,7 @@ use App\Http\Controllers\WebPages\Dashboard;
 use App\Http\Controllers\WebPages\Auth;
 use App\Http\Controllers\WebPages\Inventory;
 use App\Http\Controllers\WebPages\Purchasing;
-use App\Http\Controllers\WebPages\Requisition;
+use App\Http\Controllers\Requisition\RequisitionController;
 use App\Http\Controllers\WebPages\Returns;
 use App\Http\Controllers\WebPages\Suppliers;
 use App\Http\Controllers\WebPages\Users;
@@ -19,11 +19,11 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard',[Dashboard::class,'index'])->name('dashboard');
 //    --------------------------------------------------------------------- REQUISITION
-    Route::get('requisitions',[Requisition::class,'index'])->name('requisitions');
+    Route::get('requisitions',[RequisitionController::class,'index'])->name('requisitions');
 //    --------------------------------------------------------------------- REQUISITION FORM
-    Route::get('requisitionform',[Requisition::class,'requisitionForm'])->name('requisitionform');
+    Route::get('requisitionform',[RequisitionController::class,'requisitionForm'])->name('requisitionform');
 //    --------------------------------------------------------------------- REQUISITION EDIT
-    Route::get('requisitions/{id}/edit',[Requisition::class,'requisitionEdit'])->name('requisitionedit');
+    Route::get('requisitions/{id}/edit',[RequisitionController::class,'requisitionEdit'])->name('requisitionedit');
 //    ---------------------------------------------------------------------
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
         //Inventory - Add Item
