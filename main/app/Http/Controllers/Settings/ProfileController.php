@@ -38,7 +38,7 @@ class ProfileController extends Controller
         
         DB::statement('CALL update_user(?,?,?,?)',[$id,$validated['fullname'],$validated['username'],null]);   
         Auth::setUser($request->user()->fresh());     
-        return back();
+        return redirect()->back();
     }
 
     /**
