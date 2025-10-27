@@ -101,7 +101,7 @@ export default function Welcome() {
                             </div>
                             {auth.user ? (
                                 <Link
-                                    href="/dashboard"
+                                    href="/"
                                     className="inline-flex items-center space-x-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-600 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700 hover:shadow-md hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                                 >
                                     <LogIn className="w-4 h-4" />
