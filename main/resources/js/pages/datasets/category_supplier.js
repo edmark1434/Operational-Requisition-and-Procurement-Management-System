@@ -12,7 +12,7 @@ const categorySuppliers = [
     {
         ID: 3,
         CATEGORY_ID: 2, // Consumables
-        SUPPLIER_ID: 3  // Office World Suppliers
+        SUPPLIER_ID: 3  // Office World SupplierController
     },
     {
         ID: 4,
@@ -57,7 +57,7 @@ const categorySuppliers = [
     {
         ID: 12,
         CATEGORY_ID: 6, // Office Supplies
-        SUPPLIER_ID: 3  // Office World Suppliers
+        SUPPLIER_ID: 3  // Office World SupplierController
     },
     {
         ID: 13,

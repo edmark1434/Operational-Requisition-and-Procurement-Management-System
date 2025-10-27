@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Requisition;
 
-class RequisitionFormController
-{
+use App\Http\Controllers\Controller;
 
+class RequisitionFormController extends Controller
+{
+    //
 }
