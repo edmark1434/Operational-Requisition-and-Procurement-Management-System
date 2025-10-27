@@ -14,14 +14,7 @@ return new class extends Migration
     {
         Schema::create('audit_log', function (Blueprint $table) {
             $table->id();
-            $table->enum('type', [
-                'REQUISITION_APPROVAL',
-                'REQUISITION_REJECTION',
-                'REQUISITION_CHANGE',
-                'SETTING_CHANGE',
-                'SUPPLIER_UPDATE',
-                'PERMISSION_UPDATE'
-            ]);
+            $table->string('type', 255);
             $table->text('description');
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();

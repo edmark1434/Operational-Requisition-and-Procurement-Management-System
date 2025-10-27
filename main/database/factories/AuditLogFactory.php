@@ -19,7 +19,8 @@ class AuditLogFactory extends Factory
     public function definition(): array
     {
         return [
-            'type' => $this->faker->randomElement(AuditLog::TYPES),
+            'type' => $this->faker->words(2, true),
+            #   'type' => $this->faker->randomElement(AuditLog::TYPES),
             'description' => $this->faker->sentence(),
             'user_id' => User::factory(),
         ];
