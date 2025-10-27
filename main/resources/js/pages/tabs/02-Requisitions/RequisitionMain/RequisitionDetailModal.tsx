@@ -111,7 +111,6 @@ export default function RequisitionDetailModal({
                                         {formatDate(requisition.UPDATED_AT)} at {formatTime(requisition.UPDATED_AT)}
                                     </p>
                                 </div>
-                                {/* REMOVED TOTAL AMOUNT */}
                             </div>
                         </div>
 
@@ -139,7 +138,7 @@ export default function RequisitionDetailModal({
                             )}
                         </div>
 
-                        {/* Items List - UPDATED */}
+                        {/* Items List - IMPROVED LAYOUT */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                 Requested Items ({requisition.ITEMS.length})
@@ -150,31 +149,35 @@ export default function RequisitionDetailModal({
                                         key={index}
                                         className="p-4 border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent"
                                     >
-                                        <div className="flex flex-col space-y-2">
-                                            <div className="flex justify-between items-start">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex items-start gap-3 flex-1">
+                                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
+                                                    {requisition.ITEMS.length - index}
+                                                </span>
                                                 <div className="flex-1">
+                                                    {/* Item Name */}
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                         {item.NAME}
                                                     </p>
-                                                    {/* ADDED DESCRIPTION */}
-                                                    {item.DESCRIPTION && (
-                                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                            {item.DESCRIPTION}
-                                                        </p>
-                                                    )}
+                                                    {/* Category */}
+                                                    <div className="flex gap-4 mt-2">
+                                                        <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
+                                                            {item.CATEGORY}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-4">
-                                                <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
-                                                    {item.CATEGORY}
-                                                </span>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    Quantity: {item.QUANTITY}
+
+                                            {/* Quantity moved to the right side */}
+                                            <div className="text-right min-w-20">
+                                                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                    {item.QUANTITY}
                                                 </p>
-                                                {/* REMOVED UNIT PRICE */}
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    Qty
+                                                </p>
                                             </div>
                                         </div>
-                                        {/* REMOVED PRICE CALCULATION */}
                                     </div>
                                 ))}
                             </div>
