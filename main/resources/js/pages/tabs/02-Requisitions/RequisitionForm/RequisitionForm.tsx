@@ -26,7 +26,6 @@ interface RequisitionItem {
     id: string;
     category: string;
     itemName: string;
-    description: string;
     quantity: string;
     unit_price: string;
     total: string;
@@ -52,7 +51,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             id: '1',
             category: '',
             itemName: '',
-            description: '',
             quantity: '',
             unit_price: '',
             total: '',
@@ -92,7 +90,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             id: Date.now().toString(),
             category: '',
             itemName: '',
-            description: '',
             quantity: '',
             unit_price: '',
             total: '',
@@ -113,9 +110,15 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             if (item.id === id) {
                 const updatedItem = { ...item, [field]: value, isSaved: false };
 
-                if (field === 'quantity' || field === 'unit_price') {
-                    const quantity = field === 'quantity' ? parseFloat(value) || 0 : parseFloat(item.quantity) || 0;
-                    const unitPrice = field === 'unit_price' ? parseFloat(value) || 0 : parseFloat(item.unit_price) || 0;
+                // Only calculate total when quantity OR unit_price is manually changed
+                // Not when itemName is selected
+                if (field === 'quantity' && item.unit_price) {
+                    const quantity = parseFloat(value) || 0;
+                    const unitPrice = parseFloat(item.unit_price) || 0;
+                    updatedItem.total = (quantity * unitPrice).toFixed(2);
+                } else if (field === 'unit_price' && item.quantity) {
+                    const quantity = parseFloat(item.quantity) || 0;
+                    const unitPrice = parseFloat(value) || 0;
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
                 }
 
@@ -124,7 +127,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             return item;
         }));
 
-        if (field === 'description' || field === 'quantity' || field === 'category' || field === 'itemName') {
+        if (field === 'quantity' || field === 'category' || field === 'itemName') {
             setValidationErrors(prev => ({ ...prev, items: undefined }));
         }
     };
@@ -134,14 +137,14 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         if (!itemToSave) return;
 
         // Validate required fields
-        if (!itemToSave.description.trim() || !itemToSave.quantity.trim() || !itemToSave.category.trim()) {
-            alert('Please fill in category, description and quantity before saving the item.');
+        if (!itemToSave.itemName.trim() || !itemToSave.quantity.trim() || !itemToSave.category.trim()) {
+            alert('Please fill in category, item name and quantity before saving the item.');
             return;
         }
 
         // Link to actual item if it exists in the system
         const matchedSystemItem = systemItems.find(sysItem =>
-            sysItem.name.toLowerCase() === itemToSave.description.toLowerCase()
+            sysItem.name.toLowerCase() === itemToSave.itemName.toLowerCase()
         );
 
         setItems(prev => {
@@ -194,10 +197,10 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         }
 
         const invalidItems = items.filter(item =>
-            !item.isSaved && (!item.description.trim() || !item.quantity.trim() || !item.category.trim())
+            !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
         );
         if (invalidItems.length > 0) {
-            errors.items = 'All items must have category, description and quantity filled out before saving';
+            errors.items = 'All items must have category, item name and quantity filled out before saving';
         }
 
         setValidationErrors(errors);
@@ -235,43 +238,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
 
     const handleConfirmSubmit = () => {
         // TODO: Add submission logic when backend is ready
-        // 1. Prepare the data payload for the Laravel backend
-        /*
-        const submissionData = {
-            requestor: previewData.requestor,
-            priority: previewData.priority,
-            notes: previewData.notes,
-            // Map items to the structure the backend expects
-            items: previewData.items.map((item: any) => ({
-                itemId: item.itemId,
-                itemName: item.itemName,
-                quantity: parseInt(item.quantity),
-                category: item.category,
-                description: item.description,
-                unit_price: parseFloat(item.unit_price)
-            })),
-            total_amount: previewData.total_amount,
-            // Pass the user ID if the requestor is 'other' or the system couldn't resolve it
-            us_id: previewData.us_id
-        };
-
-        // 2. 🚀 Inertia POST Request to the Laravel controller
-        router.post('/requisitions', submissionData, {
-            onSuccess: () => {
-                // Show success message and redirect to requisitions page
-                alert('Requisition submitted successfully!');
-                router.visit('/requisitions');
-            },
-            onError: (errors) => {
-                // This runs if the Laravel controller throws validation errors or another exception
-                console.error('Submission failed:', errors);
-                alert('Requisition submission failed. Check console for details.');
-                setShowPreview(false);
-            }
-        });
-        */
-
-        // Temporary: Just show success and redirect
         alert('Requisition submitted successfully! (Demo mode)');
         setShowPreview(false);
         router.visit('/requisitions');
@@ -287,7 +253,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             id: '1',
             category: '',
             itemName: '',
-            description: '',
             quantity: '',
             unit_price: '',
             total: '',
@@ -296,12 +261,11 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         setValidationErrors({});
     };
 
-    const hasError = (itemId: string, field: 'description' | 'quantity' | 'category' | 'itemName') => {
+    const hasError = (itemId: string, field: 'quantity' | 'category' | 'itemName') => {
         const item = items.find(item => item.id === itemId);
         if (!item || item.isSaved) return false;
 
         if (validationErrors.items) {
-            if (field === 'description' && !item.description.trim()) return true;
             if (field === 'quantity' && !item.quantity.trim()) return true;
             if (field === 'category' && !item.category.trim()) return true;
             if (field === 'itemName' && !item.itemName.trim()) return true;
@@ -309,10 +273,10 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         return false;
     };
 
-    const getItemSuggestions = (description: string) => {
-        if (!description.trim()) return [];
+    const getItemSuggestions = (itemName: string) => {
+        if (!itemName.trim()) return [];
         return systemItems.filter(item =>
-            item.name.toLowerCase().includes(description.toLowerCase())
+            item.name.toLowerCase().includes(itemName.toLowerCase())
         ).slice(0, 5); // Show max 5 suggestions
     };
 
