@@ -2,26 +2,37 @@ import { Link } from '@inertiajs/react';
 import { StatusIcons } from './utils/icons';
 import { getStockStatusColor, getCategoryColor } from './utils/styleUtils';
 import { formatCurrency } from './utils/formatters';
+import { LoaderCircle, Package, Edit, ShoppingCart } from 'lucide-react';
 
 interface InventoryListProps {
     inventory: any[];
     onItemClick: (item: any, editing?: boolean) => void;
     viewMode: 'comfortable' | 'compact' | 'condensed';
+    isLoading?: boolean;
 }
 
-export default function InventoryList({ inventory, onItemClick, viewMode }: InventoryListProps) {
+export default function InventoryList({ inventory, onItemClick, viewMode, isLoading = false }: InventoryListProps) {
+    if (isLoading) {
+        return (
+            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-8">
+                <div className="flex items-center justify-center">
+                    <LoaderCircle className="w-6 h-6 animate-spin text-blue-600 mr-2" />
+                    <span className="text-gray-600 dark:text-gray-400">Loading inventory...</span>
+                </div>
+            </div>
+        );
+    }
+
     if (inventory.length === 0) {
         return (
             <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
                 <div className="h-full overflow-y-auto">
                     <div className="p-4 text-center py-12">
                         <div className="text-gray-400 dark:text-gray-600 mb-4">
-                            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
+                            <Package className="w-16 h-16 mx-auto" />
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No inventory items found</h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-4">Try adjusting your search or filters.</p>
+                        <p className="text-gray-600 dark:text-gray-400">Try adjusting your search or filters.</p>
                     </div>
                 </div>
             </div>
@@ -30,19 +41,104 @@ export default function InventoryList({ inventory, onItemClick, viewMode }: Inve
 
     if (viewMode === 'condensed') {
         return (
-            <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
-                <div className="h-full overflow-y-auto">
-                    <div className="p-4">
-                        <div className="space-y-2">
-                            {inventory.map((item) => (
-                                <CondensedListItem
-                                    key={item.ID}
-                                    item={item}
-                                    onClick={() => onItemClick(item)}
-                                />
-                            ))}
-                        </div>
-                    </div>
+            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <div className="col-span-3">Item</div>
+                    <div className="col-span-2">Category</div>
+                    <div className="col-span-1 text-center">Stock</div>
+                    <div className="col-span-2">Status</div>
+                    <div className="col-span-2 text-right">Unit Price</div>
+                    <div className="col-span-2 text-right">Actions</div>
+                </div>
+
+                {/* Table Body */}
+                <div className="divide-y divide-sidebar-border">
+                    {inventory.map((item) => {
+                        const stockStatus = item.CURRENT_STOCK === 0 ? 'out-of-stock' :
+                            item.CURRENT_STOCK < 10 ? 'low-stock' : 'in-stock';
+
+                        const stockStatusText = stockStatus === 'in-stock' ? 'In Stock' :
+                            stockStatus === 'low-stock' ? 'Low Stock' : 'Out of Stock';
+
+                        return (
+                            <div
+                                key={item.ID}
+                                className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
+                                onClick={() => onItemClick(item)}
+                            >
+                                {/* Item Info */}
+                                <div className="col-span-3 flex items-center space-x-3">
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {item.NAME}
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            #{item.ID} • {item.BARCODE}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Category */}
+                                <div className="col-span-2 flex items-center">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(item.CATEGORY)}`}>
+                                        {item.CATEGORY}
+                                    </span>
+                                </div>
+
+                                {/* Stock Quantity - Color Coded */}
+                                <div className="col-span-1 flex items-center justify-center">
+                                    <span className={`text-sm font-semibold ${
+                                        item.CURRENT_STOCK === 0
+                                            ? 'text-red-600 dark:text-red-400'
+                                            : item.CURRENT_STOCK < 10
+                                                ? 'text-orange-600 dark:text-orange-400'
+                                                : 'text-green-600 dark:text-green-400'
+                                    }`}>
+                                        {item.CURRENT_STOCK}
+                                    </span>
+                                </div>
+
+                                {/* Status */}
+                                <div className="col-span-2 flex items-center">
+                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
+                                        {StatusIcons[stockStatus as keyof typeof StatusIcons]}
+                                        {stockStatusText}
+                                    </div>
+                                </div>
+
+                                {/* Unit Price */}
+                                <div className="col-span-2 flex items-center justify-end">
+                                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                        {formatCurrency(item.UNIT_PRICE)}
+                                    </span>
+                                </div>
+
+                                {/* Actions - Cart first, then Edit (swapped positions) */}
+                                <div className="col-span-2 flex items-center justify-end space-x-2">
+                                    {item.CURRENT_STOCK === 0 && (
+                                        <Link
+                                            href="/requisitions/form"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-2 rounded-md transition-colors"
+                                            title="Order Now"
+                                        >
+                                            <ShoppingCart className="w-3 h-3" />
+                                        </Link>
+                                    )}
+
+                                    <Link
+                                        href={`/inventory/${item.ID}/edit`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded"
+                                        title="Edit Item"
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                    </Link>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -64,108 +160,6 @@ export default function InventoryList({ inventory, onItemClick, viewMode }: Inve
                             viewMode={viewMode}
                         />
                     ))}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// Condensed List Item Component
-function CondensedListItem({ item, onClick }: {
-    item: any;
-    onClick: () => void;
-}) {
-    const stockStatus = item.CURRENT_STOCK === 0 ? 'out-of-stock' :
-        item.CURRENT_STOCK < 10 ? 'low-stock' : 'in-stock';
-
-    return (
-        <div className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-3 hover:shadow-md transition-all duration-200 group">
-            <div className="flex items-center justify-between">
-                {/* Left Section - Basic Info */}
-                <div className="flex items-center space-x-4 min-w-0 flex-1">
-                    <div className="flex-shrink-0">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
-                            #{item.ID}
-                        </span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3">
-                            <h3
-                                className="text-sm font-medium text-gray-900 dark:text-white truncate hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                                onClick={onClick}
-                            >
-                                {item.NAME}
-                            </h3>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(item.CATEGORY)}`}>
-                                {item.CATEGORY}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-4 mt-1">
-                            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                                {item.BARCODE}
-                            </span>
-                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getStockStatusColor(stockStatus)}`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                {stockStatus === 'out-of-stock' ? 'Out of Stock' : stockStatus === 'low-stock' ? 'Low Stock' : 'In Stock'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Middle Section - Stock and Price */}
-                <div className="flex items-center space-x-6 mr-4">
-                    <div className="text-center">
-                        <div className={`text-sm font-semibold ${
-                            item.CURRENT_STOCK === 0 ? 'text-red-600 dark:text-red-400' :
-                                item.CURRENT_STOCK < 10 ? 'text-orange-600 dark:text-orange-400' :
-                                    'text-green-600 dark:text-green-400'
-                        }`}>
-                            {item.CURRENT_STOCK}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Qty</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                            {formatCurrency(item.UNIT_PRICE)}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Price</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-sm font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(item.CURRENT_STOCK * item.UNIT_PRICE)}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
-                    </div>
-                </div>
-
-                {/* Right Section - Actions */}
-                <div className="flex items-center space-x-2">
-                    {item.CURRENT_STOCK === 0 ? (
-                        <Link
-                            href="requisitions/form"
-                            className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-3 rounded-md flex items-center gap-1 transition-colors whitespace-nowrap"
-                        >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                            Order Now
-                        </Link>
-                    ) : (
-                        <button
-                            onClick={onClick}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium whitespace-nowrap"
-                        >
-                            View Details
-                        </button>
-                    )}
-                    <Link
-                        href={`/inventory/${item.ID}/edit`}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                    </Link>
                 </div>
             </div>
         </div>
@@ -196,9 +190,7 @@ function InventoryCard({ item, onClick, viewMode }: {
                         href={`/inventory/${item.ID}/edit`}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
                     >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        <Edit className="w-3 h-3" />
                     </Link>
                 </div>
 
@@ -250,9 +242,7 @@ function InventoryCard({ item, onClick, viewMode }: {
                             href="/requisitions/form"
                             className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-2 rounded-md flex items-center justify-center gap-1 transition-colors"
                         >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
+                            <ShoppingCart className="w-3 h-3" />
                             Order Now
                         </Link>
                     </div>
@@ -274,9 +264,7 @@ function InventoryCard({ item, onClick, viewMode }: {
                         href={`/inventory/${item.ID}/edit`}
                         className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1 rounded"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        <Edit className="w-4 h-4" />
                     </Link>
                 </div>
             </div>
@@ -355,16 +343,12 @@ function InventoryCard({ item, onClick, viewMode }: {
                         href="requisitions/form"
                         className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-3 rounded-md flex items-center gap-1 transition-colors"
                     >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
+                        <ShoppingCart className="w-3 h-3" />
                         Order Now
                     </Link>
                 ) : (
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {item.CURRENT_STOCK > 0 && item.CURRENT_STOCK < 10 && (
-                            <span className="text-orange-500 dark:text-orange-400">⚠️ Low</span>
-                        )}
+                        {/* Removed the redundant "⚠️ Low" text since we already have the status tag */}
                     </div>
                 )}
             </div>
