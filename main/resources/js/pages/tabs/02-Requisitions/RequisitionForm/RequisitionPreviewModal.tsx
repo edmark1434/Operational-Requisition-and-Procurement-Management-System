@@ -93,24 +93,10 @@ export default function RequisitionPreviewModal({
                                                 {(formData?.items?.length || 0) - index}
                                             </span>
                                             <div className="flex-1">
-                                                {/* Item Name - show if available */}
+                                                {/* Item Name */}
                                                 {item.itemName && (
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                         {item.itemName}
-                                                    </p>
-                                                )}
-
-                                                {/* Description - show if it exists and is different from item name */}
-                                                {item.description && item.description !== item.itemName && (
-                                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                        {item.description}
-                                                    </p>
-                                                )}
-
-                                                {/* Fallback if no itemName */}
-                                                {!item.itemName && item.description && (
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {item.description}
                                                     </p>
                                                 )}
 
