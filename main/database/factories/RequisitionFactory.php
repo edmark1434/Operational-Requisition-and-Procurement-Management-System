@@ -20,12 +20,12 @@ class RequisitionFactory extends Factory
     {
         return [
             'status' => $this->faker->randomElement(Requisition::STATUS),
-            'remarks' => $this->faker->sentence(6),
+            'remarks' => $this->faker->text(100),
             'user_id' => User::factory(), // Creates a related user if not existing
             'requestor' => $this->faker->name(),
-            'notes' => $this->faker->paragraph(),
+            'notes' => $this->faker->text(200),
             'priority' => $this->faker->randomElement(['LOW', 'NORMAL', 'HIGH', 'URGENT']),
-            'description' => $this->faker->text(200),
+            'description' => $this->faker->text(255),
             'created_at' => now(),
             'updated_at' => now(),
         ];
