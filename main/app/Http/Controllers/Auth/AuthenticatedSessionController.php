@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Response;
 use App\Models\User;
+use Carbon\Carbon;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -20,6 +22,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(Request $request): Response
     {
+
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
@@ -35,25 +38,44 @@ class AuthenticatedSessionController extends Controller
             'username' => 'required|string',
             'password' => 'required|string',
         ]);
-        $user = DB::select("SELECT * FROM get_users(NULL, ?)",[ $request->username ]);
-        if (empty($user)) {
-        return back()->withErrors([
-            'credentials' => 'The provided credentials do not match our records.',
-        ])->onlyInput('username');
-        }
-    
-        $user = (object) ($user ? $user[0] : NULL);
-        if (!Hash::check($request->password, $user->password)) {
+
+        //get username
+        $username = $request->username;
+        $key = 'login_attempts_' . $username;
+        $maxAttempts = 3;
+        $lockoutMinutes = 2;
+        //check if user is locked out 
+        $attempts = Cache::get($key, 0);
+        if(Cache::has("lockout_{$username}")){
             return back()->withErrors([
-                'credentials' => 'The provided credentials do not match our records.',
+                'credentials' => 'Too many login attempts. Please try again in ' . $lockoutMinutes . ' minutes.',
             ])->onlyInput('username');
         }
-        $user = User::find($user->id);
-        Auth::login($user, $request->boolean('remember'));
 
-        $request->session()->regenerate();
+        //get user by username
+        $user = DB::select("SELECT * FROM get_users(NULL, ?)",[ $request->username ]);
+        $user = (object) ($user ? $user[0] : NULL);
+        if ($user && Hash::check($request->password, $user->password)) {
+            $user = User::find($user->id);
+            Auth::login($user, $request->boolean('remember'));
+            Cache::forget($key); //clear login attempts on successful login
+            $request->session()->regenerate();
+            return redirect()->intended(route('dashboard', absolute: false))->with('success','Logged in successfully.');
+        }
 
-        return redirect()->intended(route('dashboard', absolute: false))->with('success','Logged in successfully.');
+        $attempts = Cache::get($key, 0) + 1;
+        Cache::put($key, $attempts, now()->addMinutes($lockoutMinutes));
+
+        if ($attempts >= $maxAttempts) {
+                Cache::put("lockout_{$username}", true, now()->addMinutes($lockoutMinutes));
+                Cache::forget($key);
+                return back()->withErrors([
+                    'credentials' => 'Too many login attempts. Please try again in ' . $lockoutMinutes . ' minute(s).',
+                ])->onlyInput('username');
+        }
+        return back()->withErrors([
+        'credentials' => 'The provided credentials do not match our records.',
+        ])->onlyInput('username'); 
     }
 
     /**
