@@ -6,9 +6,9 @@ const items = [
         DIMENSIONS: "30cm x 15cm x 5cm",
         UNIT_PRICE: 25.50,
         CURRENT_STOCK: 45,
-        MAKE_ID: 1, // ToolMaster
-        CATEGORY_ID: 4, // Parts
-        SUPPLIER_ID: 4 // Industrial Parts Corp.
+        MAKE_ID: 1,
+        CATEGORY_ID: 3, // Changed to Tools (was 4 - Parts)
+        SUPPLIER_ID: 4
     },
     {
         ITEM_ID: 1002,
@@ -17,9 +17,9 @@ const items = [
         DIMENSIONS: "100m roll",
         UNIT_PRICE: 120.75,
         CURRENT_STOCK: 28,
-        MAKE_ID: 2, // ElectroTech
+        MAKE_ID: 2,
         CATEGORY_ID: 1, // Electrical
-        SUPPLIER_ID: 1 // Electrical Supplies Co.
+        SUPPLIER_ID: 1
     },
     {
         ITEM_ID: 1003,
@@ -28,9 +28,9 @@ const items = [
         DIMENSIONS: "29.7cm x 21cm x 5cm",
         UNIT_PRICE: 15.25,
         CURRENT_STOCK: 150,
-        MAKE_ID: 3, // OfficePro
+        MAKE_ID: 3,
         CATEGORY_ID: 6, // Office Supplies
-        SUPPLIER_ID: 3 // Office World SupplierController
+        SUPPLIER_ID: 3
     },
     {
         ITEM_ID: 1004,
@@ -39,9 +39,9 @@ const items = [
         DIMENSIONS: "35cm x 25cm x 15cm",
         UNIT_PRICE: 350.00,
         CURRENT_STOCK: 12,
-        MAKE_ID: 4, // PowerTools Inc.
-        CATEGORY_ID: 5, // Equipment
-        SUPPLIER_ID: 2 // Tool Distributors Ltd.
+        MAKE_ID: 4,
+        CATEGORY_ID: 3, // Changed to Tools (was 5 - Equipment)
+        SUPPLIER_ID: 2
     },
     {
         ITEM_ID: 1005,
@@ -50,9 +50,9 @@ const items = [
         DIMENSIONS: "6cm x 6cm x 10cm",
         UNIT_PRICE: 8.99,
         CURRENT_STOCK: 89,
-        MAKE_ID: 2, // ElectroTech
+        MAKE_ID: 2,
         CATEGORY_ID: 1, // Electrical
-        SUPPLIER_ID: 1 // Electrical Supplies Co.
+        SUPPLIER_ID: 1
     },
     {
         ITEM_ID: 1006,
@@ -61,9 +61,9 @@ const items = [
         DIMENSIONS: "25cm x 15cm x 5cm",
         UNIT_PRICE: 12.50,
         CURRENT_STOCK: 34,
-        MAKE_ID: 5, // SafetyFirst
+        MAKE_ID: 5,
         CATEGORY_ID: 2, // Consumables
-        SUPPLIER_ID: 5 // Safety Equipment Inc.
+        SUPPLIER_ID: 5
     },
     {
         ITEM_ID: 1007,
@@ -72,9 +72,9 @@ const items = [
         DIMENSIONS: "20cm x 15cm x 3cm",
         UNIT_PRICE: 45.00,
         CURRENT_STOCK: 23,
-        MAKE_ID: 1, // ToolMaster
+        MAKE_ID: 1,
         CATEGORY_ID: 3, // Tools
-        SUPPLIER_ID: 2 // Tool Distributors Ltd.
+        SUPPLIER_ID: 2
     },
     {
         ITEM_ID: 1008,
@@ -83,9 +83,9 @@ const items = [
         DIMENSIONS: "60cm x 60cm x 110cm",
         UNIT_PRICE: 189.99,
         CURRENT_STOCK: 8,
-        MAKE_ID: 6, // ErgoWorks
+        MAKE_ID: 6,
         CATEGORY_ID: 6, // Office Supplies
-        SUPPLIER_ID: 3 // Office World SupplierController
+        SUPPLIER_ID: 3
     },
     {
         ITEM_ID: 1009,
@@ -94,9 +94,9 @@ const items = [
         DIMENSIONS: "8cm x 4cm x 6cm",
         UNIT_PRICE: 18.75,
         CURRENT_STOCK: 0,
-        MAKE_ID: 2, // ElectroTech
+        MAKE_ID: 2,
         CATEGORY_ID: 1, // Electrical
-        SUPPLIER_ID: 4 // Industrial Parts Corp.
+        SUPPLIER_ID: 4
     },
     {
         ITEM_ID: 1010,
@@ -105,9 +105,9 @@ const items = [
         DIMENSIONS: "15cm x 10cm x 8cm",
         UNIT_PRICE: 32.40,
         CURRENT_STOCK: 5,
-        MAKE_ID: 2, // ElectroTech
+        MAKE_ID: 2,
         CATEGORY_ID: 1, // Electrical
-        SUPPLIER_ID: 1 // Electrical Supplies Co.
+        SUPPLIER_ID: 1
     },
     {
         ITEM_ID: 1011,
@@ -116,9 +116,9 @@ const items = [
         DIMENSIONS: "25cm x 8cm x 3cm",
         UNIT_PRICE: 28.90,
         CURRENT_STOCK: 17,
-        MAKE_ID: 1, // ToolMaster
+        MAKE_ID: 1,
         CATEGORY_ID: 3, // Tools
-        SUPPLIER_ID: 6 // General Hardware Supply
+        SUPPLIER_ID: 6
     },
     {
         ITEM_ID: 1012,
@@ -127,9 +127,9 @@ const items = [
         DIMENSIONS: "20cm x 15cm x 10cm",
         UNIT_PRICE: 79.99,
         CURRENT_STOCK: 42,
-        MAKE_ID: 3, // OfficePro
+        MAKE_ID: 3,
         CATEGORY_ID: 6, // Office Supplies
-        SUPPLIER_ID: 3 // Office World SupplierController
+        SUPPLIER_ID: 3
     },
     {
         ITEM_ID: 1013,
@@ -138,9 +138,9 @@ const items = [
         DIMENSIONS: "50cm x 30cm x 40cm",
         UNIT_PRICE: 299.00,
         CURRENT_STOCK: 3,
-        MAKE_ID: 4, // PowerTools Inc.
+        MAKE_ID: 4,
         CATEGORY_ID: 5, // Equipment
-        SUPPLIER_ID: 4 // Industrial Parts Corp.
+        SUPPLIER_ID: 4
     },
     {
         ITEM_ID: 1014,
@@ -149,9 +149,9 @@ const items = [
         DIMENSIONS: "8cm x 8cm x 3cm",
         UNIT_PRICE: 15.80,
         CURRENT_STOCK: 67,
-        MAKE_ID: 1, // ToolMaster
+        MAKE_ID: 1,
         CATEGORY_ID: 3, // Tools
-        SUPPLIER_ID: 6 // General Hardware Supply
+        SUPPLIER_ID: 6
     },
     {
         ITEM_ID: 1015,
@@ -160,9 +160,43 @@ const items = [
         DIMENSIONS: "18cm x 8cm x 6cm",
         UNIT_PRICE: 9.45,
         CURRENT_STOCK: 0,
-        MAKE_ID: 5, // SafetyFirst
+        MAKE_ID: 5,
         CATEGORY_ID: 2, // Consumables
-        SUPPLIER_ID: 5 // Safety Equipment Inc.
+        SUPPLIER_ID: 5
+    },
+    // ADDED NEW ITEMS TO MATCH DESCRIPTIONS BETTER
+    {
+        ITEM_ID: 1016,
+        BARCODE: "8806091234582",
+        NAME: "Cordless Power Drill",
+        DIMENSIONS: "25cm x 15cm x 10cm",
+        UNIT_PRICE: 189.99,
+        CURRENT_STOCK: 15,
+        MAKE_ID: 4,
+        CATEGORY_ID: 3, // Tools
+        SUPPLIER_ID: 2
+    },
+    {
+        ITEM_ID: 1017,
+        BARCODE: "8806091234583",
+        NAME: "All-in-One Printer",
+        DIMENSIONS: "45cm x 35cm x 25cm",
+        UNIT_PRICE: 299.99,
+        CURRENT_STOCK: 7,
+        MAKE_ID: 3,
+        CATEGORY_ID: 5, // Equipment
+        SUPPLIER_ID: 3
+    },
+    {
+        ITEM_ID: 1018,
+        BARCODE: "8806091234584",
+        NAME: "Ballpoint Pens Pack",
+        DIMENSIONS: "15cm x 10cm x 3cm",
+        UNIT_PRICE: 5.99,
+        CURRENT_STOCK: 200,
+        MAKE_ID: 3,
+        CATEGORY_ID: 6, // Office Supplies
+        SUPPLIER_ID: 3
     }
 ];
 

@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 interface RequestorInformationProps {
     requestorType: 'self' | 'other';
     setRequestorType: (type: 'self' | 'other') => void;
@@ -18,24 +16,13 @@ interface RequestorInformationProps {
 export default function RequestorInformation({
                                                  requestorType,
                                                  setRequestorType,
-                                                 selectedUser,
                                                  setSelectedUser,
                                                  otherRequestor,
                                                  setOtherRequestor,
-                                                 showUserDropdown,
-                                                 setShowUserDropdown,
                                                  validationErrors,
                                                  setValidationErrors,
                                                  auth,
-                                                 systemUsers
                                              }: RequestorInformationProps) {
-
-    const handleUserSelect = (user: any) => {
-        setSelectedUser(user.name);
-        setOtherRequestor('');
-        setShowUserDropdown(false);
-        setValidationErrors((prev: any) => ({ ...prev, requestor: undefined }));
-    };
 
     const handleManualInput = (value: string) => {
         setOtherRequestor(value);
@@ -107,48 +94,10 @@ export default function RequestorInformation({
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {/* User Selection Dropdown */}
+                        {/* Manual Input Only */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Select from Users
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={selectedUser}
-                                    onClick={() => setShowUserDropdown(true)}
-                                    readOnly
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-sidebar-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-sidebar-accent text-gray-900 dark:text-white cursor-pointer"
-                                    placeholder="Click to select user"
-                                />
-                                {showUserDropdown && (
-                                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-input border border-gray-300 dark:border-sidebar-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                        {systemUsers.map((user) => (
-                                            <div
-                                                key={user.id}
-                                                className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b border-gray-200 dark:border-gray-600 last:border-b-0"
-                                                onClick={() => handleUserSelect(user)}
-                                            >
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {user.name}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {user.department}
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Manual Input */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Or Enter Name Manually
+                                Requestor Name
                             </label>
                             <input
                                 type="text"

@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react'; // Add this import
+import { router } from '@inertiajs/react';
 import DeclineReasonModal from './DeclineReasonModal';
 import { StatusIcons, PriorityIcons } from './utils/icons';
 import { getStatusColor, getPriorityColor } from './utils/styleUtils';
-import { formatCurrency, formatDate, formatTime } from './utils/formatters';
+import { formatDate, formatTime } from './utils/formatters';
 
 interface RequisitionDetailModalProps {
     requisition: any;
     isOpen: boolean;
     onClose: () => void;
     onStatusUpdate: (id: number, status: string, reason?: string) => void;
-    // onEdit: (id: number) => void;
 }
 
 export default function RequisitionDetailModal({
@@ -18,7 +17,6 @@ export default function RequisitionDetailModal({
                                                    isOpen,
                                                    onClose,
                                                    onStatusUpdate,
-                                                   // onEdit
                                                }: RequisitionDetailModalProps) {
     const [showDeclineModal, setShowDeclineModal] = useState(false);
 
@@ -39,7 +37,6 @@ export default function RequisitionDetailModal({
     };
 
     const handleEdit = () => {
-        // Navigate to the edit page with the requisition ID
         router.get(`/requisitions/${requisition.ID}/edit`);
         onClose();
     };
@@ -114,14 +111,7 @@ export default function RequisitionDetailModal({
                                         {formatDate(requisition.UPDATED_AT)} at {formatTime(requisition.UPDATED_AT)}
                                     </p>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Total Amount
-                                    </label>
-                                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                        {formatCurrency(requisition.TOTAL_AMOUNT)}
-                                    </p>
-                                </div>
+                                {/* REMOVED TOTAL AMOUNT */}
                             </div>
                         </div>
 
@@ -149,7 +139,7 @@ export default function RequisitionDetailModal({
                             )}
                         </div>
 
-                        {/* Items List */}
+                        {/* Items List - UPDATED */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                 Requested Items ({requisition.ITEMS.length})
@@ -158,29 +148,33 @@ export default function RequisitionDetailModal({
                                 {requisition.ITEMS.map((item: any, index: number) => (
                                     <div
                                         key={index}
-                                        className="flex items-center justify-between p-4 border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent"
+                                        className="p-4 border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent"
                                     >
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {item.NAME}
-                                            </p>
-                                            <div className="flex gap-4 mt-1">
-                        <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
-                          {item.CATEGORY}
-                        </span>
+                                        <div className="flex flex-col space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {item.NAME}
+                                                    </p>
+                                                    {/* ADDED DESCRIPTION */}
+                                                    {item.DESCRIPTION && (
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                            {item.DESCRIPTION}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
+                                                    {item.CATEGORY}
+                                                </span>
                                                 <p className="text-xs text-gray-600 dark:text-gray-400">
                                                     Quantity: {item.QUANTITY}
                                                 </p>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    Unit Price: {formatCurrency(item.UNIT_PRICE)}
-                                                </p>
+                                                {/* REMOVED UNIT PRICE */}
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                                {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
-                                            </p>
-                                        </div>
+                                        {/* REMOVED PRICE CALCULATION */}
                                     </div>
                                 ))}
                             </div>

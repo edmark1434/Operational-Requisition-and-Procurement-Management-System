@@ -1,17 +1,13 @@
-// import { PlaceholderPattern } from "@/components/ui/placeholder-pattern";
 import AppLayout from '@/layouts/app-layout';
 import { requisitions, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
-// import { UserInfo } from '@/components/user-info';
+import { useState } from 'react';
 
 // Import your datasets
 import itemsData from "@/pages/datasets/items";
 import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
-import requisitionsData from '@/pages/datasets/requisition';
-import requisitionItemsData from "@/pages/datasets/requisition_item";
 
 // Import components
 import RequestorInformation from './RequestorInformation';
@@ -29,6 +25,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 interface RequisitionItem {
     id: string;
     category: string;
+    itemName: string;
     description: string;
     quantity: string;
     unit_price: string;
@@ -51,7 +48,16 @@ export default function RequisitionForm({ auth }: { auth: any }) {
     const [priority, setPriority] = useState('normal');
     const [notes, setNotes] = useState('');
     const [items, setItems] = useState<RequisitionItem[]>([
-        { id: '1', category: '', description: '', quantity: '', unit_price: '', total: '', isSaved: false }
+        {
+            id: '1',
+            category: '',
+            itemName: '',
+            description: '',
+            quantity: '',
+            unit_price: '',
+            total: '',
+            isSaved: false
+        }
     ]);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [showPreview, setShowPreview] = useState(false);
@@ -85,6 +91,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         const newItem = {
             id: Date.now().toString(),
             category: '',
+            itemName: '',
             description: '',
             quantity: '',
             unit_price: '',
@@ -112,25 +119,12 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
                 }
 
-                // Auto-fill unit price if an existing item is selected
-                if (field === 'description') {
-                    const matchedItem = systemItems.find(sysItem =>
-                        sysItem.name.toLowerCase() === value.toLowerCase()
-                    );
-                    if (matchedItem) {
-                        updatedItem.unit_price = matchedItem.unitPrice.toString();
-                        updatedItem.category = matchedItem.category;
-                        const quantity = parseFloat(updatedItem.quantity) || 0;
-                        updatedItem.total = (quantity * matchedItem.unitPrice).toFixed(2);
-                    }
-                }
-
                 return updatedItem;
             }
             return item;
         }));
 
-        if (field === 'description' || field === 'quantity' || field === 'category') {
+        if (field === 'description' || field === 'quantity' || field === 'category' || field === 'itemName') {
             setValidationErrors(prev => ({ ...prev, items: undefined }));
         }
     };
@@ -169,7 +163,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         });
     };
 
-    // Add the editItem function
     const editItem = (id: string) => {
         setItems(prev => prev.map(item =>
             item.id === id
@@ -241,7 +234,9 @@ export default function RequisitionForm({ auth }: { auth: any }) {
     };
 
     const handleConfirmSubmit = () => {
+        // TODO: Add submission logic when backend is ready
         // 1. Prepare the data payload for the Laravel backend
+        /*
         const submissionData = {
             requestor: previewData.requestor,
             priority: previewData.priority,
@@ -249,23 +244,23 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             // Map items to the structure the backend expects
             items: previewData.items.map((item: any) => ({
                 itemId: item.itemId,
+                itemName: item.itemName,
                 quantity: parseInt(item.quantity),
                 category: item.category,
                 description: item.description,
                 unit_price: parseFloat(item.unit_price)
             })),
+            total_amount: previewData.total_amount,
             // Pass the user ID if the requestor is 'other' or the system couldn't resolve it
             us_id: previewData.us_id
         };
 
         // 2. 🚀 Inertia POST Request to the Laravel controller
-        // This sends the data to your 'requisition.store' route
-        router.post(route('requisition.store'), submissionData, {
+        router.post('/requisitions', submissionData, {
             onSuccess: () => {
-                // This runs if the Laravel controller returns a successful redirect
+                // Show success message and redirect to requisitions page
                 alert('Requisition submitted successfully!');
-                setShowPreview(false);
-                clearForm();
+                router.visit('/requisitions');
             },
             onError: (errors) => {
                 // This runs if the Laravel controller throws validation errors or another exception
@@ -274,24 +269,12 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                 setShowPreview(false);
             }
         });
+        */
 
-        // Prepare requisition items data
-        const newRequisitionItemsData = previewData.items.map((item: any, index: number) => ({
-            REQT_ID: 7000 + index + 1, // Simple incremental IDs
-            REQ_ID: newReqId,
-            ITEM_ID: item.itemId || null, // Link to actual item if exists
-            QUANTITY: parseInt(item.quantity),
-            CATEGORY: item.category
-        }));
-
-        console.log('Requisition Data:', requisitionData);
-        console.log('Requisition Items:', newRequisitionItemsData);
-
-        // In a real application, you would send this data to your backend
-        // For now, we'll just log it and show success message
-        alert('Requisition submitted successfully!');
+        // Temporary: Just show success and redirect
+        alert('Requisition submitted successfully! (Demo mode)');
         setShowPreview(false);
-        clearForm();
+        router.visit('/requisitions');
     };
 
     const clearForm = () => {
@@ -300,11 +283,20 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         setSelectedUser('');
         setPriority('normal');
         setNotes('');
-        setItems([{ id: '1', category: '', description: '', quantity: '', unit_price: '', total: '', isSaved: false }]);
+        setItems([{
+            id: '1',
+            category: '',
+            itemName: '',
+            description: '',
+            quantity: '',
+            unit_price: '',
+            total: '',
+            isSaved: false
+        }]);
         setValidationErrors({});
     };
 
-    const hasError = (itemId: string, field: 'description' | 'quantity' | 'category') => {
+    const hasError = (itemId: string, field: 'description' | 'quantity' | 'category' | 'itemName') => {
         const item = items.find(item => item.id === itemId);
         if (!item || item.isSaved) return false;
 
@@ -312,11 +304,11 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             if (field === 'description' && !item.description.trim()) return true;
             if (field === 'quantity' && !item.quantity.trim()) return true;
             if (field === 'category' && !item.category.trim()) return true;
+            if (field === 'itemName' && !item.itemName.trim()) return true;
         }
         return false;
     };
 
-    // Auto-suggest items based on description input
     const getItemSuggestions = (description: string) => {
         if (!description.trim()) return [];
         return systemItems.filter(item =>
@@ -396,7 +388,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                             addNewItem={addNewItem}
                                             hasError={hasError}
                                             getItemSuggestions={getItemSuggestions}
-                                            editItem={editItem} // Add this prop
+                                            editItem={editItem}
                                         />
                                     </div>
 
@@ -430,7 +422,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                     onClose={() => setShowPreview(false)}
                     onConfirm={handleConfirmSubmit}
                     formData={previewData}
-
                 />
             </div>
         </AppLayout>
