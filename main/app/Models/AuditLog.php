@@ -15,10 +15,10 @@ class AuditLog extends Model
         'user_id',
     ];
     public $timestamps = false;
-    public const TYPES = ['REQUISITION_APPROVAL',
-                'REQUISITION_REJECTION',
-                'REQUISITION_CHANGE',
-                'SETTING_CHANGE',
-                'SUPPLIER_UPDATE',
-                'PERMISSION_UPDATE'];
+//    public const TYPES = ['REQUISITION_APPROVAL',
+//                'REQUISITION_REJECTION',
+//                'REQUISITION_CHANGE',
+//                'SETTING_CHANGE',
+//                'SUPPLIER_UPDATE',
+//                'PERMISSION_UPDATE'];
 }
