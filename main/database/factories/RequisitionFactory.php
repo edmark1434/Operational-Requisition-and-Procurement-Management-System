@@ -25,7 +25,6 @@ class RequisitionFactory extends Factory
             'requestor' => $this->faker->name(),
             'notes' => $this->faker->text(200),
             'priority' => $this->faker->randomElement(['LOW', 'NORMAL', 'HIGH', 'URGENT']),
-            'description' => $this->faker->text(255),
             'created_at' => now(),
             'updated_at' => now(),
         ];
