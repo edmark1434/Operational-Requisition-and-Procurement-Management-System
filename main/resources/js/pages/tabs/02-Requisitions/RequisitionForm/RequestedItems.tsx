@@ -6,7 +6,6 @@ interface RequisitionItem {
     id: string;
     category: string;
     itemName: string;
-    description: string;
     quantity: string;
     unit_price: string;
     total: string;
@@ -26,8 +25,8 @@ interface RequestedItemsProps {
     saveItem: (id: string) => void;
     removeItem: (id: string) => void;
     addNewItem: () => void;
-    hasError: (itemId: string, field: 'description' | 'quantity' | 'category' | 'itemName') => boolean;
-    getItemSuggestions: (description: string) => any[];
+    hasError: (itemId: string, field: 'quantity' | 'category' | 'itemName') => boolean;
+    getItemSuggestions: (itemName: string) => any[];
     editItem: (id: string) => void;
 }
 
@@ -40,7 +39,6 @@ export default function RequestedItems({
                                            removeItem,
                                            addNewItem,
                                            hasError,
-                                           getItemSuggestions,
                                            editItem
                                        }: RequestedItemsProps) {
 
@@ -66,7 +64,7 @@ export default function RequestedItems({
         });
     };
 
-    // Handle item name selection - ONLY update itemName and unit_price, NOT description
+    // Handle item name selection - ONLY update itemName and unit_price, DO NOT recalculate total
     const handleItemNameChange = (itemId: string, selectedItemName: string, categoryName: string) => {
         if (!selectedItemName) {
             // Clear itemName and unit_price if empty
@@ -81,17 +79,30 @@ export default function RequestedItems({
         const selectedItem = filteredItems.find(item => item.NAME === selectedItemName);
 
         if (selectedItem) {
-            // Only update itemName and unit_price, leave description completely unchanged
+            // Only update itemName and unit_price, do NOT recalculate total
             updateItem(itemId, 'itemName', selectedItemName);
             updateItem(itemId, 'unit_price', selectedItem.UNIT_PRICE.toString());
+            // Total will be calculated only when quantity is manually inputted
+        }
+    };
 
-            // Recalculate total based on current quantity
-            const currentItem = requisitionItems.find(item => item.id === itemId);
-            if (currentItem) {
-                const quantity = parseFloat(currentItem.quantity) || 0;
-                const total = (quantity * selectedItem.UNIT_PRICE).toFixed(2);
-                updateItem(itemId, 'total', total);
-            }
+    // Handle quantity change - recalculate total when quantity is manually changed
+    const handleQuantityChange = (itemId: string, quantityValue: string) => {
+        const item = requisitionItems.find(item => item.id === itemId);
+        if (!item) return;
+
+        // Update quantity
+        updateItem(itemId, 'quantity', quantityValue);
+
+        // Only calculate total if we have both quantity and unit price
+        if (quantityValue && item.unit_price) {
+            const quantity = parseFloat(quantityValue) || 0;
+            const unitPrice = parseFloat(item.unit_price) || 0;
+            const total = (quantity * unitPrice).toFixed(2);
+            updateItem(itemId, 'total', total);
+        } else {
+            // Clear total if no quantity or unit price
+            updateItem(itemId, 'total', '');
         }
     };
 
@@ -122,8 +133,6 @@ export default function RequestedItems({
                 {/* Items container with dynamic height */}
                 <div className={`space-y-3 overflow-y-auto pr-2 ${requisitionItems.length > 2 ? 'max-h-96' : ''}`}>
                     {requisitionItems.map((item, index) => {
-                        const suggestions = getItemSuggestions(item.description);
-                        const showSuggestions = suggestions.length > 0 && !item.isSaved && item.description.trim().length > 2;
                         const filteredItems = getFilteredItems(item.category);
 
                         return (
@@ -243,53 +252,12 @@ export default function RequestedItems({
                                         </select>
                                     </div>
 
-                                    {/* Description Input - Completely separate from Item Name */}
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={item.description}
-                                            onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                                            className={`w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                                item.isSaved
-                                                    ? 'bg-white dark:bg-gray-700 border-green-300 dark:border-green-600 text-gray-900 dark:text-white'
-                                                    : hasError(item.id, 'description')
-                                                        ? 'border-red-500 dark:border-red-500 bg-white dark:bg-gray-600 text-gray-900 dark:text-white'
-                                                        : 'bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white'
-                                            }`}
-                                            placeholder="Enter item description"
-                                            required
-                                            disabled={item.isSaved}
-                                        />
-                                        {showSuggestions && (
-                                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-sidebar-border rounded-lg shadow-lg">
-                                                {suggestions.map(suggestion => (
-                                                    <div
-                                                        key={suggestion.id}
-                                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b border-gray-200 dark:border-sidebar-border last:border-b-0"
-                                                        onClick={() => {
-                                                            // Only update description and category, NOT itemName
-                                                            updateItem(item.id, 'description', suggestion.name);
-                                                            updateItem(item.id, 'category', suggestion.category);
-                                                        }}
-                                                    >
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {suggestion.name}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{suggestion.category}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
                                     {/* Quantity Input */}
                                     <div>
                                         <input
                                             type="number"
                                             value={item.quantity}
-                                            onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
+                                            onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                                             min="1"
                                             className={`w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                                                 item.isSaved
@@ -298,7 +266,7 @@ export default function RequestedItems({
                                                         ? 'border-red-500 dark:border-red-500 bg-white dark:bg-gray-600 text-gray-900 dark:text-white'
                                                         : 'bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white'
                                             }`}
-                                            placeholder="Quantity"
+                                            placeholder="Enter quantity"
                                             required
                                             disabled={item.isSaved}
                                         />
