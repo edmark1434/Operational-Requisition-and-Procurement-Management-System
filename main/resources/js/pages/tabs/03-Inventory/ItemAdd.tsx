@@ -162,7 +162,7 @@ export default function ItemAdd({ auth }: { auth: any }) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold">Add New Item</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Add New Item</h1>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             Add a new item to your inventory
                         </p>
@@ -175,8 +175,8 @@ export default function ItemAdd({ auth }: { auth: any }) {
                     </Link>
                 </div>
 
-                {/* Form Container */}
-                <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:bg-sidebar">
+                {/* Form Container - Updated to match requisition form */}
+                <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-white dark:bg-[oklch(0.145_0_0)]">
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-4xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
@@ -191,14 +191,14 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6">
-                                    <div className="space-y-6">
+                                    <div className="space-y-8">
                                         {/* Basic Information */}
-                                        <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                        <div className="space-y-6">
+                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
                                                 Basic Information
                                             </h3>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         Item Name <span className="text-red-500">*</span>
@@ -233,7 +233,7 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         Category <span className="text-red-500">*</span>
@@ -279,7 +279,7 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         Current Stock <span className="text-red-500">*</span>
@@ -321,8 +321,8 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                         </div>
 
                                         {/* Supplier Information */}
-                                        <div className="border-t border-sidebar-border pt-6">
-                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                        <div className="space-y-6">
+                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
                                                 Supplier Information
                                             </h3>
                                             <div className="space-y-4">
@@ -352,7 +352,7 @@ export default function ItemAdd({ auth }: { auth: any }) {
 
                                                 {/* Display selected supplier info */}
                                                 {formData.SUPPLIER_ID && (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                                 Email
