@@ -22,8 +22,19 @@ class UserFactory extends Factory
      * @return array<string, mixed>
      */
     protected $model = User::class;
+
     public function definition(): array
     {
+        static $userCount = 0;
+        $userCount++;
+        if ($userCount === 1) {
+            return [
+                'fullname' => 'Admin User',
+                'username' => 'admin',
+                'password' => Hash::make('admin123'),
+                'remember_token' => Str::random(10),
+            ];
+        }
         return [
             'fullname' => $this->faker->firstName(),
             'username' => $this->faker->unique()->userName(),
