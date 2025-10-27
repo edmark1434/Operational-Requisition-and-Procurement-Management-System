@@ -61,14 +61,6 @@ export default function RequisitionPreviewModal({
                                 </label>
                                 <p className="text-sm text-gray-900 dark:text-white">{formData?.items?.length || 0}</p>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Total Amount
-                                </label>
-                                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                    ${formData?.total_amount?.toLocaleString() || '0'}
-                                </p>
-                            </div>
                         </div>
                     </div>
 
@@ -93,37 +85,53 @@ export default function RequisitionPreviewModal({
                             {formData?.items?.map((item: any, index: number) => (
                                 <div
                                     key={item.id}
-                                    className="flex items-center justify-between p-4 border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent"
+                                    className="p-4 border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent"
                                 >
-                                    <div className="flex-1">
-                                        <div className="flex items-start gap-3">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex items-start gap-3 flex-1">
                                             <span className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
                                                 {(formData?.items?.length || 0) - index}
                                             </span>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {item.description}
-                                                </p>
-                                                <div className="flex gap-4 mt-1">
+                                            <div className="flex-1">
+                                                {/* Item Name - show if available */}
+                                                {item.itemName && (
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {item.itemName}
+                                                    </p>
+                                                )}
+
+                                                {/* Description - show if it exists and is different from item name */}
+                                                {item.description && item.description !== item.itemName && (
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                        {item.description}
+                                                    </p>
+                                                )}
+
+                                                {/* Fallback if no itemName */}
+                                                {!item.itemName && item.description && (
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {item.description}
+                                                    </p>
+                                                )}
+
+                                                {/* Category */}
+                                                <div className="flex gap-4 mt-2">
                                                     <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
                                                         {item.category}
                                                     </span>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        Quantity: {item.quantity}
-                                                    </p>
-                                                    {item.unit_price && (
-                                                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                            Unit Price: ${parseFloat(item.unit_price).toLocaleString()}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                            ${(parseFloat(item.total) || 0).toLocaleString()}
-                                        </p>
+
+                                        {/* Quantity moved to the right side */}
+                                        <div className="text-right min-w-20">
+                                            <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                {item.quantity}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Qty
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
