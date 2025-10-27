@@ -15,16 +15,12 @@ export const transformRequisitionData = () => {
             const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
             return {
                 NAME: itemDetails?.NAME || 'Unknown Item',
+                DESCRIPTION: reqItem.DESCRIPTION || '', // Use DESCRIPTION from requisitionItemsData
                 QUANTITY: reqItem.QUANTITY,
-                UNIT_PRICE: itemDetails?.UNIT_PRICE || 0,
                 CATEGORY: category?.NAME || reqItem.CATEGORY,
                 CATEGORY_ID: category?.CAT_ID
             };
         });
-
-        const totalAmount = itemsWithDetails.reduce((sum, item) =>
-            sum + (item.QUANTITY * item.UNIT_PRICE), 0
-        );
 
         // Get all unique categories from items
         const categories = [...new Set(itemsWithDetails.map(item => item.CATEGORY))];
@@ -41,7 +37,7 @@ export const transformRequisitionData = () => {
             NOTES: requisition.NOTES,
             ITEMS: itemsWithDetails,
             CATEGORIES: categories,
-            TOTAL_AMOUNT: totalAmount
+            // REMOVED TOTAL_AMOUNT
         };
     });
 };
