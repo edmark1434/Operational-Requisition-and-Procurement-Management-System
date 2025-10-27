@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { requisitionform } from '@/routes';
 import { StatusIcons, PriorityIcons } from './utils/icons';
 import { getStatusColor, getPriorityColor } from './utils/styleUtils';
-import { formatCurrency, formatDate } from './utils/formatters';
+import { formatDate } from './utils/formatters';
 
 interface RequisitionsListProps {
     requisitions: any[];
@@ -66,9 +66,9 @@ function RequisitionListItem({ requisition, onClick }: { requisition: any; onCli
                 {/* Left Section - ID and Basic Info */}
                 <div className="flex items-center space-x-4 min-w-0 flex-1">
                     <div className="flex-shrink-0">
-            <span className="text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
-              #{requisition.ID}
-            </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
+                            #{requisition.ID}
+                        </span>
                     </div>
                     <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -80,13 +80,13 @@ function RequisitionListItem({ requisition, onClick }: { requisition: any; onCli
                         <div className="flex gap-2 mt-1">
                             {requisition.CATEGORIES.slice(0, 2).map((category: string, index: number) => (
                                 <span key={index} className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border">
-                  {category}
-                </span>
+                                    {category}
+                                </span>
                             ))}
                             {requisition.CATEGORIES.length > 2 && (
                                 <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border">
-                  +{requisition.CATEGORIES.length - 2} more
-                </span>
+                                    +{requisition.CATEGORIES.length - 2} more
+                                </span>
                             )}
                         </div>
                     </div>
@@ -104,12 +104,10 @@ function RequisitionListItem({ requisition, onClick }: { requisition: any; onCli
                     </div>
                 </div>
 
-                {/* Right Section - Amount and Date */}
+                {/* Right Section - Date Only (REMOVED AMOUNT) */}
                 <div className="flex items-center space-x-4 justify-between sm:justify-end min-w-0">
                     <div className="text-right min-w-0">
-                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate">
-                            {formatCurrency(requisition.TOTAL_AMOUNT)}
-                        </p>
+                        {/* REMOVED AMOUNT - Keep only date */}
                         <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
                             {formatDate(requisition.CREATED_AT)}
                         </p>
