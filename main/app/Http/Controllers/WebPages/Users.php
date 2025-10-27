@@ -10,6 +10,14 @@ class Users extends Controller
     protected $base_path = "tabs/08-Users";
     public function index()
     {
-        return Inertia::render($this->base_path .'/users');
+        return Inertia::render($this->base_path .'/Users');
+    }
+    public function store(){
+        return Inertia::render($this->base_path .'/UserAdd');
+    }
+    public function edit($id){
+        return Inertia::render($this->base_path .'/UserEdit', [
+            'userId' => (int)$id
+        ]);
     }
 }
