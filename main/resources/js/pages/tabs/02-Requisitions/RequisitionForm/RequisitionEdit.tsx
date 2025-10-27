@@ -26,6 +26,7 @@ interface RequisitionEditProps {
 interface RequisitionItem {
     id: string;
     category: string;
+    itemName: string;
     description: string;
     quantity: string;
     unit_price: string;
@@ -147,7 +148,8 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                     return {
                         id: `existing_${reqItem.REQT_ID}`,
                         category: reqItem.CATEGORY || category?.NAME || '',
-                        description: itemDetails?.NAME || 'Unknown Item',
+                        itemName: itemDetails?.NAME || '',
+                        description: reqItem.DESCRIPTION || '', // ✅ CORRECT - using DESCRIPTION from requisitionItemsData
                         quantity: reqItem.QUANTITY.toString(),
                         unit_price: itemDetails?.UNIT_PRICE?.toString() || '0',
                         total: ((itemDetails?.UNIT_PRICE || 0) * reqItem.QUANTITY).toFixed(2),
@@ -167,11 +169,11 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         }
     };
 
-    // Reuse all the existing functions from your RequisitionForm
     const addNewItem = () => {
         const newItem = {
             id: Date.now().toString(),
             category: '',
+            itemName: '',
             description: '',
             quantity: '',
             unit_price: '',
@@ -199,25 +201,12 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
                 }
 
-                // Auto-fill unit price if an existing item is selected
-                if (field === 'description') {
-                    const matchedItem = systemItems.find(sysItem =>
-                        sysItem.name.toLowerCase() === value.toLowerCase()
-                    );
-                    if (matchedItem) {
-                        updatedItem.unit_price = matchedItem.unitPrice.toString();
-                        updatedItem.category = matchedItem.category;
-                        const quantity = parseFloat(updatedItem.quantity) || 0;
-                        updatedItem.total = (quantity * matchedItem.unitPrice).toFixed(2);
-                    }
-                }
-
                 return updatedItem;
             }
             return item;
         }));
 
-        if (field === 'description' || field === 'quantity' || field === 'category') {
+        if (field === 'description' || field === 'quantity' || field === 'category' || field === 'itemName') {
             setValidationErrors(prev => ({ ...prev, items: undefined }));
         }
     };
@@ -328,6 +317,8 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
     };
 
     const handleConfirmSubmit = () => {
+        // TODO: Add update logic when backend is ready
+        /*
         // Prepare updated requisition data
         const updatedRequisitionData = {
             REQ_ID: requisitionId,
@@ -356,11 +347,27 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         console.log('Updated Requisition Items:', updatedRequisitionItems);
 
         // In a real application, you would send PATCH request to your backend
-        alert('Requisition updated successfully!');
-        setShowPreview(false);
+        router.patch(`/requisitions/${requisitionId}`, {
+            requisition: updatedRequisitionData,
+            items: updatedRequisitionItems
+        }, {
+            onSuccess: () => {
+                alert('Requisition updated successfully!');
+                setShowPreview(false);
+                router.visit('/requisitions');
+            },
+            onError: (errors) => {
+                console.error('Update failed:', errors);
+                alert('Requisition update failed. Check console for details.');
+                setShowPreview(false);
+            }
+        });
+        */
 
-        // Redirect back to requisitions list
-        router.visit(requisitions().url);
+        // Temporary: Just show success and redirect
+        alert('Requisition updated successfully! (Demo mode)');
+        setShowPreview(false);
+        router.visit('/requisitions');
     };
 
     const handleCancel = () => {
@@ -369,7 +376,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         }
     };
 
-    const hasError = (itemId: string, field: 'description' | 'quantity' | 'category') => {
+    const hasError = (itemId: string, field: 'description' | 'quantity' | 'category' | 'itemName') => {
         const item = items.find(item => item.id === itemId);
         if (!item || item.isSaved) return false;
 
@@ -377,6 +384,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
             if (field === 'description' && !item.description.trim()) return true;
             if (field === 'quantity' && !item.quantity.trim()) return true;
             if (field === 'category' && !item.category.trim()) return true;
+            if (field === 'itemName' && !item.itemName.trim()) return true;
         }
         return false;
     };
