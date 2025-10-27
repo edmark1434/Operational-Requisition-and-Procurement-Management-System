@@ -38,6 +38,8 @@ Follow these steps to set up the project locally.
 > - composer install
 > - composer require inertiajs/inertia-laravel
 > - php artisan inertia:middleware
+> - Add .env file. Premade .env is currently named .env.example
+> - php artisan key:generate - To generate a key
 
 #### 3. Frontend Setup (React + Inertia)
 > - npm install
