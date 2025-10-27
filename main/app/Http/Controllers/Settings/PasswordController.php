@@ -37,6 +37,6 @@ class PasswordController extends Controller
         DB::statement('CALL update_user(?,?,?,?)',[$id,null,null,Hash::make($validated['password'])]);
         
         Auth::setUser($request->user()->fresh());
-        return back()->with('success', 'Password updated successfully!');;
+        return redirect()->back()->with('success', 'Password updated successfully!');;
     }
 }
