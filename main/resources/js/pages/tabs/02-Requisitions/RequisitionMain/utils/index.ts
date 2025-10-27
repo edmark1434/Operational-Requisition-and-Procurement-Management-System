@@ -15,7 +15,6 @@ export const transformRequisitionData = () => {
             const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
             return {
                 NAME: itemDetails?.NAME || 'Unknown Item',
-                DESCRIPTION: reqItem.DESCRIPTION || '', // Use DESCRIPTION from requisitionItemsData
                 QUANTITY: reqItem.QUANTITY,
                 CATEGORY: category?.NAME || reqItem.CATEGORY,
                 CATEGORY_ID: category?.CAT_ID
