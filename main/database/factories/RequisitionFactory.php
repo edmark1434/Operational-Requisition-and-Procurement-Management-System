@@ -24,6 +24,8 @@ class RequisitionFactory extends Factory
             'user_id' => User::factory(), // Creates a related user if not existing
             'requestor' => $this->faker->name(),
             'notes' => $this->faker->paragraph(),
+            'priority' => $this->faker->randomElement(['LOW', 'NORMAL', 'HIGH', 'URGENT']),
+            'description' => $this->faker->text(200),
             'created_at' => now(),
             'updated_at' => now(),
         ];

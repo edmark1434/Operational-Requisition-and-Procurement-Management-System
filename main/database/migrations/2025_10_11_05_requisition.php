@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('remarks')->nullable();
             $table->string('requestor')->nullable();
             $table->string('notes')->nullable();
+            $table->string('priority', 15)->default('NORMAL');
+            $table->text('description')->nullable();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
         });
 
