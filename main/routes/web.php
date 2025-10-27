@@ -49,6 +49,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
     Route::get('users',[Users::class,'index'])->name('users');
+    Route::get('users/add',[Users::class,"store"])->name('useradd');
+    Route::get('users/{id}/edit',[Users::class,"edit"])->name('useredit');
 
     Route::get('roles',[Roles::class,'index'])->name('roles');
 
