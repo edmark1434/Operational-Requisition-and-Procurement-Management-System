@@ -7,6 +7,8 @@ import { LoaderCircle, Search, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import UserModal from './components/user-modal';
+import DeleteConfirmationModal from './components/delete-confirmation-modal';
 
 interface User {
     id: number;
@@ -79,20 +81,8 @@ export default function Users() {
     const [roleFilter, setRoleFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [isLoading, setIsLoading] = useState(true);
-    const [showAddUser, setShowAddUser] = useState(false);
-    const [showEditUser, setShowEditUser] = useState(false);
+    const [modalState, setModalState] = useState<'add' | 'edit' | 'delete' | null>(null);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    // Form state
-    const [formData, setFormData] = useState({
-        fullname: '',
-        username: '',
-        role: '',
-        password: '',
-        password_confirmation: '',
-    });
-    const [errors, setErrors] = useState<{[key: string]: string}>({});
 
     // Load users on component mount
     useEffect(() => {
@@ -127,122 +117,62 @@ export default function Users() {
         setSearchTerm(term);
     };
 
-    const validateForm = () => {
-        const newErrors: {[key: string]: string} = {};
+    const handleAddUser = (userData: Omit<User, 'id' | 'created_at' | 'updated_at'>) => {
+        const newUser: User = {
+            id: Math.max(...users.map(u => u.id), 0) + 1,
+            ...userData,
+            created_at: new Date().toISOString().split('T')[0],
+            updated_at: new Date().toISOString().split('T')[0],
+        };
 
-        if (!formData.fullname.trim()) {
-            newErrors.fullname = 'Full name is required';
-        }
-
-        if (!formData.username.trim()) {
-            newErrors.username = 'Username is required';
-        }
-
-        if (!formData.role) {
-            newErrors.role = 'Role is required';
-        }
-
-        if (showAddUser && !formData.password) {
-            newErrors.password = 'Password is required';
-        }
-
-        if (showAddUser && formData.password !== formData.password_confirmation) {
-            newErrors.password_confirmation = 'Passwords do not match';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        setUsers(prev => [...prev, newUser]);
+        setModalState(null);
     };
 
-    const handleAddUser = () => {
-        if (validateForm()) {
-            // In real application, send POST request to backend
-            const newUser: User = {
-                id: Math.max(...users.map(u => u.id), 0) + 1,
-                fullname: formData.fullname,
-                username: formData.username,
-                role: formData.role,
-                role_description: mockRoles.find(r => r.name === formData.role)?.description || '',
-                created_at: new Date().toISOString().split('T')[0],
-                updated_at: new Date().toISOString().split('T')[0],
-                status: 'active'
-            };
+    const handleEditUser = (userData: Omit<User, 'id' | 'created_at' | 'updated_at'>) => {
+        if (!selectedUser) return;
 
-            setUsers(prev => [...prev, newUser]);
-            setShowAddUser(false);
-            resetForm();
-            alert('User added successfully!');
-        }
-    };
+        const updatedUsers = users.map(user =>
+            user.id === selectedUser.id
+                ? {
+                    ...user,
+                    ...userData,
+                    updated_at: new Date().toISOString().split('T')[0],
+                }
+                : user
+        );
 
-    const handleEditUser = () => {
-        if (validateForm() && selectedUser) {
-            // In real application, send PUT request to backend
-            const updatedUsers = users.map(user =>
-                user.id === selectedUser.id
-                    ? {
-                        ...user,
-                        fullname: formData.fullname,
-                        username: formData.username,
-                        role: formData.role,
-                        role_description: mockRoles.find(r => r.name === formData.role)?.description || '',
-                        updated_at: new Date().toISOString().split('T')[0],
-                    }
-                    : user
-            );
-
-            setUsers(updatedUsers);
-            setShowEditUser(false);
-            setSelectedUser(null);
-            resetForm();
-            alert('User updated successfully!');
-        }
-    };
-
-    const handleDeleteUser = (userId: number) => {
-        // In real application, send DELETE request to backend
-        setUsers(prev => prev.filter(user => user.id !== userId));
-        setShowDeleteConfirm(false);
+        setUsers(updatedUsers);
+        setModalState(null);
         setSelectedUser(null);
-        alert('User deleted successfully!');
     };
 
-    const resetForm = () => {
-        setFormData({
-            fullname: '',
-            username: '',
-            role: '',
-            password: '',
-            password_confirmation: '',
-        });
-        setErrors({});
+    const handleDeleteUser = () => {
+        if (!selectedUser) return;
+
+        setUsers(prev => prev.filter(user => user.id !== selectedUser.id));
+        setModalState(null);
+        setSelectedUser(null);
     };
 
     const openAddUser = () => {
-        setShowAddUser(true);
-        setShowEditUser(false);
+        setModalState('add');
         setSelectedUser(null);
-        resetForm();
     };
 
     const openEditUser = (user: User) => {
-        setShowEditUser(true);
-        setShowAddUser(false);
+        setModalState('edit');
         setSelectedUser(user);
-        setFormData({
-            fullname: user.fullname,
-            username: user.username,
-            role: user.role,
-            password: '',
-            password_confirmation: '',
-        });
+    };
+
+    const openDeleteUser = (user: User) => {
+        setModalState('delete');
+        setSelectedUser(user);
     };
 
     const closeModals = () => {
-        setShowAddUser(false);
-        setShowEditUser(false);
+        setModalState(null);
         setSelectedUser(null);
-        resetForm();
     };
 
     const getStatusColor = (status: string) => {
@@ -280,6 +210,9 @@ export default function Users() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Manage system users and their permissions
+                        </p>
                     </div>
                     <Button
                         onClick={openAddUser}
@@ -440,10 +373,7 @@ export default function Users() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => {
-                                                            setSelectedUser(user);
-                                                            setShowDeleteConfirm(true);
-                                                        }}
+                                                        onClick={() => openDeleteUser(user)}
                                                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -460,171 +390,24 @@ export default function Users() {
                 </div>
             </div>
 
-            {/* Add User Modal */}
-            {(showAddUser || showEditUser) && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
-                        <div className="p-6 border-b border-sidebar-border">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                {showAddUser ? 'Add New User' : 'Edit User'}
-                            </h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {showAddUser
-                                    ? 'Create a new user account'
-                                    : `Edit ${selectedUser?.fullname}'s details`
-                                }
-                            </p>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            {/* Full Name */}
-                            <div>
-                                <Label htmlFor="fullname" className="text-sm font-medium mb-2 block">
-                                    Full Name *
-                                </Label>
-                                <Input
-                                    id="fullname"
-                                    type="text"
-                                    required
-                                    value={formData.fullname}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, fullname: e.target.value }))}
-                                    className={errors.fullname ? 'border-red-500' : ''}
-                                />
-                                {errors.fullname && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.fullname}</p>
-                                )}
-                            </div>
-
-                            {/* Username */}
-                            <div>
-                                <Label htmlFor="username" className="text-sm font-medium mb-2 block">
-                                    Username *
-                                </Label>
-                                <Input
-                                    id="username"
-                                    type="text"
-                                    required
-                                    value={formData.username}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                                    className={errors.username ? 'border-red-500' : ''}
-                                />
-                                {errors.username && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.username}</p>
-                                )}
-                            </div>
-
-                            {/* Role */}
-                            <div>
-                                <Label htmlFor="role" className="text-sm font-medium mb-2 block">
-                                    Role *
-                                </Label>
-                                <select
-                                    id="role"
-                                    required
-                                    value={formData.role}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                        errors.role ? 'border-red-500' : 'border-sidebar-border'
-                                    }`}
-                                >
-                                    <option value="">Select a role</option>
-                                    {mockRoles.map(role => (
-                                        <option key={role.id} value={role.name}>
-                                            {role.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errors.role && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.role}</p>
-                                )}
-                            </div>
-
-                            {/* Password (only for new users) */}
-                            {showAddUser && (
-                                <>
-                                    <div>
-                                        <Label htmlFor="password" className="text-sm font-medium mb-2 block">
-                                            Password *
-                                        </Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            required
-                                            value={formData.password}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                                            className={errors.password ? 'border-red-500' : ''}
-                                        />
-                                        {errors.password && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="password_confirmation" className="text-sm font-medium mb-2 block">
-                                            Confirm Password *
-                                        </Label>
-                                        <Input
-                                            id="password_confirmation"
-                                            type="password"
-                                            required
-                                            value={formData.password_confirmation}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, password_confirmation: e.target.value }))}
-                                            className={errors.password_confirmation ? 'border-red-500' : ''}
-                                        />
-                                        {errors.password_confirmation && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.password_confirmation}</p>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        <div className="p-6 border-t border-sidebar-border flex justify-end gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={closeModals}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={showAddUser ? handleAddUser : handleEditUser}
-                                className="bg-blue-600 hover:bg-blue-700"
-                            >
-                                {showAddUser ? 'Add User' : 'Save Changes'}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+            {/* User Modal */}
+            {(modalState === 'add' || modalState === 'edit') && (
+                <UserModal
+                    mode={modalState}
+                    user={selectedUser}
+                    roles={mockRoles}
+                    onSave={modalState === 'add' ? handleAddUser : handleEditUser}
+                    onClose={closeModals}
+                />
             )}
 
             {/* Delete Confirmation Modal */}
-            {showDeleteConfirm && selectedUser && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
-                        <div className="p-6 border-b border-sidebar-border">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Delete User
-                            </h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Are you sure you want to delete "{selectedUser.fullname}"? This action cannot be undone.
-                            </p>
-                        </div>
-                        <div className="p-6 flex justify-end gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowDeleteConfirm(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={() => handleDeleteUser(selectedUser.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                            >
-                                Delete User
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+            {modalState === 'delete' && selectedUser && (
+                <DeleteConfirmationModal
+                    user={selectedUser}
+                    onConfirm={handleDeleteUser}
+                    onClose={closeModals}
+                />
             )}
         </AppLayout>
     );
