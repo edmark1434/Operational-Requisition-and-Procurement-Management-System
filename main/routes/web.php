@@ -8,6 +8,7 @@ use App\Http\Controllers\WebPages\Inventory;
 use App\Http\Controllers\WebPages\Purchasing;
 use App\Http\Controllers\WebPages\Returns;
 use App\Http\Controllers\WebPages\Users;
+use App\Http\Controllers\WebPages\Roles;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -48,6 +49,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
     Route::get('users',[Users::class,'index'])->name('users');
+
+    Route::get('roles',[Roles::class,'index'])->name('roles');
 
 });
 
