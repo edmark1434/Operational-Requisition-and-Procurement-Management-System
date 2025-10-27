@@ -1,4 +1,4 @@
-// RequisitionEdit.tsx - Updated version
+// RequisitionEdit.tsx - Updated version (without description field)
 import AppLayout from '@/layouts/app-layout';
 import { requisitions } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -27,7 +27,6 @@ interface RequisitionItem {
     id: string;
     category: string;
     itemName: string;
-    description: string;
     quantity: string;
     unit_price: string;
     total: string;
@@ -149,7 +148,6 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                         id: `existing_${reqItem.REQT_ID}`,
                         category: reqItem.CATEGORY || category?.NAME || '',
                         itemName: itemDetails?.NAME || '',
-                        description: reqItem.DESCRIPTION || '', // ✅ CORRECT - using DESCRIPTION from requisitionItemsData
                         quantity: reqItem.QUANTITY.toString(),
                         unit_price: itemDetails?.UNIT_PRICE?.toString() || '0',
                         total: ((itemDetails?.UNIT_PRICE || 0) * reqItem.QUANTITY).toFixed(2),
@@ -174,7 +172,6 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
             id: Date.now().toString(),
             category: '',
             itemName: '',
-            description: '',
             quantity: '',
             unit_price: '',
             total: '',
@@ -195,9 +192,15 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
             if (item.id === id) {
                 const updatedItem = { ...item, [field]: value, isSaved: false };
 
-                if (field === 'quantity' || field === 'unit_price') {
-                    const quantity = field === 'quantity' ? parseFloat(value) || 0 : parseFloat(item.quantity) || 0;
-                    const unitPrice = field === 'unit_price' ? parseFloat(value) || 0 : parseFloat(item.unit_price) || 0;
+                // Only calculate total when quantity OR unit_price is manually changed
+                // Not when itemName is selected
+                if (field === 'quantity' && item.unit_price) {
+                    const quantity = parseFloat(value) || 0;
+                    const unitPrice = parseFloat(item.unit_price) || 0;
+                    updatedItem.total = (quantity * unitPrice).toFixed(2);
+                } else if (field === 'unit_price' && item.quantity) {
+                    const quantity = parseFloat(item.quantity) || 0;
+                    const unitPrice = parseFloat(value) || 0;
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
                 }
 
@@ -206,7 +209,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
             return item;
         }));
 
-        if (field === 'description' || field === 'quantity' || field === 'category' || field === 'itemName') {
+        if (field === 'quantity' || field === 'category' || field === 'itemName') {
             setValidationErrors(prev => ({ ...prev, items: undefined }));
         }
     };
@@ -216,14 +219,14 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         if (!itemToSave) return;
 
         // Validate required fields
-        if (!itemToSave.description.trim() || !itemToSave.quantity.trim() || !itemToSave.category.trim()) {
-            alert('Please fill in category, description and quantity before saving the item.');
+        if (!itemToSave.itemName.trim() || !itemToSave.quantity.trim() || !itemToSave.category.trim()) {
+            alert('Please fill in category, item name and quantity before saving the item.');
             return;
         }
 
         // Link to actual item if it exists in the system
         const matchedSystemItem = systemItems.find(sysItem =>
-            sysItem.name.toLowerCase() === itemToSave.description.toLowerCase()
+            sysItem.name.toLowerCase() === itemToSave.itemName.toLowerCase()
         );
 
         setItems(prev => {
@@ -276,10 +279,10 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         }
 
         const invalidItems = items.filter(item =>
-            !item.isSaved && (!item.description.trim() || !item.quantity.trim() || !item.category.trim())
+            !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
         );
         if (invalidItems.length > 0) {
-            errors.items = 'All items must have category, description and quantity filled out before saving';
+            errors.items = 'All items must have category, item name and quantity filled out before saving';
         }
 
         setValidationErrors(errors);
@@ -318,53 +321,6 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
 
     const handleConfirmSubmit = () => {
         // TODO: Add update logic when backend is ready
-        /*
-        // Prepare updated requisition data
-        const updatedRequisitionData = {
-            REQ_ID: requisitionId,
-            DATE_REQUESTED: originalRequisition.DATE_REQUESTED,
-            DATE_UPDATED: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            STATUS: originalRequisition.STATUS, // Keep original status
-            NOTES: previewData.notes,
-            PRIORITY: previewData.priority.charAt(0).toUpperCase() + previewData.priority.slice(1),
-            US_ID: previewData.us_id || auth.user.id,
-            REQUESTOR: previewData.requestor,
-            REASON: originalRequisition.REASON
-        };
-
-        // Prepare updated requisition items data
-        const updatedRequisitionItems = previewData.items.map((item: any, index: number) => ({
-            REQT_ID: item.id.startsWith('existing_')
-                ? parseInt(item.id.replace('existing_', ''))
-                : 7000 + index + 1,
-            REQ_ID: requisitionId,
-            ITEM_ID: item.itemId || null,
-            QUANTITY: parseInt(item.quantity),
-            CATEGORY: item.category
-        }));
-
-        console.log('Updated Requisition Data:', updatedRequisitionData);
-        console.log('Updated Requisition Items:', updatedRequisitionItems);
-
-        // In a real application, you would send PATCH request to your backend
-        router.patch(`/requisitions/${requisitionId}`, {
-            requisition: updatedRequisitionData,
-            items: updatedRequisitionItems
-        }, {
-            onSuccess: () => {
-                alert('Requisition updated successfully!');
-                setShowPreview(false);
-                router.visit('/requisitions');
-            },
-            onError: (errors) => {
-                console.error('Update failed:', errors);
-                alert('Requisition update failed. Check console for details.');
-                setShowPreview(false);
-            }
-        });
-        */
-
-        // Temporary: Just show success and redirect
         alert('Requisition updated successfully! (Demo mode)');
         setShowPreview(false);
         router.visit('/requisitions');
@@ -376,12 +332,11 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         }
     };
 
-    const hasError = (itemId: string, field: 'description' | 'quantity' | 'category' | 'itemName') => {
+    const hasError = (itemId: string, field: 'quantity' | 'category' | 'itemName') => {
         const item = items.find(item => item.id === itemId);
         if (!item || item.isSaved) return false;
 
         if (validationErrors.items) {
-            if (field === 'description' && !item.description.trim()) return true;
             if (field === 'quantity' && !item.quantity.trim()) return true;
             if (field === 'category' && !item.category.trim()) return true;
             if (field === 'itemName' && !item.itemName.trim()) return true;
@@ -389,10 +344,10 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         return false;
     };
 
-    const getItemSuggestions = (description: string) => {
-        if (!description.trim()) return [];
+    const getItemSuggestions = (itemName: string) => {
+        if (!itemName.trim()) return [];
         return systemItems.filter(item =>
-            item.name.toLowerCase().includes(description.toLowerCase())
+            item.name.toLowerCase().includes(itemName.toLowerCase())
         ).slice(0, 5);
     };
 
