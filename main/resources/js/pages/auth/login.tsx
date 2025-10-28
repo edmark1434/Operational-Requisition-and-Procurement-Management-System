@@ -73,18 +73,29 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 {({ processing, errors }) => 
                     {
                         useEffect(() => {
+                            
                             if (errors?.credentials?.toLowerCase().includes("too many login attempts")) {
                                 setIsLocked(true);
                                 const lockTime = new Date();
                                 lockTime.setMinutes(lockTime.getMinutes() + 2);
                                 localStorage.setItem("lockedTime",lockTime.toISOString());
-                                const timeout = setTimeout(() => {
-                                    localStorage.removeItem("lockedTime");
-                                    setIsLocked(false);
-                                },60000);
+                                const lock = () => {
+                                    const now = new Date();
+                                    const remaining = Math.floor((lockTime.getTime() - now.getTime()) / 1000);
+                                    if (remaining <= 0) {
+                                        clearInterval(interval);
+                                        localStorage.removeItem("lockedTime");
+                                        setIsLocked(false);
+                                        setMessage("");
+                                    } else {
+                                        setMessage(`Too many login attempts. Please try again in ${remaining} seconds.`);
+                                    }
+                                };
+                                lock();
+                                const interval = setInterval(lock, 1000);
                                 return () =>{ 
                                     errors.credentials = "";
-                                    clearTimeout(timeout);
+                                    clearInterval(interval);
                                 };
                             } else {
                                 setMessage(errors.credentials || "");
