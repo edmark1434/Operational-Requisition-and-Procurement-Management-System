@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
+import { local } from '@/routes/storage';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle, Shield, User, Lock } from 'lucide-react';
 import { use, useEffect, useState  } from 'react';
@@ -18,6 +19,44 @@ interface LoginProps {
 
 export default function Login({ status, canResetPassword }: LoginProps) {
     const [isLocked, setIsLocked] = useState(false);
+    const [message, setMessage] = useState("");
+
+    useEffect(() => {
+    const lockedTime = localStorage.getItem("lockedTime");
+    if (!lockedTime) {
+        localStorage.removeItem("lockedTime");
+        setIsLocked(false);
+        setMessage("");
+        return;
+    }
+
+    const lockDate = new Date(lockedTime);
+
+    const updateLockState = () => {
+        const now = new Date();
+        const remaining = Math.floor((lockDate.getTime() - now.getTime()) / 1000);
+
+        if (remaining <= 0) {
+            clearInterval(interval);
+            localStorage.removeItem("lockedTime");
+            setIsLocked(false);
+            setMessage("");
+        } else {
+            setIsLocked(true);
+            setMessage(`Too many login attempts. Please try again in ${remaining} seconds.`);
+        }
+    };
+
+    // Run once immediately to show the message right away
+        updateLockState();
+
+        // Then run every second
+        const interval = setInterval(updateLockState, 1000);
+
+        // Cleanup interval on unmount
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <AuthLayout
             title="Welcome back"
@@ -36,14 +75,21 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         useEffect(() => {
                             if (errors?.credentials?.toLowerCase().includes("too many login attempts")) {
                                 setIsLocked(true);
+                                const lockTime = new Date();
+                                lockTime.setMinutes(lockTime.getMinutes() + 2);
+                                localStorage.setItem("lockedTime",lockTime.toISOString());
+                                const timeout = setTimeout(() => {
+                                    localStorage.removeItem("lockedTime");
+                                    setIsLocked(false);
+                                },60000);
+                                return () =>{ 
+                                    errors.credentials = "";
+                                    clearTimeout(timeout);
+                                };
                             } else {
+                                setMessage(errors.credentials || "");
                                 setIsLocked(false);
                             }
-                            const timeout = setTimeout(() => setIsLocked(false), 60000);
-                            return () =>{ 
-                                errors.credentials = "";
-                                clearTimeout(timeout);
-                            };
                         }, [errors]);
                         return (
                         <>
@@ -101,10 +147,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 </div>
 
                                 {/* Error message */}
-                                {errors.credentials && (
+                                {message && (
                                     <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                                         <Shield className="h-4 w-4 text-red-500 dark:text-red-400" />
-                                        <InputError message={errors.credentials} className="text-sm text-red-700 dark:text-red-300" />
+                                        <InputError message={message} className="text-sm text-red-700 dark:text-red-300" />
                                     </div>
                                 )}
 
