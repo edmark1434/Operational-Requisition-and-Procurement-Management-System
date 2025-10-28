@@ -74,7 +74,7 @@ class AuthenticatedSessionController extends Controller
                 ])->onlyInput('username');
         }
         return back()->withErrors([
-        'credentials' => 'The provided credentials do not match our records.',
+        'credentials' => 'The provided credentials do not match our records. You have '. ($maxAttempts - $attempts) .' attempt(s) left.',
         ])->onlyInput('username'); 
     }
 
