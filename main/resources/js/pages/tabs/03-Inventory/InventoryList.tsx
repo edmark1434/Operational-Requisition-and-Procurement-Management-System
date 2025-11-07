@@ -121,7 +121,7 @@ export default function InventoryList({ inventory, onItemClick, viewMode, isLoad
                                             href="/requisitions/form"
                                             onClick={(e) => e.stopPropagation()}
                                             className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-2 rounded-md transition-colors"
-                                            title="Order Now"
+                                            title="Request Item"
                                         >
                                             <ShoppingCart className="w-3 h-3" />
                                         </Link>
@@ -243,7 +243,7 @@ function InventoryCard({ item, onClick, viewMode }: {
                             className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-2 rounded-md flex items-center justify-center gap-1 transition-colors"
                         >
                             <ShoppingCart className="w-3 h-3" />
-                            Order Now
+                            Request Item
                         </Link>
                     </div>
                 )}
@@ -344,7 +344,7 @@ function InventoryCard({ item, onClick, viewMode }: {
                         className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-3 rounded-md flex items-center gap-1 transition-colors"
                     >
                         <ShoppingCart className="w-3 h-3" />
-                        Order Now
+                         Request Item
                     </Link>
                 ) : (
                     <div className="text-xs text-gray-500 dark:text-gray-400">
