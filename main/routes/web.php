@@ -18,15 +18,9 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard',[Dashboard::class,'index'])->name('dashboard');
-//    ---------------------------------------------------------------------
-    Route::get('inventory',[Inventory::class,'index'])->name('inventory');
-        //Inventory - Add Item
-    Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');
 
-
-// REQUISITION PART!
+// REQUISITION PART
     Route::get('requisitions',[RequisitionController::class,'index'])->name('requisitions');
-
     //    --------------------------------------------------------------------- REQUISITION FORM
     Route::get('requisitionform',[RequisitionController::class,'requisitionForm'])->name('requisitionform');
 
@@ -35,12 +29,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //    --------------------------------------------------------------------- REQUISITION EDIT
     Route::get('requisitions/{id}/edit',[RequisitionController::class,'requisitionEdit'])->name('requisitionedit');
 
-
-
-    //Inventory - Edit item
+    // INVENTORY PART (Main / Add / Edit)
+    Route::get('inventory',[Inventory::class,'index'])->name('inventory');
+    Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');
     Route::get('inventory/{id}/edit',[Inventory::class,"edit"])->name('inventoryedit');
 
+    // PURCHASES PART (Main / Add / Edit)
     Route::get('purchases',[Purchasing::class,'index'])->name('purchases');
+    Route::get('purchases/create',[Purchasing::class,"create"])->name('PurchaseOrderForm');
+    Route::get('purchases/{purchaseId}/edit',[Purchasing::class,"edit"])->name('PurchaseOrderEdit');
 
     Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
 
