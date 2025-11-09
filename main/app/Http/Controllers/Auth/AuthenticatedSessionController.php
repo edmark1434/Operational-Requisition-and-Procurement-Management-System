@@ -54,15 +54,20 @@ class AuthenticatedSessionController extends Controller
 
         //get user by username
         $user = DB::select("SELECT * FROM get_users(NULL, ?)",[ $request->username ]);
-        $user = (object) ($user ? $user[0] : NULL);
-        if ($user && Hash::check($request->password, $user->password)) {
-            $user = User::find($user->id);
-            Auth::login($user, $request->boolean('remember'));
-            Cache::forget($key); //clear login attempts on successful login
-            $request->session()->regenerate();
-            return redirect()->intended(route('dashboard', absolute: false))->with('success','Logged in successfully.');
-        }
-
+        $user =  $user ? ((object) $user[0]) : NULL;
+        if(!$user){
+            return back()->withErrors([
+                'credentials' => 'The provided credentials do not match our records.',
+            ])->onlyInput('username');
+        }else{
+            if ($user && Hash::check($request->password, $user->password)) {
+                $user = User::find($user->id);
+                Auth::login($user, $request->boolean('remember'));
+                Cache::forget($key); //clear login attempts on successful login
+                $request->session()->regenerate();
+                return redirect()->intended(route('dashboard', absolute: false))->with('success','Logged in successfully.');
+            }
+            
         $attempts = Cache::get($key, 0) + 1;
         Cache::put($key, $attempts, now()->addMinutes($lockoutMinutes));
 
@@ -76,6 +81,7 @@ class AuthenticatedSessionController extends Controller
         return back()->withErrors([
         'credentials' => 'The provided credentials do not match our records. You have '. ($maxAttempts - $attempts) .' attempt(s) left.',
         ])->onlyInput('username'); 
+        }
     }
 
     /**
