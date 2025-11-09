@@ -40,6 +40,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('purchases/{purchaseId}/edit',[Purchasing::class,"edit"])->name('PurchaseOrderEdit');
 
     Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
+    Route::get('suppliers/add',[SupplierController::class,"store"])->name('supplieradd');
+    Route::get('suppliers/{id}/edit',[SupplierController::class,"edit"])->name('supplieredit');
 
     Route::get('returns',[Returns::class,'index'])->name('returns');
 
