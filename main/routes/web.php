@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('suppliers/{id}/edit',[SupplierController::class,"edit"])->name('supplieredit');
 
     Route::get('returns',[Returns::class,'index'])->name('returns');
+    Route::get('returns/add',[Returns::class,"store"])->name('returnsadd');
+    Route::get('returns/{id}/edit',[Returns::class,"edit"])->name('returnsedit');
 
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
