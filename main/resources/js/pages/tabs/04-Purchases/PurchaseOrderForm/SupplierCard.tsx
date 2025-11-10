@@ -64,7 +64,7 @@ export default function SupplierCard({
                                                 : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                         }`}
                                     >
-                                        {isMatch ? '✅ ' : '📦 '}{category}
+                                        {isMatch ? ' ' : ' '}{category}
                                     </span>
                                 );
                             })}
@@ -75,17 +75,17 @@ export default function SupplierCard({
                     <div className="flex flex-wrap gap-1">
                         {supplier.ALLOWS_CASH && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                💵 Cash
+                                Cash
                             </span>
                         )}
                         {supplier.ALLOWS_DISBURSEMENT && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                🏦 Disbursement
+                                Disbursement
                             </span>
                         )}
                         {supplier.ALLOWS_STORE_CREDIT && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                💳 Store Credit
+                                Store Credit
                             </span>
                         )}
                     </div>
