@@ -76,5 +76,28 @@ export const purchaseOrdersData = [
                 SELECTED: true
             }
         ]
+    },
+    {
+        ID: 4,
+        REFERENCE_NO: 'PO-2024-004',
+        CREATED_AT: '2024-01-28',
+        TOTAL_COST: 189.99,
+        PAYMENT_TYPE: 'cash',
+        STATUS: 'completed',
+        SUPPLIER_ID: 3,
+        SUPPLIER_NAME: 'Office World Suppliers',
+        REQUISITION_ID: 5004,
+        REMARKS: 'New office furniture',
+        ITEMS: [
+            {
+                ID: 7005,
+                ITEM_ID: 1008,
+                NAME: 'Office Chair Ergonomic',
+                QUANTITY: 1,
+                UNIT_PRICE: 189.99,
+                CATEGORY_ID: 6,
+                SELECTED: true
+            }
+        ]
     }
 ];

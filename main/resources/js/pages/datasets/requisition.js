@@ -31,6 +31,17 @@ const requisitions = [
         US_ID: 2003,
         REQUESTOR: "David Johnson",
         REASON: ""
+    },
+    {
+        REQ_ID: 5004,
+        DATE_REQUESTED: "2024-01-25 10:00:00",
+        DATE_UPDATED: "2024-01-26 11:30:00",
+        STATUS: "Approved",
+        NOTES: "New office chair for admin department",
+        PRIORITY: "Normal",
+        US_ID: 2004,
+        REQUESTOR: "Sarah Wilson",
+        REASON: ""
     }
 ];
 
