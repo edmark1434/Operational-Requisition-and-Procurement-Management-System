@@ -9,6 +9,7 @@ import { useState } from 'react';
 import roles from '@/pages/datasets/role';
 import userRoles from '@/pages/datasets/user_role';
 import mockUsers from '@/pages/datasets/user';
+import permissions from '@/pages/datasets/permissions';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -30,7 +31,8 @@ export default function UserAdd() {
         USERNAME: '',
         PASSWORD: '',
         CONFIRM_PASSWORD: '',
-        ROLE_ID: ''
+        ROLE_ID: '',
+        PERMISSIONS: [] as string[]
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [showPreview, setShowPreview] = useState(false);
@@ -74,7 +76,6 @@ export default function UserAdd() {
         const { FIRST_NAME, MIDDLE_NAME, LAST_NAME, SUFFIX } = formData;
         let fullName = FIRST_NAME;
 
-        // Convert middle name to middle initial (first letter only)
         if (MIDDLE_NAME) {
             const middleInitial = MIDDLE_NAME.charAt(0).toUpperCase() + '.';
             fullName += ` ${middleInitial}`;
@@ -97,6 +98,26 @@ export default function UserAdd() {
         }
     };
 
+    const handlePermissionChange = (permissionId: string, isChecked: boolean) => {
+        setFormData(prev => {
+            if (isChecked) {
+                return {
+                    ...prev,
+                    PERMISSIONS: [...prev.PERMISSIONS, permissionId]
+                };
+            } else {
+                return {
+                    ...prev,
+                    PERMISSIONS: prev.PERMISSIONS.filter(id => id !== permissionId)
+                };
+            }
+        });
+
+        if (errors.PERMISSIONS) {
+            setErrors(prev => ({ ...prev, PERMISSIONS: '' }));
+        }
+    };
+
     const handlePreview = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -106,37 +127,35 @@ export default function UserAdd() {
     };
 
     const handleConfirmSubmit = () => {
-        // Generate new user ID
         const newUserId = Math.max(...mockUsers.map(user => user.US_ID), 0) + 1;
-
-        // Generate new user role ID
         const newUserRoleId = Math.max(...userRoles.map(ur => ur.UR_ID), 0) + 1;
 
-        // Prepare user data
         const userData = {
             US_ID: newUserId,
             FULLNAME: getFullName(),
             NAME: formData.USERNAME,
-            PASSWORD: formData.PASSWORD, // In real app, this should be hashed
+            PASSWORD: formData.PASSWORD,
             DATE_CREATED: new Date().toISOString().replace('T', ' ').substring(0, 19),
             DATE_UPDATED: new Date().toISOString().replace('T', ' ').substring(0, 19),
             STATUS: 'active'
         };
 
-        // Prepare user role data
         const userRoleData = {
             UR_ID: newUserRoleId,
             US_ID: newUserId,
             RO_ID: parseInt(formData.ROLE_ID)
         };
 
+        const userPermissionsData = formData.PERMISSIONS.map(permissionId => ({
+            US_ID: newUserId,
+            PERMISSION_ID: permissionId
+        }));
+
         console.log('New User Data:', userData);
         console.log('New User Role Data:', userRoleData);
+        console.log('New User Permissions Data:', userPermissionsData);
 
-        // In real application, you would send POST request to backend
         alert('User added successfully!');
-
-        // Redirect back to users list
         router.visit(users().url);
     };
 
@@ -149,7 +168,8 @@ export default function UserAdd() {
             USERNAME: '',
             PASSWORD: '',
             CONFIRM_PASSWORD: '',
-            ROLE_ID: ''
+            ROLE_ID: '',
+            PERMISSIONS: []
         });
         setErrors({});
     };
@@ -386,13 +406,54 @@ export default function UserAdd() {
                                                     <option value="">Select a role</option>
                                                     {roles.map(role => (
                                                         <option key={role.RO_ID} value={role.RO_ID}>
-                                                            {role.NAME} - {role.DESCRIPTION}
+                                                            {role.NAME}
                                                         </option>
                                                     ))}
                                                 </select>
                                                 {errors.ROLE_ID && (
                                                     <p className="text-red-500 text-xs mt-1">{errors.ROLE_ID}</p>
                                                 )}
+                                            </div>
+
+                                            {/* Permissions Dropdown */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    Permissions
+                                                </label>
+                                                <div className={`w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                    errors.PERMISSIONS ? 'border-red-500' : 'border-sidebar-border'
+                                                }`}>
+                                                    <div className="max-h-48 overflow-y-auto">
+                                                        {permissions.map(permission => (
+                                                            <div key={permission.PERMISSION_ID} className="flex items-center py-2">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id={`permission-${permission.PERMISSION_ID}`}
+                                                                    checked={formData.PERMISSIONS.includes(permission.PERMISSION_ID)}
+                                                                    onChange={(e) => handlePermissionChange(permission.PERMISSION_ID, e.target.checked)}
+                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                                />
+                                                                <label
+                                                                    htmlFor={`permission-${permission.PERMISSION_ID}`}
+                                                                    className="ml-3 text-sm text-gray-700 dark:text-gray-300"
+                                                                >
+                                                                    {permission.NAME}
+                                                                    {permission.DESCRIPTION && (
+                                                                        <span className="text-xs text-gray-500 dark:text-gray-400 block">
+                                                                            {permission.DESCRIPTION}
+                                                                        </span>
+                                                                    )}
+                                                                </label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                {errors.PERMISSIONS && (
+                                                    <p className="text-red-500 text-xs mt-1">{errors.PERMISSIONS}</p>
+                                                )}
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    Select one or more permissions for this user
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -534,6 +595,35 @@ export default function UserAdd() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                             {roles.find(role => role.RO_ID === parseInt(formData.ROLE_ID))?.DESCRIPTION}
                                         </p>
+                                    </div>
+                                </div>
+
+                                {/* Permissions Information */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                        Permissions
+                                    </h3>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Selected Permissions
+                                        </label>
+                                        {formData.PERMISSIONS.length > 0 ? (
+                                            <ul className="text-sm text-gray-900 dark:text-white space-y-1">
+                                                {formData.PERMISSIONS.map(permissionId => {
+                                                    const permission = permissions.find(p => p.PERMISSION_ID === permissionId);
+                                                    return permission ? (
+                                                        <li key={permissionId} className="flex items-center">
+                                                            <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                            {permission.NAME}
+                                                        </li>
+                                                    ) : null;
+                                                })}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">No permissions selected</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
