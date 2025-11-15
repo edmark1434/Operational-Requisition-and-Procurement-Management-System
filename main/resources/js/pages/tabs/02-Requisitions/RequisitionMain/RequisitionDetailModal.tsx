@@ -138,48 +138,52 @@ export default function RequisitionDetailModal({
                             )}
                         </div>
 
-                        {/* Items List - IMPROVED LAYOUT */}
+                        {/* Items List - TABLE LAYOUT */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                 Requested Items ({requisition.ITEMS.length})
                             </label>
-                            <div className="space-y-3">
-                                {requisition.ITEMS.map((item: any, index: number) => (
-                                    <div
-                                        key={index}
-                                        className="p-4 border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent"
-                                    >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex items-start gap-3 flex-1">
-                                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
-                                                    {requisition.ITEMS.length - index}
-                                                </span>
-                                                <div className="flex-1">
-                                                    {/* Item Name */}
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {item.NAME}
-                                                    </p>
-                                                    {/* Category */}
-                                                    <div className="flex gap-4 mt-2">
-                                                        <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
-                                                            {item.CATEGORY}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Quantity moved to the right side */}
-                                            <div className="text-right min-w-20">
-                                                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                    {item.QUANTITY}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    Qty
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="border border-sidebar-border rounded-lg overflow-hidden bg-white dark:bg-sidebar-accent">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 dark:bg-sidebar border-b border-sidebar-border">
+                                    <tr>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                                            #
+                                        </th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                            Quantity
+                                        </th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Item Name
+                                        </th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Category
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-sidebar-border">
+                                    {requisition.ITEMS.map((item: any, index: number) => (
+                                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
+                                            <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
+                                                        {index + 1}
+                                                    </span>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                {item.QUANTITY}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                {item.NAME}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-sidebar border border-sidebar-border">
+                                                        {item.CATEGORY}
+                                                    </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
