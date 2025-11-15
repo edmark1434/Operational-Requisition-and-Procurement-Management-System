@@ -40,8 +40,27 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
     return (
         <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
             <div className="h-full overflow-y-auto">
-                <div className="p-4">
-                    <div className="space-y-3">
+                {/* Column Headers */}
+                <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 border-b border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
+                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        REQ #
+                    </div>
+                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        STATUS
+                    </div>
+                    <div className="col-span-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        DETAILS
+                    </div>
+                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        PRIORITY
+                    </div>
+                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
+                        DATE
+                    </div>
+                </div>
+
+                <div className="p-4 lg:p-0">
+                    <div className="space-y-3 lg:space-y-0">
                         {requisitions.map((requisition) => (
                             <RequisitionListItem
                                 key={requisition.ID}
@@ -60,59 +79,62 @@ function RequisitionListItem({ requisition, onClick }: { requisition: any; onCli
     return (
         <div
             onClick={onClick}
-            className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-4 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600"
+            className="border border-sidebar-border rounded-lg lg:border-0 lg:rounded-none lg:border-b bg-white dark:bg-sidebar-accent p-4 lg:py-3 hover:shadow-md lg:hover:shadow-none transition-all duration-200 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 lg:hover:bg-gray-50 dark:lg:hover:bg-sidebar"
         >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                {/* Left Section - ID and Basic Info */}
-                <div className="flex items-center space-x-4 min-w-0 flex-1">
-                    <div className="flex-shrink-0">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
-                            #{requisition.ID}
-                        </span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {requisition.REQUESTOR}
-                        </p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                            {requisition.REMARKS || requisition.NOTES || 'No remarks'}
-                        </p>
-                        <div className="flex gap-2 mt-1">
-                            {requisition.CATEGORIES.slice(0, 2).map((category: string, index: number) => (
-                                <span key={index} className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border">
-                                    {category}
-                                </span>
-                            ))}
-                            {requisition.CATEGORIES.length > 2 && (
-                                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border">
-                                    +{requisition.CATEGORIES.length - 2} more
-                                </span>
-                            )}
-                        </div>
-                    </div>
+            <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center">
+                {/* REQ # - Increased space */}
+                <div className="col-span-2 mb-3 lg:mb-0">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
+                        #{requisition.ID}
+                    </span>
                 </div>
 
-                {/* Middle Section - Status and Priority Tags */}
-                <div className="flex items-center space-x-2 flex-wrap gap-2">
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(requisition.STATUS)}`}>
+                {/* STATUS */}
+                <div className="col-span-2 mb-3 lg:mb-0">
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(requisition.STATUS)}`}>
                         {StatusIcons[requisition.STATUS.toLowerCase() as keyof typeof StatusIcons]}
                         {requisition.STATUS}
                     </div>
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getPriorityColor(requisition.PRIORITY)}`}>
-                        {PriorityIcons[requisition.PRIORITY.toLowerCase() as keyof typeof PriorityIcons]}
+                </div>
+
+                {/* DETAILS - Reduced space to accommodate REQ # */}
+                <div className="col-span-4 mb-3 lg:mb-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {requisition.REQUESTOR}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-1">
+                        {requisition.REMARKS || requisition.NOTES || 'No remarks'}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                        {requisition.CATEGORIES.slice(0, 2).map((category: string, index: number) => (
+                            <span key={index} className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border">
+                                {category}
+                            </span>
+                        ))}
+                        {requisition.CATEGORIES.length > 2 && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border">
+                                +{requisition.CATEGORIES.length - 2} more
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* PRIORITY */}
+                <div className="col-span-2 mb-3 lg:mb-0">
+                    <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${getPriorityColor(requisition.PRIORITY)}`}>
                         {requisition.PRIORITY}
                     </div>
                 </div>
 
-                {/* Right Section - Date Only (REMOVED AMOUNT) */}
-                <div className="flex items-center space-x-4 justify-between sm:justify-end min-w-0">
-                    <div className="text-right min-w-0">
-                        {/* REMOVED AMOUNT - Keep only date */}
-                        <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
+                {/* DATE & ARROW */}
+                <div className="col-span-2 flex items-center justify-between lg:justify-end">
+                    <div className="text-right">
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
                             {formatDate(requisition.CREATED_AT)}
                         </p>
                     </div>
-                    <div className="flex-shrink-0 text-gray-400">
+                    {/* Arrow indicator for clickable rows */}
+                    <div className="flex-shrink-0 text-gray-400 ml-3">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
