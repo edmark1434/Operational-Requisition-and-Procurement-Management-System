@@ -166,10 +166,6 @@ export default function Dashboard() {
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <BarChart3 className="h-5 w-5" />
-                        <span className="text-sm">Last updated: Today</span>
-                    </div>
                 </div>
 
                 {/* Quick Stats Grid */}
