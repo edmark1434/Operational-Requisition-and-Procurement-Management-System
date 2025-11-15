@@ -10,6 +10,6 @@ class Roles extends Controller
     protected $base_path = "tabs/09-Roles";
     public function index()
     {
-        return Inertia::render($this->base_path .'/roles');
+        return Inertia::render($this->base_path .'/RolePerm');
     }
 }
