@@ -6,6 +6,7 @@ use App\Http\Controllers\WebPages\Audit;
 use App\Http\Controllers\WebPages\Dashboard;
 use App\Http\Controllers\WebPages\Inventory;
 use App\Http\Controllers\WebPages\Purchasing;
+use App\Http\Controllers\WebPages\Deliveries;
 use App\Http\Controllers\WebPages\Returns;
 use App\Http\Controllers\WebPages\Users;
 use App\Http\Controllers\WebPages\Roles;
@@ -42,6 +43,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
     Route::get('suppliers/add',[SupplierController::class,"store"])->name('supplieradd');
     Route::get('suppliers/{id}/edit',[SupplierController::class,"edit"])->name('supplieredit');
+
+    Route::get('delivery',[Deliveries::class,'index'])->name('delivery');
+    Route::get('delivery/add',[Deliveries::class,"store"])->name('deliveryadd');
+    Route::get('delivery/{id}/edit',[Deliveries::class,"edit"])->name('deliveryedit');
 
     Route::get('returns',[Returns::class,'index'])->name('returns');
     Route::get('returns/add',[Returns::class,"store"])->name('returnsadd');
