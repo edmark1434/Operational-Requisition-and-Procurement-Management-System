@@ -10,11 +10,12 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, requisitions, inventory, purchases, suppliers, returns, audit, users, roles } from '@/routes';
+import { dashboard, requisitions, inventory, purchases, suppliers, delivery, returns, audit, users, roles } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, NotepadTextIcon, Package, ShoppingCart, Contact, SquareArrowDownIcon, LucideLogs, User, Shield } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, NotepadTextIcon, Package, ShoppingCart, Contact, SquareArrowDownIcon, LucideLogs, User, Shield, Truck } from 'lucide-react';
 import AppLogo from './app-logo';
+import deliveries from "@/pages/datasets/delivery";
 
 const mainNavItems: NavItem[] = [
     {
@@ -43,6 +44,11 @@ const mainNavItems: NavItem[] = [
         icon: Contact,
     },
     {
+        title: 'Deliveries',
+        href: delivery(),
+        icon: Truck,
+    },
+    {
         title: 'Returns',
         href: returns(),
         icon: SquareArrowDownIcon,
@@ -53,12 +59,12 @@ const mainNavItems: NavItem[] = [
         icon: LucideLogs,
     },
     {
-        title: 'Users',
+        title: 'Users Management',
         href: users(),
         icon: User,
     },
     {
-        title: 'Roles',
+        title: 'Roles & Permissions',
         href: roles(),
         icon: Shield,
     },
