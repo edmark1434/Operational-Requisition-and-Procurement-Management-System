@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('return_item', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('req_id')->constrained('requisition')->cascadeOnDelete();
+            $table->foreignId('return_id')->constrained('returns')->cascadeOnDelete();
             $table->foreignId('item_id')->constrained('item')->cascadeOnDelete();
             $table->integer('quantity');
         });

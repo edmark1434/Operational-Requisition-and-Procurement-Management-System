@@ -5,6 +5,7 @@ use App\Models\Item;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Category;
 use App\Models\Make;
+use App\Models\Supplier;
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Item>
  */
@@ -26,6 +27,7 @@ class ItemFactory extends Factory
             'current_stock' => $this->faker->numberBetween(0, 500),
             'make_id' => Make::factory(),
             'category_id' => Category::factory(),
+            'supplier_id' => Supplier::factory()
         ];
     }
 }

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\User;
 class AuditLog extends Model
 {
     use HasFactory;
@@ -15,10 +15,20 @@ class AuditLog extends Model
         'user_id',
     ];
     public $timestamps = false;
-//    public const TYPES = ['REQUISITION_APPROVAL',
-//                'REQUISITION_REJECTION',
-//                'REQUISITION_CHANGE',
-//                'SETTING_CHANGE',
-//                'SUPPLIER_UPDATE',
-//                'PERMISSION_UPDATE'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class,'user_id');
+    }
+   public const TYPES = ['REQUISITION APPROVAL',
+               'REQUISITION REJECTION',
+               'REQUISITION CHANGE',
+               'SETTING CHANGE',
+               'SUPPLIER UPDATE',
+               'PERMISSION UPDATE',
+               'REQUISITION DELIVERY',
+               'RETURN REJECTION',
+               'RETURN DELIVERY',
+               'ITEM INFO CHANGE'
+            ];
 }
