@@ -1,0 +1,334 @@
+import { Link } from '@inertiajs/react';
+import { DeliveriesIcons } from './utils/icons';
+import { getDeliveriesStatusColor } from './utils/styleUtils';
+import { formatCurrency, formatDate } from './utils/formatters';
+import { LoaderCircle, Package, Edit } from 'lucide-react';
+
+interface DeliveriesListProps {
+    deliveries: any[];
+    onDeliveryClick: (delivery: any) => void;
+    onStatusChange: (deliveryId: number, newStatus: string) => void;
+    viewMode: 'comfortable' | 'compact' | 'condensed';
+    isLoading?: boolean;
+}
+
+export default function DeliveriesList({ deliveries, onDeliveryClick, onStatusChange, viewMode, isLoading = false }: DeliveriesListProps) {
+    if (isLoading) {
+        return (
+            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-8">
+                <div className="flex items-center justify-center">
+                    <LoaderCircle className="w-6 h-6 animate-spin text-blue-600 mr-2" />
+                    <span className="text-gray-600 dark:text-gray-400">Loading deliveries...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (deliveries.length === 0) {
+        return (
+            <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
+                <div className="h-full overflow-y-auto">
+                    <div className="p-4 text-center py-12">
+                        <div className="text-gray-400 dark:text-gray-600 mb-4">
+                            <Package className="w-16 h-16 mx-auto" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No deliveries found</h3>
+                        <p className="text-gray-600 dark:text-gray-400">Try adjusting your search or filters.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (viewMode === 'condensed') {
+        return (
+            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <div className="col-span-2">Receipt No</div>
+                    <div className="col-span-2">Supplier</div>
+                    <div className="col-span-2">Delivery Date</div>
+                    <div className="col-span-1">Items</div>
+                    <div className="col-span-2">Status</div>
+                    <div className="col-span-2 text-right">Total Value</div>
+                    <div className="col-span-1 text-right">Actions</div>
+                </div>
+
+                {/* Table Body */}
+                <div className="divide-y divide-sidebar-border">
+                    {deliveries.map((delivery) => (
+                        <div
+                            key={delivery.ID}
+                            className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
+                            onClick={() => onDeliveryClick(delivery)}
+                        >
+                            {/* Receipt No */}
+                            <div className="col-span-2 flex items-center">
+                                <div className="min-w-0">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                        {delivery.RECEIPT_NO}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Supplier */}
+                            <div className="col-span-2 flex items-center">
+                                <span className="text-sm text-gray-900 dark:text-white truncate">
+                                    {delivery.SUPPLIER_NAME}
+                                </span>
+                            </div>
+
+                            {/* Delivery Date */}
+                            <div className="col-span-2 flex items-center">
+                                <span className="text-sm text-gray-900 dark:text-white">
+                                    {formatDate(delivery.DELIVERY_DATE)}
+                                </span>
+                            </div>
+
+                            {/* Items Count */}
+                            <div className="col-span-1 flex items-center">
+                                <span className="text-sm text-gray-900 dark:text-white">
+                                    {delivery.TOTAL_ITEMS}
+                                </span>
+                            </div>
+
+                            {/* Status - Now Editable */}
+                            <div className="col-span-2 flex items-center" onClick={(e) => e.stopPropagation()}>
+                                <StatusDropdown
+                                    delivery={delivery}
+                                    onStatusChange={onStatusChange}
+                                    size="sm"
+                                />
+                            </div>
+
+                            {/* Total Value */}
+                            <div className="col-span-2 flex items-center justify-end">
+                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                    {formatCurrency(delivery.TOTAL_VALUE)}
+                                </span>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="col-span-1 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                                <Link
+                                    href={`/deliveries/${delivery.ID}/edit`}
+                                    className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded"
+                                    title="Edit Delivery"
+                                >
+                                    <Edit className="w-4 h-4" />
+                                </Link>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
+            <div className="h-full overflow-y-auto p-4">
+                <div className={`grid gap-4 ${
+                    viewMode === 'comfortable'
+                        ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
+                        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
+                }`}>
+                    {deliveries.map((delivery) => (
+                        <DeliveryCard
+                            key={delivery.ID}
+                            delivery={delivery}
+                            onClick={() => onDeliveryClick(delivery)}
+                            onStatusChange={onStatusChange}
+                            viewMode={viewMode}
+                        />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Status Dropdown Component with themed colors - UPDATED
+function StatusDropdown({ delivery, onStatusChange, size = 'md' }: {
+    delivery: any;
+    onStatusChange: (deliveryId: number, newStatus: string) => void;
+    size?: 'sm' | 'md';
+}) {
+    const getStatusClasses = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'pending':
+                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+            case 'delivered':
+                return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800';
+            case 'in-transit':
+                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800';
+            case 'cancelled':
+                return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border-gray-200 dark:border-gray-700';
+        }
+    };
+
+    const sizeClasses = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm';
+
+    return (
+        <select
+            value={delivery.STATUS}
+            onChange={(e) => onStatusChange(delivery.ID, e.target.value)}
+            className={`w-full ${sizeClasses} rounded-full font-medium border-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer transition-colors ${getStatusClasses(delivery.STATUS)}`}
+            onClick={(e) => e.stopPropagation()} // Prevent card click when interacting with dropdown
+        >
+            <option value="pending" className="bg-white dark:bg-input text-gray-900 dark:text-white">Pending</option>
+            <option value="in-transit" className="bg-white dark:bg-input text-gray-900 dark:text-white">In Transit</option>
+            <option value="delivered" className="bg-white dark:bg-input text-gray-900 dark:text-white">Delivered</option>
+            <option value="cancelled" className="bg-white dark:bg-input text-gray-900 dark:text-white">Cancelled</option>
+        </select>
+    );
+}
+
+// Delivery Card Component
+function DeliveryCard({ delivery, onClick, onStatusChange, viewMode }: {
+    delivery: any;
+    onClick: () => void;
+    onStatusChange: (deliveryId: number, newStatus: string) => void;
+    viewMode: 'comfortable' | 'compact';
+}) {
+    if (viewMode === 'compact') {
+        return (
+            <div
+                className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-3 hover:shadow-md transition-all duration-200 cursor-pointer group"
+                onClick={onClick}
+            >
+                {/* Compact Header */}
+                <div className="flex justify-between items-start mb-2">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        {delivery.RECEIPT_NO}
+                    </span>
+                    <Link
+                        href={`/deliveries/${delivery.ID}/edit`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
+                    >
+                        <Edit className="w-3 h-3" />
+                    </Link>
+                </div>
+
+                {/* Supplier - Compact */}
+                <h3 className="font-medium text-sm text-gray-900 dark:text-white mb-1 line-clamp-1">
+                    {delivery.SUPPLIER_NAME}
+                </h3>
+
+                {/* Status and Items - Compact */}
+                <div className="space-y-1">
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <StatusDropdown
+                            delivery={delivery}
+                            onStatusChange={onStatusChange}
+                            size="sm"
+                        />
+                    </div>
+
+                    <div className="flex justify-between text-xs">
+                        <span className="text-gray-500 dark:text-gray-400">Items:</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                            {delivery.TOTAL_ITEMS}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between text-xs">
+                        <span className="text-gray-500 dark:text-gray-400">Value:</span>
+                        <span className="font-semibold text-blue-600 dark:text-blue-400">
+                            {formatCurrency(delivery.TOTAL_VALUE)}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between text-xs">
+                        <span className="text-gray-500 dark:text-gray-400">Date:</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                            {formatDate(delivery.DELIVERY_DATE)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Comfortable View
+    return (
+        <div
+            className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-4 hover:shadow-md transition-all duration-200 cursor-pointer group"
+            onClick={onClick}
+        >
+            {/* Header with Receipt No and Actions */}
+            <div className="flex justify-between items-start mb-3">
+                <div>
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
+                        {delivery.RECEIPT_NO}
+                    </span>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Delivered: {formatDate(delivery.DELIVERY_DATE)}
+                    </div>
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" onClick={(e) => e.stopPropagation()}>
+                    <Link
+                        href={`/deliveries/${delivery.ID}/edit`}
+                        className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1 rounded"
+                    >
+                        <Edit className="w-4 h-4" />
+                    </Link>
+                </div>
+            </div>
+
+            {/* Supplier Name */}
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                {delivery.SUPPLIER_NAME}
+            </h3>
+
+            {/* Status Badge - Now Editable */}
+            <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                <StatusDropdown
+                    delivery={delivery}
+                    onStatusChange={onStatusChange}
+                    size="md"
+                />
+            </div>
+
+            {/* Delivery Details */}
+            <div className="space-y-2">
+                {/* Items Count */}
+                <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Items Delivered:</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {delivery.TOTAL_ITEMS} items
+                    </span>
+                </div>
+
+                {/* Total Value */}
+                <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Total Value:</span>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        {formatCurrency(delivery.TOTAL_VALUE)}
+                    </span>
+                </div>
+
+                {/* Total Cost */}
+                <div className="flex justify-between items-center pt-2 border-t border-sidebar-border">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Total Cost:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {formatCurrency(delivery.TOTAL_COST)}
+                    </span>
+                </div>
+            </div>
+
+            {/* Quick Actions Footer */}
+            <div className="mt-4 pt-3 border-t border-sidebar-border" onClick={(e) => e.stopPropagation()}>
+                <button
+                    onClick={onClick}
+                    className="w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-center"
+                >
+                    View Details
+                </button>
+            </div>
+        </div>
+    );
+}

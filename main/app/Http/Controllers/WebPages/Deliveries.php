@@ -13,12 +13,12 @@ class Deliveries extends Controller
     {
         return Inertia::render($this->base_path .'/Deliveries');
     }
-    public function create(){
-        return Inertia::render($this->base_path .'/PurchaseOrderForm');
+    public function store(){
+        return Inertia::render($this->base_path .'/DeliveryAdd');
     }
     public function edit($id){
-        return Inertia::render($this->base_path .'/PurchaseOrderEdit', [
-            'purchaseId' => (int)$id
+        return Inertia::render($this->base_path .'/DeliveryEdit', [
+            'deliveryId' => (int)$id
         ]);
     }
 }
