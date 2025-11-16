@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('category', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100)->unique();
+            $table->text('description')->nullable();
         });
         DB::unprepared("
             CREATE OR REPLACE FUNCTION get_category(p_id INT DEFAULT NULL)
@@ -29,23 +30,23 @@ return new class extends Migration
         ");
 
         DB::unprepared("
-            CREATE OR REPLACE PROCEDURE create_category(p_name VARCHAR(100))
+            CREATE OR REPLACE PROCEDURE create_category(p_name VARCHAR(100),p_desc TEXT)
             LANGUAGE plpgsql
             AS $$
             BEGIN
-                INSERT INTO category (name)
-                VALUES (p_name);
+                INSERT INTO category (name,description)
+                VALUES (p_name,p_desc);
             END;
             $$;
         ");
 
         DB::unprepared("
-            CREATE OR REPLACE PROCEDURE update_category(p_id INT, p_name VARCHAR(100))
+            CREATE OR REPLACE PROCEDURE update_category(p_id INT, p_name VARCHAR(100),p_desc TEXT)
             LANGUAGE plpgsql
             AS $$
             BEGIN
                 UPDATE category
-                SET name = COALESCE(p_name, name)
+                SET name = COALESCE(p_name, name), description = COALESCE(p_desc, description)
                 WHERE id = p_id;
             END;
             $$;
@@ -69,8 +70,8 @@ return new class extends Migration
     {
         Schema::dropIfExists('category');
         DB::unprepared("DROP FUNCTION IF EXISTS get_category(INT);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS create_category(VARCHAR);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS update_category(INT, VARCHAR);");
+        DB::unprepared("DROP PROCEDURE IF EXISTS create_category(VARCHAR,TEXT);");
+        DB::unprepared("DROP PROCEDURE IF EXISTS update_category(INT, VARCHAR,TEXT);");
         DB::unprepared("DROP PROCEDURE IF EXISTS delete_category(INT);");
     }
 };

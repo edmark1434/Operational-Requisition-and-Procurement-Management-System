@@ -2,21 +2,22 @@
 
 namespace Database\Factories;
 
-use App\Models\ReturnItem;
-use App\Models\Returns;
+use App\Models\DeliveryItem;
+use App\Models\PurchaseOrder;
 use App\Models\Item;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class ReturnItemFactory extends Factory
+class DeliveryItemFactory extends Factory
 {
-    protected $model = ReturnItem::class;
+    protected $model = DeliveryItem::class;
 
     public function definition(): array
     {
         return [
-            'return_id' => Returns::factory(),
+            'purchase_id' => PurchaseOrder::factory(), 
             'item_id' => Item::factory(),
             'quantity' => $this->faker->numberBetween(1, 50),
+            'unit_price' => $this->faker->randomFloat(2, 50, 5000),
         ];
     }
 }

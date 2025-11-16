@@ -11,16 +11,19 @@ use App\Models\CategorySupplier;
 use App\Models\Notification;
 use App\Models\Make;
 use App\Models\Item;
-use App\Models\PurchaseReturn;
-use App\Models\Purchase;
 use App\Models\Requisition;
-use App\Models\PurchaseItem;
 use App\Models\ReturnItem;
 use App\Models\RequisitionItem;
 use App\Models\UserPermission;
 use App\Models\Setting;
 use App\Models\Supplier;
 use App\Models\AuditLog;
+use App\Models\PurchaseOrder;
+use App\Models\OrderLink;
+use App\Models\OrderItem;
+use App\Models\Delivery;
+use App\Models\DeliveryItem;
+use App\Models\Returns;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -41,10 +44,7 @@ class DatabaseSeeder extends Seeder
         Notification::factory(5)->create();
         Make::factory(5)->create();
         Item::factory(5)->create();
-        PurchaseReturn::factory(5)->create();
-        Purchase::factory(5)->create();
         Requisition::factory(5)->create();
-        PurchaseItem::factory(5)->create();
         ReturnItem::factory(5)->create();
         RequisitionItem::factory(5)->create();
         UserPermission::factory(5)->create();
@@ -52,6 +52,11 @@ class DatabaseSeeder extends Seeder
         Supplier::factory(5)->create();
         AuditLog::factory(5)->create();
         RolePermission::factory(5)->create();
-
+        OrderLink::factory(5)->create();
+        OrderItem::factory(5)->create();
+        PurchaseOrder::factory(5)->create();
+        Delivery::factory(5)->create();
+        DeliveryItem::factory(5)->create();
+        Returns::factory(5)->create();
     }
 }

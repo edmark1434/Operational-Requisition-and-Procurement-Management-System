@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-
+use App\Models\AuditLog;
+use App\Models\notification;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -44,6 +45,20 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class,'user_id');
+    }
+    public function notification(){
+        return $this->hasMany(Notification::class,'user_id');
+    }
+    public function user_permission(){
+        return $this->hasMany(\App\Models\UserPermission::class,'user_id');
+    }
+    public function requisition()
+    {
+        return $this->hasMany(\App\Models\Requisition::class, 'user_id');
     }
     public $timestamps = false;
 }
