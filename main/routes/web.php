@@ -44,9 +44,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('suppliers/add',[SupplierController::class,"store"])->name('supplieradd');
     Route::get('suppliers/{id}/edit',[SupplierController::class,"edit"])->name('supplieredit');
 
-    Route::get('delivery',[Deliveries::class,'index'])->name('delivery');
-    Route::get('delivery/add',[Deliveries::class,"store"])->name('deliveryadd');
-    Route::get('delivery/{id}/edit',[Deliveries::class,"edit"])->name('deliveryedit');
+    Route::get('deliveries',[Deliveries::class,'index'])->name('delivery');
+    Route::get('deliveries/add',[Deliveries::class,"store"])->name('deliveryadd');
+    Route::get('deliveries/{id}/edit',[Deliveries::class,"edit"])->name('deliveryedit');
 
     Route::get('returns',[Returns::class,'index'])->name('returns');
     Route::get('returns/add',[Returns::class,"store"])->name('returnsadd');
