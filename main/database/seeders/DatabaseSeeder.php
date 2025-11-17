@@ -24,11 +24,9 @@ use App\Models\OrderItem;
 use App\Models\Delivery;
 use App\Models\DeliveryItem;
 use App\Models\Returns;
-
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -36,9 +34,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+            CustomSeeder::class
+        ]);
         User::factory(5)->create();
-        Permission::factory(5)->create();
-        Role::factory(5)->create();
         Category::factory(5)->create();
         CategorySupplier::factory(5)->create();
         Notification::factory(5)->create();
@@ -47,11 +46,9 @@ class DatabaseSeeder extends Seeder
         Requisition::factory(5)->create();
         ReturnItem::factory(5)->create();
         RequisitionItem::factory(5)->create();
-        UserPermission::factory(5)->create();
         Setting::factory(5)->create();
         Supplier::factory(5)->create();
         AuditLog::factory(5)->create();
-        RolePermission::factory(5)->create();
         OrderLink::factory(5)->create();
         OrderItem::factory(5)->create();
         PurchaseOrder::factory(5)->create();
