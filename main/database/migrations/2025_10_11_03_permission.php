@@ -15,7 +15,9 @@ return new class extends Migration
         Schema::create('permission', function (Blueprint $table) {
             $table->id();
             $table->string('name', 50)->unique();
+            $table->string('category');
         });
+
         DB::unprepared("
             CREATE OR REPLACE FUNCTION get_permission(p_id INT DEFAULT NULL)
             RETURNS SETOF permission AS $$
@@ -29,38 +31,61 @@ return new class extends Migration
         ");
 
         DB::unprepared("
-            CREATE OR REPLACE PROCEDURE create_permission(p_name VARCHAR)
+            CREATE OR REPLACE PROCEDURE seed_permission()
             LANGUAGE plpgsql
             AS $$
             BEGIN
-                INSERT INTO permission(name)
-                VALUES (p_name);
+                INSERT INTO permission (name, category)
+                VALUES
+
+                ('View Requisitions', 'Requisitions'),
+                ('Create Requisition', 'Requisitions'),
+                ('Approve / Reject Requisition', 'Requisitions'),
+                ('Mark Requisition for Pickup', 'Requisitions'),
+                ('Receive Requisition', 'Requisitions'),
+
+                ('View Purchase Orders', 'Purchase Orders'),
+                ('Merge Purchase Orders', 'Purchase Orders'),
+                ('Update Purchase Order', 'Purchase Orders'),
+                ('Issue Purchase Order', 'Purchase Orders'),
+
+                ('View Deliveries', 'Deliveries'),
+                ('Add Delivery', 'Deliveries'),
+                ('Update Delivery', 'Deliveries'),
+
+                ('View Returns', 'Returns'),
+                ('Create Return', 'Returns'),
+                ('Issue Return', 'Returns'),
+                ('Mark Return as Replaced / Rejected', 'Returns'),
+
+                ('View Items', 'Items'),
+                ('Manage Items', 'Items'),
+
+                ('View Makes', 'Makes'),
+                ('Manage Makes', 'Makes'),
+
+                ('View Categories', 'Categories'),
+                ('Manage Categories', 'Categories'),
+
+                ('View Suppliers', 'Suppliers'),
+                ('Manage Suppliers', 'Suppliers'),
+
+                ('View Users', 'Users'),
+                ('Create User', 'Users'),
+                ('Update User Permissions', 'Users'),
+                ('Update User Password', 'Users'),
+                ('Remove User', 'Users'),
+
+                ('View Roles and Permissions', 'Roles and Permissions'),
+                ('Manage Roles', 'Roles and Permissions'),
+
+                ('View Settings', 'Settings'),
+                ('Update Settings', 'Settings');
             END;
             $$;
         ");
 
-        DB::unprepared("
-            CREATE OR REPLACE PROCEDURE update_permission(p_id INT, p_name VARCHAR DEFAULT NULL)
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                UPDATE permission
-                SET
-                    name = COALESCE(p_name, name)
-                WHERE id = p_id;
-            END;
-            $$;
-        ");
-
-        DB::unprepared("
-            CREATE OR REPLACE PROCEDURE delete_permission(p_id INT)
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                DELETE FROM permission WHERE id = p_id;
-            END;
-            $$;
-        ");
+        DB::unprepared("CALL seed_permission();");
     }
 
     /**
@@ -70,8 +95,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('permission');
         DB::unprepared("DROP FUNCTION IF EXISTS get_permission(INT);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS create_permission(VARCHAR);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS update_permission(INT, VARCHAR);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS delete_permission(INT);");
+        DB::unprepared("DROP PROCEDURE IF EXISTS seed_permission();");
     }
 };

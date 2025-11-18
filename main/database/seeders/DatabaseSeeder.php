@@ -34,9 +34,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            CustomSeeder::class
-        ]);
         User::factory(5)->create();
         Category::factory(5)->create();
         CategorySupplier::factory(5)->create();
@@ -46,7 +43,6 @@ class DatabaseSeeder extends Seeder
         Requisition::factory(5)->create();
         ReturnItem::factory(5)->create();
         RequisitionItem::factory(5)->create();
-        Setting::factory(5)->create();
         Supplier::factory(5)->create();
         AuditLog::factory(5)->create();
         OrderLink::factory(5)->create();
@@ -55,5 +51,6 @@ class DatabaseSeeder extends Seeder
         Delivery::factory(5)->create();
         DeliveryItem::factory(5)->create();
         Returns::factory(5)->create();
+        $this->call(UserPermissionSeeder::class);
     }
 }

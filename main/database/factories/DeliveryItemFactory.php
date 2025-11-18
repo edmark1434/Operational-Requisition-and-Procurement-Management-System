@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Delivery;
 use App\Models\DeliveryItem;
 use App\Models\PurchaseOrder;
 use App\Models\Item;
@@ -14,7 +15,7 @@ class DeliveryItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'purchase_id' => PurchaseOrder::factory(), 
+            'delivery_id' => Delivery::factory(),
             'item_id' => Item::factory(),
             'quantity' => $this->faker->numberBetween(1, 50),
             'unit_price' => $this->faker->randomFloat(2, 50, 5000),

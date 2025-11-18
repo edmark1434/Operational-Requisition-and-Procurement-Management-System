@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('make', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100)->unique();
+            $table->boolean('is_active')->default(true);
         });
          DB::unprepared("
             CREATE OR REPLACE FUNCTION get_make(p_id INT DEFAULT NULL)

@@ -21,6 +21,11 @@ class Delivery extends Model
         'remarks',
         'po_id',
     ];
+    public const STATUSES = [
+        'Received',     // when delivery is created
+        'With Returns', // when created but return is also created
+    ];
+
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class,'po_id');

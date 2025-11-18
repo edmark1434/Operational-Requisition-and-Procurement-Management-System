@@ -19,6 +19,7 @@ class SupplierFactory extends Factory
     {
         return [
             'name' => $this->faker->company(),
+            'email' => $this->faker->unique()->safeEmail(),
             'contact_info' => $this->faker->phoneNumber(),
             'allows_cash' => $this->faker->boolean(),
             'allows_disbursement' => $this->faker->boolean(),

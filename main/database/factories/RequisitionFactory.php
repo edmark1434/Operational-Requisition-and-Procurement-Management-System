@@ -19,7 +19,7 @@ class RequisitionFactory extends Factory
     public function definition(): array
     {
         return [
-            'status' => $this->faker->randomElement(Requisition::STATUS),
+            'status' => $this->faker->randomElement(Requisition::STATUSES),
             'remarks' => $this->faker->text(100),
             'user_id' => User::factory(), // Creates a related user if not existing
             'requestor' => $this->faker->name(),

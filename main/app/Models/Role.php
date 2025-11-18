@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Role extends Model
 {
-    use HasFactory;
     protected $table = 'role';
     protected $fillable = ['name', 'description'];
     public $timestamps = false;
@@ -15,5 +13,5 @@ class Role extends Model
     public function role_permission(){
         return $this->hasMany(\App\Models\RolePermission::class,'role_id');
     }
-    
+
 }

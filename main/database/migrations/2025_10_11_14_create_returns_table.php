@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Returns;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->timestamp('created_at')->useCurrent();
             $table->date('return_date');
-            $table->string('status')->default('PENDING');
+            $table->enum('status', Returns::STATUSES)->default('Pending');
             $table->text('remarks')->nullable();
             $table->unsignedBigInteger('delivery_id')->nullable();
             $table->foreign('delivery_id')->references('id')->on('delivery')->onDelete('set null');

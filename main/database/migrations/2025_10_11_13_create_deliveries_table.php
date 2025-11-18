@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Delivery;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -17,8 +18,8 @@ return new class extends Migration
             $table->date('delivery_date');
             $table->decimal('total_cost', 15, 2);
             $table->string('receipt_no')->unique();
-            $table->string('receipt_photo')->nullable();
-            $table->string('status')->default('PENDING');
+            $table->string('receipt_photo');
+            $table->enum('status', Delivery::STATUSES)->default('Received');
             $table->text('remarks')->nullable();
             $table->unsignedBigInteger('po_id')->nullable();
             $table->foreign('po_id')->references('id')->on('purchase_order')->onDelete('set null');

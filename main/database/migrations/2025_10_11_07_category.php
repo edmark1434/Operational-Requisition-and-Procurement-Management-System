@@ -16,6 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 100)->unique();
             $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
         });
         DB::unprepared("
             CREATE OR REPLACE FUNCTION get_category(p_id INT DEFAULT NULL)

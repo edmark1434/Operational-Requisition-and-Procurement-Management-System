@@ -15,10 +15,12 @@ return new class extends Migration
         Schema::create('supplier', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100)->unique();
+            $table->string('email')->unique();
             $table->string('contact_info', 255)->nullable();
             $table->boolean('allows_cash');
             $table->boolean('allows_disbursement');
             $table->boolean('allows_store_credit');
+            $table->boolean('is_active')->default(true);
         });
         DB::unprepared("
             CREATE OR REPLACE FUNCTION get_supplier(p_id INT DEFAULT NULL)

@@ -26,6 +26,14 @@ class Returns extends Model
         'return_date' => 'date',
     ];
 
+    public const STATUSES = [
+        'Pending',   // return is created
+        'Issued',    // when manager sends return slip to supplier
+        'Rejected',  // when return is rejected by supplier, which is weird
+        'Replaced',  // when items are replaced
+    ];
+
+
     /**
      * Each return belongs to one delivery
      */

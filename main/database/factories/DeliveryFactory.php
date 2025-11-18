@@ -16,10 +16,10 @@ class DeliveryFactory extends Factory
             'delivery_date' => $this->faker->date(),
             'total_cost' => $this->faker->randomFloat(2, 1000, 50000),
             'receipt_no' => $this->faker->unique()->numerify('RCPT-#####'),
-            'receipt_photo' => null, // or fake path if needed
-            'status' => $this->faker->randomElement(['PENDING', 'RECEIVED', 'CANCELLED']),
+            'receipt_photo' => "", // or fake path if needed
+            'status' => $this->faker->randomElement(Delivery::STATUSES),
             'remarks' => $this->faker->optional()->sentence(),
-            
+
             'po_id' => PurchaseOrder::factory(), // auto-create PO unless you replace it manually
         ];
     }

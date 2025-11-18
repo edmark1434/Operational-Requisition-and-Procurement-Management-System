@@ -14,14 +14,14 @@ return new class extends Migration
     {
         Schema::create('audit_log', function (Blueprint $table) {
             $table->id();
-            $table->enum('type',AuditLog::TYPES);
+            $table->foreignId('type_id')->constrained('audit_log_type')->cascadeOnDelete()->cascadeOnUpdate();
             $table->text('description');
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
         });
 
         DB::unprepared("
-            CREATE OR REPLACE FUNCTION get_audit_log(p_id INT, p_userId INT, p_type VARCHAR)
+            CREATE OR REPLACE FUNCTION get_audit_log(p_id INT, p_userId INT, p_typeId INT)
             RETURNS SETOF audit_log AS $$
             BEGIN
                 RETURN QUERY
@@ -29,31 +29,31 @@ return new class extends Migration
                 FROM audit_log
                 WHERE (p_id IS NULL OR audit_log.id = p_id)
                 AND (p_userId IS NULL OR audit_log.user_id = p_userId)
-                AND (p_type IS NULL OR audit_log.type = p_type)
+                AND (p_typeId IS NULL OR audit_log.type_id = p_typeId)
                 ORDER BY audit_log.created_at DESC;
             END;
             $$ LANGUAGE plpgsql;
         ");
 
         DB::unprepared("
-            CREATE OR REPLACE PROCEDURE create_audit_log(p_type VARCHAR, p_description VARCHAR, p_userId INT)
+            CREATE OR REPLACE PROCEDURE create_audit_log(p_typeId INT, p_description VARCHAR, p_userId INT)
             LANGUAGE plpgsql
             AS $$
             BEGIN
-                INSERT INTO audit_log (type, description, user_id)
-                VALUES (p_type, p_description, p_userId);
+                INSERT INTO audit_log (type_id, description, user_id)
+                VALUES (p_typeId, p_description, p_userId);
             END;
             $$;
         ");
 
         DB::unprepared("
-            CREATE OR REPLACE PROCEDURE update_audit_log(p_id INT, p_type VARCHAR, p_description VARCHAR)
+            CREATE OR REPLACE PROCEDURE update_audit_log(p_id INT, p_typeId INT, p_description VARCHAR)
             LANGUAGE plpgsql
             AS $$
             BEGIN
                 UPDATE audit_log
                 SET
-                    type = COALESCE(p_type, type),
+                    typeId = COALESCE(p_typeId, type_id),
                     description = COALESCE(p_description, description)
                 WHERE id = p_id;
             END;

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\AuditLog;
+use App\Models\AuditLogType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -13,7 +14,7 @@ class AuditLogFactory extends Factory
     public function definition(): array
     {
         return [
-            'type' => $this->faker->randomElement(AuditLog::TYPES),
+            'type_id' => AuditLogType::query()->inRandomOrder()->first()->id,
             'description' => $this->faker->sentence(),
             'user_id' => User::factory(),
             // created_at exists in your table but timestamps are disabled

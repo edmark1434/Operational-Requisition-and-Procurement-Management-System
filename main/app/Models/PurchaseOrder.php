@@ -17,6 +17,15 @@ class PurchaseOrder extends Model
      * Available payment types (Your migration uses this)
      */
     public const PAYMENT_TYPE = ['CASH', 'STORE CREDIT', 'DISBURSEMENT'];
+    public const STATUSES = [
+        'Pending',            // automatically when req is approved
+        'Merged',             // when merged with other POs
+        'Issued',             // when manager sends PO to supplier
+        'Rejected',           // when PO is rejected by supplier
+        'Delivered',          // when delivery is created
+        'Partially Delivered',// when delivery is created, but return is also created
+        'Received',           // when encoder marks it received via requisition
+    ];
 
     /**
      * Mass assignable fields

@@ -16,8 +16,35 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->string('description', 255)->nullable();
+            $table->boolean('is_active')->default(true);
         });
-         DB::unprepared("
+
+        DB::unprepared("
+            CREATE OR REPLACE PROCEDURE seed_role()
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                INSERT INTO role (name, description)
+                VALUES
+                (
+                    'Encoder',
+                    'Records requisitions, deliveries and returns, and merges purchase orders to ready for issuance'
+                ),
+                (
+                    'Manager',
+                    'Manages inventory, approves requisitions and issues purchase orders and returns'
+                ),
+                (
+                    'Administrator',
+                    'Manages users, roles and permissions, suppliers, settings, as well as the list of items, makes, and categories'
+                );
+            END;
+            $$;
+        ");
+
+        DB::unprepared("CALL seed_role();");
+
+        DB::unprepared("
             CREATE OR REPLACE FUNCTION get_roles(p_id INT DEFAULT NULL)
             RETURNS SETOF role AS $$
             BEGIN
@@ -70,6 +97,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('role');
+        DB::unprepared("DROP PROCEDURE IF EXISTS seed_role();");
         DB::unprepared("DROP FUNCTION IF EXISTS get_roles(INT);");
         DB::unprepared("DROP PROCEDURE IF EXISTS create_role(VARCHAR, VARCHAR);");
         DB::unprepared("DROP PROCEDURE IF EXISTS update_role(INT, VARCHAR, VARCHAR);");

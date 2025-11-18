@@ -15,7 +15,7 @@ class ReturnsFactory extends Factory
         return [
             'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'return_date' => $this->faker->dateTimeBetween('-1 month', 'now')->format('Y-m-d'),
-            'status' => $this->faker->randomElement(['PENDING', 'APPROVED', 'REJECTED']),
+            'status' => $this->faker->randomElement(Returns::STATUSES),
             'remarks' => $this->faker->optional()->sentence(),
             'delivery_id' => Delivery::factory(),
         ];

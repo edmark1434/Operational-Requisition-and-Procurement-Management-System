@@ -15,11 +15,11 @@ return new class extends Migration
     {
         Schema::create('purchase_order', function (Blueprint $table) {
             $table->id();
-            $table->string('references_no')->unique();
+            $table->string('reference_no')->unique();
             $table->timestamp('created_at')->useCurrent();
             $table->decimal('total_cost', 15, 2);
             $table->enum('payment_type', PurchaseOrder::PAYMENT_TYPE);
-            $table->string('status')->default('PENDING');
+            $table->enum('status', PurchaseOrder::STATUSES)->default('Pending');
             $table->text('remarks')->nullable();
             $table->unsignedBigInteger('req_id')->nullable();
             $table->unsignedBigInteger('supplier_id')->nullable();

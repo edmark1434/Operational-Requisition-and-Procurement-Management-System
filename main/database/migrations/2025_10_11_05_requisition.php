@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Requisition;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
-            $table->enum('status', ['PENDING', 'REJECTED', 'APPROVED', 'DELIVERED', 'RECEIVED']);
+            $table->enum('status', Requisition::STATUSES)->default('Pending');
             $table->string('remarks')->nullable();
             $table->string('requestor')->nullable();
             $table->string('notes')->nullable();

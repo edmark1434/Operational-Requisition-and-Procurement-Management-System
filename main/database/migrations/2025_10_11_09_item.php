@@ -22,6 +22,7 @@ return new class extends Migration
             $table->foreignId('make_id')->nullable()->constrained('make')->nullOnDelete();
             $table->foreignId('category_id')->constrained('category')->cascadeOnDelete();
             $table->foreignId('supplier_id')->nullable()->constrained('supplier')->nullOnDelete();
+            $table->boolean('is_active')->default(true);
         });
         DB::unprepared("
             CREATE OR REPLACE FUNCTION get_item(
@@ -37,7 +38,7 @@ return new class extends Migration
                 WHERE
                     id = COALESCE(p_id, id) AND
                     category_id = COALESCE(p_category_id, category_id) AND
-                    make_id = COALESCE(p_make_id, make_id) AND 
+                    make_id = COALESCE(p_make_id, make_id) AND
                     supplier_id = COALESCE(p_supplier_id, supplier_id)
 
                 ORDER BY name;
