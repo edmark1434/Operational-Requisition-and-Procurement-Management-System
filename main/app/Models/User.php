@@ -50,13 +50,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(AuditLog::class,'user_id');
     }
-    public function notification(){
+    public function notifications(){
         return $this->hasMany(Notification::class,'user_id');
     }
-    public function user_permission(){
+    public function userPermissions(){
         return $this->hasMany(\App\Models\UserPermission::class,'user_id');
     }
-    public function requisition()
+    public function requisitions()
     {
         return $this->hasMany(\App\Models\Requisition::class, 'user_id');
     }

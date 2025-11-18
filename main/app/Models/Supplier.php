@@ -17,10 +17,13 @@ class Supplier extends Model
         'allows_store_credit',
     ];
     public $timestamps = false;
-    public function purchase_order(){
+    public function purchaseOrders(){
         return $this->hasMany(\App\Models\PurchaseOrder::class,'supplier_id');
     }
-    public function category_supplier(){
+    public function categorySuppliers(){
         return $this->hasMany(\App\Models\CategorySupplier::class, 'supplier_id');
+    }
+    public function items(){
+        return $this->hasMany(\App\Models\Item::class, 'supplier_id');
     }
 }

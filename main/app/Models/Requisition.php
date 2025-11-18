@@ -25,7 +25,7 @@ class Requisition extends Model
     public function user(){
         return $this->belongsTo(User::class,'user_id');
     }
-    public function requisition_item(){
+    public function requisitionItems(){
         return $this->hasMany(RequisitionItem::class,'req_id');
     }
 }

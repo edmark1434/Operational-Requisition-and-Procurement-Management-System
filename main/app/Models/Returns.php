@@ -41,8 +41,8 @@ class Returns extends Model
     {
         return $this->belongsTo(\App\Models\Delivery::class, 'delivery_id');
     }
-    public function return_item()
+    public function returnItems()
     {
-        return $this->belongsTo(\App\Models\ReturnItem::class, 'return_id');
+        return $this->hasMany(\App\Models\ReturnItem::class, 'return_id');
     }
 }

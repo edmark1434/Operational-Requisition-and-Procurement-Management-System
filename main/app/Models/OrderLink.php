@@ -15,12 +15,12 @@ class OrderLink extends Model
         'po_from_id', 'po_to_id'
     ];
 
-    public function linksFrom()
+    public function fromPurchaseOrder()
     {
         return $this->belongsTo(\App\Models\PurchaseOrder::class,'po_from_id');
     }
 
-    public function linksTo()
+    public function toPurchaseOrder()
     {
         return $this->belongsTo(\App\Models\PurchaseOrder::class,'po_to_id');
     }

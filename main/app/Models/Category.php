@@ -10,15 +10,12 @@ class Category extends Model
     use HasFactory;
     protected $table = 'category';
     protected $fillable = ['name', 'description'];
-    public function category(){
-        return $this->hasMany(CategorySupplier::class,'category_id');
-    }
     public $timestamps = false;
-    public function item()
+    public function items()
     {
         return $this->hasMany(\App\Models\Item::class, 'category_id');
     }
-    public function categorySupplier(){
+    public function categorySuppliers(){
         return $this->hasMany(\App\Models\CategorySupplier::class, 'category_id');
     }
 }

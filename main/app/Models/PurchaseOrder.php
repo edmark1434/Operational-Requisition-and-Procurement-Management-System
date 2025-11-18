@@ -59,21 +59,21 @@ class PurchaseOrder extends Model
         return $this->hasMany(\App\Models\OrderItem::class, 'po_id');
     }
 
-    public function linksFrom()
+    public function fromLinks()
     {
         return $this->hasMany(\App\Models\OrderLink::class, 'po_from_id');
     }
 
-    public function linksTo()
+    public function toLinks()
     {
         return $this->hasMany(\App\Models\OrderLink::class, 'po_to_id');
     }
 
-    public function delivery()
+    public function deliveries()
     {
         return $this->hasMany(\App\Models\Delivery::class, 'po_id');
     }
-    public function deliveryItem()
+    public function deliveryItems()
     {
         return $this->hasMany(\App\Models\DeliveryItem::class, 'po_id');
     }

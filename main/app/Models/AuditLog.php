@@ -21,7 +21,7 @@ class AuditLog extends Model
         return $this->belongsTo(User::class,'user_id');
     }
 
-    public function type()
+    public function auditLogType()
     {
         return $this->belongsTo(AuditLogType::class,'type_id');
     }
