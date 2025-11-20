@@ -118,7 +118,7 @@ export default function InventoryList({ inventory, onItemClick, viewMode, isLoad
                                 <div className="col-span-2 flex items-center justify-end space-x-2">
                                     {item.CURRENT_STOCK === 0 && (
                                         <Link
-                                            href="/requisitions/form"
+                                            href="/requisitionform"
                                             onClick={(e) => e.stopPropagation()}
                                             className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-2 rounded-md transition-colors"
                                             title="Request Item"
