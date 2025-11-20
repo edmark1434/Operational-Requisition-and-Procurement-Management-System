@@ -30,7 +30,7 @@ export default function OrderInfo({
                     type="text"
                     readOnly
                     value={formData.REFERENCE_NO}
-                    className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-900 dark:text-white font-mono cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-400 dark:text-gray-500 font-mono cursor-not-allowed"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Auto-generated reference number

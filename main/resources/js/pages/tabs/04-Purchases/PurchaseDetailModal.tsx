@@ -53,12 +53,15 @@ export default function PurchaseDetailModal({
 
     if (!isOpen || !purchase) return null;
 
+// Update the statusOptions array in PurchaseDetailModal.tsx
     const statusOptions = [
-        { value: 'pending_approval', label: 'Pending Approval', description: 'Waiting for approval from management' },
-        { value: 'approved', label: 'Approved', description: 'Order has been approved and can proceed' },
-        { value: 'rejected', label: 'Rejected', description: 'Order has been rejected' },
-        { value: 'sent_dispatched', label: 'Sent & Dispatched', description: 'Order has been sent to supplier' },
-        { value: 'closed', label: 'Closed', description: 'Order is complete and closed' }
+        { value: 'pending_approval', label: 'Pending Approval', description: 'Automatically created when requisition is approved' },
+        { value: 'merged', label: 'Merged', description: 'When merged with other purchase orders' },
+        { value: 'issued', label: 'Issued', description: 'When manager sends PO to supplier' },
+        { value: 'rejected', label: 'Rejected', description: 'When PO is rejected by supplier' },
+        { value: 'delivered', label: 'Delivered', description: 'When delivery is created' },
+        { value: 'partially_delivered', label: 'Partially Delivered', description: 'When delivery is created, but return is also created' },
+        { value: 'received', label: 'Received', description: 'When encoder marks it received via requisition' }
     ];
 
     return (
@@ -99,7 +102,7 @@ export default function PurchaseDetailModal({
                                         </label>
                                         <div className="flex items-center gap-2">
                                             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(purchase?.STATUS)}`}>
-                                                <StatusIcon status={purchase?.STATUS} />
+                                                <PurchaseStatusIcon status={purchase?.STATUS} />
                                                 {getStatusDisplayName(purchase?.STATUS)}
                                             </div>
                                             <div className="relative" ref={dropdownRef}>
@@ -114,34 +117,55 @@ export default function PurchaseDetailModal({
                                                 </button>
 
                                                 {showStatusDropdown && (
-                                                    <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
-                                                        <div className="p-2">
-                                                            {statusOptions.map((status) => (
-                                                                <button
-                                                                    key={status.value}
-                                                                    onClick={() => handleStatusChange(status.value)}
-                                                                    className={`w-full text-left px-3 py-2 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
-                                                                        purchase?.STATUS === status.value
-                                                                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                                                                            : 'text-gray-700 dark:text-gray-300'
-                                                                    }`}
-                                                                >
-                                                                    <div className={`mt-1 w-2 h-2 rounded-full ${
-                                                                        purchase?.STATUS === status.value ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-600'
-                                                                    }`} />
-                                                                    <div className="flex-1">
-                                                                        <div className="font-medium">{status.label}</div>
-                                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                            {status.description}
+                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                        <div className="p-3">
+                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                Update Status
+                                                            </div>
+                                                            {/* Scrollable container with fixed height */}
+                                                            <div className="max-h-48 overflow-y-auto pr-1">
+                                                                {statusOptions.map((status) => (
+                                                                    <button
+                                                                        key={status.value}
+                                                                        onClick={() => handleStatusChange(status.value)}
+                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                            purchase?.STATUS === status.value
+                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                : 'border border-transparent'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                                                                purchase?.STATUS === status.value
+                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                            }`}>
+                                                                                {purchase?.STATUS === status.value && (
+                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                    </svg>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium text-gray-900 dark:text-white">
+                                                                                    {status.label}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                    {status.description}
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                    {purchase?.STATUS === status.value && (
-                                                                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                        </svg>
-                                                                    )}
-                                                                </button>
-                                                            ))}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+
+                                                            {statusOptions.length > 4 && (
+                                                                <div className="mt-2 pt-2 border-t border-sidebar-border">
+                                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                                                                        Scroll for more options
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
@@ -428,18 +452,25 @@ export default function PurchaseDetailModal({
 }
 
 // Status Icon Component
-function StatusIcon({ status }: { status: string }) {
+// Updated Purchase Status Icon Component
+function PurchaseStatusIcon({ status }: { status: string }) {
     switch (status?.toLowerCase()) {
-        case 'pending_approval':
+        case 'pending':
             return (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             );
-        case 'approved':
+        case 'merged':
             return (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+                </svg>
+            );
+        case 'issued':
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
             );
         case 'rejected':
@@ -448,13 +479,19 @@ function StatusIcon({ status }: { status: string }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
             );
-        case 'sent_dispatched':
+        case 'delivered':
             return (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
             );
-        case 'closed':
+        case 'partially_delivered':
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+            );
+        case 'received':
             return (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
