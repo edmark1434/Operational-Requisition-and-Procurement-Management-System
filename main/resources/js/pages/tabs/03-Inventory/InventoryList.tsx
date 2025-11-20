@@ -239,7 +239,7 @@ function InventoryCard({ item, onClick, viewMode }: {
                 {item.CURRENT_STOCK === 0 && (
                     <div className="mt-2 pt-2 border-t border-sidebar-border">
                         <Link
-                            href="/requisitions/form"
+                            href="/requisitionform"
                             className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-2 rounded-md flex items-center justify-center gap-1 transition-colors"
                         >
                             <ShoppingCart className="w-3 h-3" />
@@ -340,7 +340,7 @@ function InventoryCard({ item, onClick, viewMode }: {
 
                 {item.CURRENT_STOCK === 0 ? (
                     <Link
-                        href="requisitions/form"
+                        href="requisitionform"
                         className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-3 rounded-md flex items-center gap-1 transition-colors"
                     >
                         <ShoppingCart className="w-3 h-3" />
