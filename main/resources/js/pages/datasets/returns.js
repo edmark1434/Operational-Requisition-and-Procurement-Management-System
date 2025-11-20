@@ -4,7 +4,7 @@ const returns = [
         ID: 1,
         CREATED_AT: '2024-01-22',
         RETURN_DATE: '2024-01-22',
-        STATUS: 'completed',
+        STATUS: 'pending',
         REMARKS: 'Defective item received',
         DELIVERY_ID: 1,
         SUPPLIER_NAME: 'Electrical Supplies Co.'
