@@ -15,33 +15,32 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, NotepadTextIcon, Package, ShoppingCart, Contact, SquareArrowDownIcon, LucideLogs, User, Shield, Truck } from 'lucide-react';
 import AppLogo from './app-logo';
-import deliveries from "@/pages/datasets/delivery";
 
-const mainNavItems: NavItem[] = [
+// Group 1: Dashboard & Inventory
+const group1NavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
     },
     {
+        title: 'Inventory',
+        href: inventory(),
+        icon: Package,
+    },
+];
+
+// Group 2: Requisition, Purchases, Deliveries, Returns
+const group2NavItems: NavItem[] = [
+    {
         title: 'Requisitions',
         href: requisitions(),
         icon: NotepadTextIcon,
     },
     {
-        title: 'Inventory',
-        href: inventory(),
-        icon: Package,
-    },
-    {
         title: 'Purchases',
         href: purchases(),
         icon: ShoppingCart,
-    },
-    {
-        title: 'Suppliers',
-        href: suppliers(),
-        icon: Contact,
     },
     {
         title: 'Deliveries',
@@ -53,15 +52,28 @@ const mainNavItems: NavItem[] = [
         href: returns(),
         icon: SquareArrowDownIcon,
     },
+];
+
+// Group 3: Suppliers & Users
+const group3NavItems: NavItem[] = [
     {
-        title: 'Audit Logs',
-        href: audit(),
-        icon: LucideLogs,
+        title: 'Suppliers',
+        href: suppliers(),
+        icon: Contact,
     },
     {
         title: 'Users Management',
         href: users(),
         icon: User,
+    },
+];
+
+// Group 4: Audit Logs & Roles & Permissions
+const group4NavItems: NavItem[] = [
+    {
+        title: 'Audit Logs',
+        href: audit(),
+        icon: LucideLogs,
     },
     {
         title: 'Roles & Permissions',
@@ -83,6 +95,13 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
+// Simple separator component
+function SidebarSeparator() {
+    return (
+        <div className="h-px bg-sidebar-border mx-2 my-2" />
+    );
+}
+
 export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" variant="sidebar">
@@ -99,7 +118,26 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                {/* Group 1: Dashboard & Inventory */}
+                <NavMain items={group1NavItems} />
+
+                {/* First Separator */}
+                <SidebarSeparator />
+
+                {/* Group 2: Requisition, Purchases, Deliveries, Returns */}
+                <NavMain items={group2NavItems} />
+
+                {/* Second Separator */}
+                <SidebarSeparator />
+
+                {/* Group 3: Suppliers & Users */}
+                <NavMain items={group3NavItems} />
+
+                {/* Third Separator */}
+                <SidebarSeparator />
+
+                {/* Group 4: Audit Logs & Roles & Permissions */}
+                <NavMain items={group4NavItems} />
             </SidebarContent>
 
             <SidebarFooter>
