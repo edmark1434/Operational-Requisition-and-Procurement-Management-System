@@ -27,6 +27,22 @@ export default function SearchAndFilters({
                                              allCategories,
                                              resultsCount
                                          }: SearchAndFiltersProps) {
+
+    const getStatusDisplayName = (status: string): string => {
+        const statusMap: { [key: string]: string } = {
+            'pending': 'Pending',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'partially_approved': 'Partially Approved',
+            'ordered': 'Ordered',
+            'delivered': 'Delivered',
+            'awaiting_pickup': 'Awaiting Pickup',
+            'received': 'Received',
+            'all': 'All Statuses'
+        };
+        return statusMap[status?.toLowerCase()] || status;
+    };
+
     return (
         <div className="bg-sidebar dark:bg-sidebar rounded-lg border border-sidebar-border p-6">
             <div className="space-y-4">
@@ -69,7 +85,9 @@ export default function SearchAndFilters({
                             className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                         >
                             {statuses.map(status => (
-                                <option key={status} value={status}>{status}</option>
+                                <option key={status} value={status}>
+                                    {getStatusDisplayName(status)}
+                                </option>
                             ))}
                         </select>
                     </div>
