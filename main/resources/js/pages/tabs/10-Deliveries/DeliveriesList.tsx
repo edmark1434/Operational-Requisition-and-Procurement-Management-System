@@ -7,12 +7,23 @@ import { LoaderCircle, Package, Edit } from 'lucide-react';
 interface DeliveriesListProps {
     deliveries: any[];
     onDeliveryClick: (delivery: any) => void;
-    onStatusChange: (deliveryId: number, newStatus: string) => void;
     viewMode: 'comfortable' | 'compact' | 'condensed';
     isLoading?: boolean;
 }
 
-export default function DeliveriesList({ deliveries, onDeliveryClick, onStatusChange, viewMode, isLoading = false }: DeliveriesListProps) {
+// Add this helper function to format status display
+function formatStatusDisplay(status: string): string {
+    switch (status?.toLowerCase()) {
+        case 'received':
+            return 'Received';
+        case 'with returns':
+            return 'With Returns';
+        default:
+            return status;
+    }
+}
+
+export default function DeliveriesList({ deliveries, onDeliveryClick, viewMode, isLoading = false }: DeliveriesListProps) {
     if (isLoading) {
         return (
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-8">
@@ -92,13 +103,12 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, onStatusCh
                                 </span>
                             </div>
 
-                            {/* Status - Now Editable */}
-                            <div className="col-span-2 flex items-center" onClick={(e) => e.stopPropagation()}>
-                                <StatusDropdown
-                                    delivery={delivery}
-                                    onStatusChange={onStatusChange}
-                                    size="sm"
-                                />
+                            {/* Status - READ ONLY */}
+                            <div className="col-span-2 flex items-center">
+                                <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getDeliveriesStatusColor(delivery?.STATUS)}`}>
+                                    <DeliveryStatusIcon status={delivery?.STATUS} />
+                                    {formatStatusDisplay(delivery?.STATUS)}
+                                </span>
                             </div>
 
                             {/* Total Value */}
@@ -138,7 +148,6 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, onStatusCh
                             key={delivery.ID}
                             delivery={delivery}
                             onClick={() => onDeliveryClick(delivery)}
-                            onStatusChange={onStatusChange}
                             viewMode={viewMode}
                         />
                     ))}
@@ -148,49 +157,10 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, onStatusCh
     );
 }
 
-// Status Dropdown Component with themed colors - UPDATED
-function StatusDropdown({ delivery, onStatusChange, size = 'md' }: {
-    delivery: any;
-    onStatusChange: (deliveryId: number, newStatus: string) => void;
-    size?: 'sm' | 'md';
-}) {
-    const getStatusClasses = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'pending':
-                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800';
-            case 'delivered':
-                return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800';
-            case 'in-transit':
-                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800';
-            case 'cancelled':
-                return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border-gray-200 dark:border-gray-700';
-        }
-    };
-
-    const sizeClasses = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm';
-
-    return (
-        <select
-            value={delivery.STATUS}
-            onChange={(e) => onStatusChange(delivery.ID, e.target.value)}
-            className={`w-full ${sizeClasses} rounded-full font-medium border-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer transition-colors ${getStatusClasses(delivery.STATUS)}`}
-            onClick={(e) => e.stopPropagation()} // Prevent card click when interacting with dropdown
-        >
-            <option value="pending" className="bg-white dark:bg-input text-gray-900 dark:text-white">Pending</option>
-            <option value="in-transit" className="bg-white dark:bg-input text-gray-900 dark:text-white">In Transit</option>
-            <option value="delivered" className="bg-white dark:bg-input text-gray-900 dark:text-white">Delivered</option>
-            <option value="cancelled" className="bg-white dark:bg-input text-gray-900 dark:text-white">Cancelled</option>
-        </select>
-    );
-}
-
-// Delivery Card Component
-function DeliveryCard({ delivery, onClick, onStatusChange, viewMode }: {
+// Delivery Card Component - READ ONLY status
+function DeliveryCard({ delivery, onClick, viewMode }: {
     delivery: any;
     onClick: () => void;
-    onStatusChange: (deliveryId: number, newStatus: string) => void;
     viewMode: 'comfortable' | 'compact';
 }) {
     if (viewMode === 'compact') {
@@ -218,16 +188,16 @@ function DeliveryCard({ delivery, onClick, onStatusChange, viewMode }: {
                     {delivery.SUPPLIER_NAME}
                 </h3>
 
-                {/* Status and Items - Compact */}
-                <div className="space-y-1">
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        <StatusDropdown
-                            delivery={delivery}
-                            onStatusChange={onStatusChange}
-                            size="sm"
-                        />
-                    </div>
+                {/* Status - READ ONLY */}
+                <div className="mb-2">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDeliveriesStatusColor(delivery?.STATUS)}`}>
+                        <DeliveryStatusIcon status={delivery?.STATUS} />
+                        {formatStatusDisplay(delivery?.STATUS)}
+                    </span>
+                </div>
 
+                {/* Details */}
+                <div className="space-y-1">
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400">Items:</span>
                         <span className="font-semibold text-gray-900 dark:text-white">
@@ -253,7 +223,7 @@ function DeliveryCard({ delivery, onClick, onStatusChange, viewMode }: {
         );
     }
 
-    // Comfortable View
+    // Comfortable View - READ ONLY status
     return (
         <div
             className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-4 hover:shadow-md transition-all duration-200 cursor-pointer group"
@@ -284,13 +254,12 @@ function DeliveryCard({ delivery, onClick, onStatusChange, viewMode }: {
                 {delivery.SUPPLIER_NAME}
             </h3>
 
-            {/* Status Badge - Now Editable */}
-            <div className="mb-3" onClick={(e) => e.stopPropagation()}>
-                <StatusDropdown
-                    delivery={delivery}
-                    onStatusChange={onStatusChange}
-                    size="md"
-                />
+            {/* Status Badge - READ ONLY */}
+            <div className="mb-3">
+                <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getDeliveriesStatusColor(delivery?.STATUS)}`}>
+                    <DeliveryStatusIcon status={delivery?.STATUS} />
+                    {formatStatusDisplay(delivery?.STATUS)}
+                </span>
             </div>
 
             {/* Delivery Details */}
@@ -321,7 +290,7 @@ function DeliveryCard({ delivery, onClick, onStatusChange, viewMode }: {
             </div>
 
             {/* Quick Actions Footer */}
-            <div className="mt-4 pt-3 border-t border-sidebar-border" onClick={(e) => e.stopPropagation()}>
+            <div className="mt-4 pt-3 border-t border-sidebar-border">
                 <button
                     onClick={onClick}
                     className="w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-center"
@@ -331,4 +300,28 @@ function DeliveryCard({ delivery, onClick, onStatusChange, viewMode }: {
             </div>
         </div>
     );
+}
+
+// Delivery Status Icon Component
+function DeliveryStatusIcon({ status }: { status: string }) {
+    switch (status?.toLowerCase()) {
+        case 'received':
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+            );
+        case 'with returns':
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+            );
+        default:
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            );
+    }
 }

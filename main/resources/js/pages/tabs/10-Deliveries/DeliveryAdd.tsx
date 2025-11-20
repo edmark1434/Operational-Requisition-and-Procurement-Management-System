@@ -44,19 +44,11 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
     // Load data on component mount
     useEffect(() => {
         loadPurchaseOrders();
-        generateReceiptNo();
     }, []);
 
     const loadPurchaseOrders = () => {
         const availablePOs = getAvailablePurchaseOrders();
         setPurchaseOrders(availablePOs);
-    };
-
-    const generateReceiptNo = () => {
-        const timestamp = new Date().getTime();
-        const random = Math.floor(Math.random() * 1000);
-        const receiptNo = `REC-${new Date().getFullYear()}-${timestamp}${random}`.slice(0, 15);
-        setFormData(prev => ({ ...prev, RECEIPT_NO: receiptNo }));
     };
 
     const handleReceiptPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +78,10 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
             newErrors.PO_ID = 'Purchase order is required';
         }
 
+        if (!formData.RECEIPT_NO) {
+            newErrors.RECEIPT_NO = 'Receipt number is required';
+        }
+
         if (selectedItems.length === 0) {
             newErrors.items = 'At least one item must be selected for delivery';
         }
@@ -103,9 +99,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
             if (item.QUANTITY <= 0) {
                 newErrors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
             }
-            if (item.QUANTITY > item.MAX_QUANTITY) {
-                newErrors[`item_${index}_quantity`] = `Quantity cannot exceed ${item.MAX_QUANTITY} (ordered quantity)`;
-            }
+            // Removed the max quantity validation to allow more than ordered quantity
         });
 
         setErrors(newErrors);
@@ -141,10 +135,11 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
     };
 
     const handleItemQuantityChange = (itemId: number, quantity: number) => {
+        // Allow any positive quantity (removed max limit)
         setSelectedItems(prev => prev.map(item =>
             item.ITEM_ID === itemId ? {
                 ...item,
-                QUANTITY: Math.min(quantity, item.MAX_QUANTITY || quantity)
+                QUANTITY: Math.max(1, quantity) // Ensure at least 1
             } : item
         ));
     };
@@ -213,7 +208,6 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
         });
         setSelectedItems([]);
         setErrors({});
-        generateReceiptNo();
     };
 
     const handleCancel = () => {
@@ -268,16 +262,23 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Receipt Number
+                                                        Receipt Number <span className="text-red-500">*</span>
                                                     </label>
                                                     <input
                                                         type="text"
-                                                        readOnly
+                                                        required
                                                         value={formData.RECEIPT_NO}
-                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-900 dark:text-white font-mono cursor-not-allowed"
+                                                        onChange={(e) => handleInputChange('RECEIPT_NO', e.target.value)}
+                                                        placeholder="Enter receipt number"
+                                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                            errors.RECEIPT_NO ? 'border-red-500' : 'border-sidebar-border'
+                                                        }`}
                                                     />
+                                                    {errors.RECEIPT_NO && (
+                                                        <p className="text-red-500 text-xs mt-1">{errors.RECEIPT_NO}</p>
+                                                    )}
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        Auto-generated receipt number
+                                                        Enter the receipt number from your delivery
                                                     </p>
                                                 </div>
                                                 <div>
@@ -501,7 +502,6 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                         <input
                                                                             type="number"
                                                                             min="1"
-                                                                            max={item.MAX_QUANTITY}
                                                                             value={item.QUANTITY}
                                                                             onChange={(e) => handleItemQuantityChange(item.ITEM_ID, parseInt(e.target.value) || 0)}
                                                                             className={`w-full px-3 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
@@ -512,7 +512,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                             <p className="text-red-500 text-xs mt-1">{errors[`item_${index}_quantity`]}</p>
                                                                         )}
                                                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                            Max: {item.MAX_QUANTITY} (ordered quantity)
+                                                                            Ordered: {item.MAX_QUANTITY} (reference only)
                                                                         </p>
                                                                     </div>
                                                                     <div>
@@ -563,24 +563,46 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
 
                                     {/* Action Buttons */}
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
-                                        <div className="flex gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={handleReset}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
-                                                Reset Form
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleCancel}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
-                                                Cancel
-                                            </button>
+                                        <div className="flex gap-3 justify-between items-center">
+                                            <div className="flex gap-3">
+                                                {/* Reset Button - Circle with refresh icon and tooltip */}
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleReset}
+                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    </button>
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Reset Form
+                                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Cancel Button - Circle with X icon and tooltip */}
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCancel}
+                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Cancel
+                                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <button
                                                 type="submit"
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                className="flex-1 max-w-xs bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
                                             >
                                                 Create Delivery
                                             </button>
