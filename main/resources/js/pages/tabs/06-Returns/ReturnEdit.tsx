@@ -34,7 +34,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
         ITEM_NAME: string;
         QUANTITY: number;
         UNIT_PRICE: number;
-        REASON: string;
         MAX_QUANTITY: number;
     }>>([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -88,7 +87,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                     ITEM_NAME: item.ITEM_NAME,
                     QUANTITY: item.QUANTITY,
                     UNIT_PRICE: item.UNIT_PRICE,
-                    REASON: item.REASON,
                     MAX_QUANTITY: originalQuantity // Use original delivered quantity as max
                 };
             });
@@ -120,9 +118,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
 
         // Validate each selected item
         selectedItems.forEach((item, index) => {
-            if (!item.REASON.trim()) {
-                newErrors[`item_${index}_reason`] = 'Reason is required for all items';
-            }
             if (item.QUANTITY <= 0) {
                 newErrors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
             }
@@ -152,7 +147,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                 ITEM_NAME: item.ITEM_NAME,
                 QUANTITY: 1,
                 UNIT_PRICE: item.UNIT_PRICE,
-                REASON: '',
                 MAX_QUANTITY: item.AVAILABLE_QUANTITY
             }]);
         }
@@ -165,12 +159,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
     const handleItemQuantityChange = (itemId: number, quantity: number) => {
         setSelectedItems(prev => prev.map(item =>
             item.ITEM_ID === itemId ? { ...item, QUANTITY: quantity } : item
-        ));
-    };
-
-    const handleItemReasonChange = (itemId: number, reason: string) => {
-        setSelectedItems(prev => prev.map(item =>
-            item.ITEM_ID === itemId ? { ...item, REASON: reason } : item
         ));
     };
 
@@ -206,8 +194,7 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                 SUPPLIER_NAME: selectedDelivery?.SUPPLIER_NAME,
                 ITEMS: selectedItems.map(item => ({
                     ITEM_ID: item.ITEM_ID,
-                    QUANTITY: item.QUANTITY,
-                    REASON: item.REASON
+                    QUANTITY: item.QUANTITY
                 }))
             };
 
@@ -337,14 +324,15 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                             Status
                                                         </label>
-                                                        <select
+                                                        <input
+                                                            type="text"
+                                                            readOnly
                                                             value={formData.STATUS}
-                                                            onChange={(e) => handleInputChange('STATUS', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                        >
-                                                            <option value="pending">Pending</option>
-                                                            <option value="completed">Completed</option>
-                                                        </select>
+                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-900 dark:text-white font-medium cursor-not-allowed capitalize"
+                                                        />
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            Status cannot be changed when editing
+                                                        </p>
                                                     </div>
                                                 </div>
 
@@ -522,24 +510,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                                                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(item.QUANTITY * item.UNIT_PRICE)}
                                                                             </p>
                                                                         </div>
-                                                                    </div>
-
-                                                                    <div className="mt-3">
-                                                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                            Reason for Return <span className="text-red-500">*</span>
-                                                                        </label>
-                                                                        <textarea
-                                                                            value={item.REASON}
-                                                                            onChange={(e) => handleItemReasonChange(item.ITEM_ID, e.target.value)}
-                                                                            placeholder="Enter reason for returning this item (e.g., defective, wrong item, damaged)"
-                                                                            rows={2}
-                                                                            className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                                                                errors[`item_${index}_reason`] ? 'border-red-500' : 'border-sidebar-border'
-                                                                            }`}
-                                                                        />
-                                                                        {errors[`item_${index}_reason`] && (
-                                                                            <p className="text-red-500 text-xs mt-1">{errors[`item_${index}_reason`]}</p>
-                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             ))}
