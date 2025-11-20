@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ReturnsIcons } from './utils/icons';
 import { getReturnsStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
@@ -9,16 +9,33 @@ interface ReturnsDetailModalProps {
     onClose: () => void;
     onEdit: () => void;
     onDelete: (id: number) => void;
+    onStatusChange: (id: number, newStatus: string) => void;
 }
+
+// Helper function to capitalize status display
+const capitalizeStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+// Returns status options with capitalized labels
+const statusOptions = [
+    { value: 'pending', label: 'Pending', description: 'Return is created' },
+    { value: 'issued', label: 'Issued', description: 'When manager sends return slip to supplier' },
+    { value: 'rejected', label: 'Rejected', description: 'When return is rejected by supplier' },
+    { value: 'replaced', label: 'Replaced', description: 'When items are replaced' }
+];
 
 export default function ReturnsDetailModal({
                                                returnItem,
                                                isOpen,
                                                onClose,
                                                onEdit,
-                                               onDelete
+                                               onDelete,
+                                               onStatusChange
                                            }: ReturnsDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = () => {
         if (returnItem) {
@@ -26,6 +43,29 @@ export default function ReturnsDetailModal({
         }
         setShowDeleteConfirm(false);
     };
+
+    const handleStatusChange = (newStatus: string) => {
+        if (returnItem) {
+            onStatusChange(returnItem.ID, newStatus);
+            // The modal will automatically close because the parent component
+            // should handle the state update and re-render
+        }
+        setShowStatusDropdown(false);
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowStatusDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     if (!isOpen || !returnItem) return null;
 
@@ -65,9 +105,67 @@ export default function ReturnsDetailModal({
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Status
                                         </label>
-                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getReturnsStatusColor(returnItem.STATUS)}`}>
-                                            {ReturnsIcons[returnItem.STATUS.toLowerCase() as keyof typeof ReturnsIcons]}
-                                            {returnItem.STATUS}
+                                        <div className="flex items-center gap-2">
+                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getReturnsStatusColor(returnItem.STATUS)}`}>
+                                                {ReturnsIcons[returnItem.STATUS.toLowerCase() as keyof typeof ReturnsIcons]}
+                                                {capitalizeStatus(returnItem.STATUS)}
+                                            </div>
+                                            <div className="relative" ref={dropdownRef}>
+                                                <button
+                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                    Change Status
+                                                </button>
+
+                                                {showStatusDropdown && (
+                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                        <div className="p-3">
+                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                Update Status
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                {statusOptions.map((status) => (
+                                                                    <button
+                                                                        key={status.value}
+                                                                        onClick={() => handleStatusChange(status.value)}
+                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                            returnItem?.STATUS === status.value
+                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                : 'border border-transparent'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                                                                returnItem?.STATUS === status.value
+                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                            }`}>
+                                                                                {returnItem?.STATUS === status.value && (
+                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                    </svg>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium text-gray-900 dark:text-white">
+                                                                                    {status.label}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                    {status.description}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div>

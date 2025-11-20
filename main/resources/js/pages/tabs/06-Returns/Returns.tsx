@@ -40,6 +40,20 @@ export default function Returns() {
         setIsDetailModalOpen(false);
     };
 
+    // UPDATED: Status Change Handler with explicit modal close
+    const handleStatusChange = (id: number, newStatus: string) => {
+        setReturns(prevReturns =>
+            prevReturns.map(returnItem =>
+                returnItem.ID === id
+                    ? { ...returnItem, STATUS: newStatus }
+                    : returnItem
+            )
+        );
+        // Close modal immediately after status change
+        setIsDetailModalOpen(false);
+        setSelectedReturn(null);
+    };
+
     const openDetailModal = (returnItem: any) => {
         setSelectedReturn(returnItem);
         setIsDetailModalOpen(true);
@@ -93,18 +107,17 @@ export default function Returns() {
                     viewMode={viewMode}
                 />
 
-                {/* View Detail Modal */}
-                {isDetailModalOpen && (
-                    <ReturnsDetailModal
-                        returnItem={selectedReturn}
-                        isOpen={isDetailModalOpen}
-                        onClose={closeAllModals}
-                        onEdit={() => {
-                            window.location.href = `/returns/${selectedReturn.ID}/edit`;
-                        }}
-                        onDelete={handleDeleteReturn}
-                    />
-                )}
+                {/* View Detail Modal - REMOVED the conditional rendering */}
+                <ReturnsDetailModal
+                    returnItem={selectedReturn}
+                    isOpen={isDetailModalOpen}
+                    onClose={closeAllModals}
+                    onEdit={() => {
+                        window.location.href = `/returns/${selectedReturn?.ID}/edit`;
+                    }}
+                    onDelete={handleDeleteReturn}
+                    onStatusChange={handleStatusChange}
+                />
             </div>
         </AppLayout>
     );
