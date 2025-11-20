@@ -30,7 +30,7 @@ export default function InventoryStats({ inventory }: InventoryStatsProps) {
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
                             {formatCurrency(totalValue)}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Total Value</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Estimated Total Value</div>
                     </div>
                 </div>
             </div>
