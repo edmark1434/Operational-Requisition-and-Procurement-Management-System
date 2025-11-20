@@ -38,7 +38,7 @@ const group2NavItems: NavItem[] = [
         icon: NotepadTextIcon,
     },
     {
-        title: 'Purchases',
+        title: 'Purchase Orders',
         href: purchases(),
         icon: ShoppingCart,
     },
@@ -62,7 +62,7 @@ const group3NavItems: NavItem[] = [
         icon: Contact,
     },
     {
-        title: 'Users Management',
+        title: 'Users',
         href: users(),
         icon: User,
     },
