@@ -124,10 +124,25 @@ export default function AuditLogs() {
     const [dateFilter, setDateFilter] = useState('All');
 
     // Available types for filter
-    const availableTypes = ['All', 'user_login', 'user_created', 'user_updated', 'user_deleted',
-        'requisition_created', 'requisition_approved', 'requisition_declined',
-        'delivery_created', 'delivery_completed', 'inventory_updated',
-        'permission_updated', 'system_event'];
+    const availableTypes = [
+        'All',
+        // Requisition events
+        'requisition_created', 'requisition_approved', 'requisition_rejected',
+        'requisition_changed', 'requisition_awaiting_pickup', 'requisition_received',
+        // Purchase order events
+        'purchase_order_created', 'purchase_order_merged', 'purchase_order_updated',
+        'purchase_order_issued', 'purchase_order_rejected',
+        // Delivery events
+        'delivery_created', 'delivery_updated', 'delivery_completed',
+        // Return events
+        'return_created', 'return_issued', 'return_rejected', 'return_replaced',
+        // Inventory events
+        'item_created', 'item_updated', 'item_removed',
+        // Supplier events
+        'supplier_created', 'supplier_updated', 'supplier_removed',
+        // User events
+        'user_login', 'user_created', 'permission_updated'
+    ];
 
     const dateRanges = ['All', 'Today', 'Last 7 days', 'Last 30 days', 'Last 90 days'];
 
@@ -165,16 +180,9 @@ export default function AuditLogs() {
     const transformAuditLogData = (): AuditLog[] => {
         // Create mock audit log data based on your system
         const mockLogs: AuditLog[] = [
+            // REQUISITION EVENTS
             {
                 id: 1,
-                type: 'user_login',
-                description: 'User logged into the system',
-                created_at: '2024-01-20 09:30:00',
-                user_id: 2001,
-                user_name: 'John Doe'
-            },
-            {
-                id: 2,
                 type: 'requisition_created',
                 description: 'Created new requisition #5004 for office supplies',
                 created_at: '2024-01-20 10:15:00',
@@ -182,7 +190,7 @@ export default function AuditLogs() {
                 user_name: 'Maria Garcia'
             },
             {
-                id: 3,
+                id: 2,
                 type: 'requisition_approved',
                 description: 'Approved requisition #5001 for maintenance department',
                 created_at: '2024-01-20 11:30:00',
@@ -190,23 +198,195 @@ export default function AuditLogs() {
                 user_name: 'John Doe'
             },
             {
+                id: 3,
+                type: 'requisition_rejected',
+                description: 'Rejected requisition #5002 due to budget constraints',
+                created_at: '2024-01-18 11:20:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
                 id: 4,
+                type: 'requisition_changed',
+                description: 'Partially approved requisition #5003 - 3 items approved, 2 items rejected',
+                created_at: '2024-01-19 14:25:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
+                id: 5,
+                type: 'requisition_awaiting_pickup',
+                description: 'Requisition #5001 marked as Awaiting Pickup',
+                created_at: '2024-01-21 09:15:00',
+                user_id: 2002,
+                user_name: 'Maria Garcia'
+            },
+            {
+                id: 6,
+                type: 'requisition_received',
+                description: 'Requisition #5001 received by requestor',
+                created_at: '2024-01-21 14:30:00',
+                user_id: 2003,
+                user_name: 'David Johnson'
+            },
+
+            // PURCHASE ORDER EVENTS
+            {
+                id: 7,
+                type: 'purchase_order_created',
+                description: 'Created purchase order #PO-2024-001 for ABC Suppliers',
+                created_at: '2024-01-19 16:45:00',
+                user_id: 2002,
+                user_name: 'Maria Garcia'
+            },
+            {
+                id: 8,
+                type: 'purchase_order_merged',
+                description: 'Merged purchase orders #PO-2024-001 and #PO-2024-002',
+                created_at: '2024-01-20 08:30:00',
+                user_id: 2002,
+                user_name: 'Maria Garcia'
+            },
+            {
+                id: 9,
+                type: 'purchase_order_updated',
+                description: 'Updated purchase order #PO-2024-001 - added 2 new items',
+                created_at: '2024-01-20 10:20:00',
+                user_id: 2002,
+                user_name: 'Maria Garcia'
+            },
+            {
+                id: 10,
+                type: 'purchase_order_issued',
+                description: 'Purchase order #PO-2024-001 issued to supplier',
+                created_at: '2024-01-20 11:45:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
+                id: 11,
+                type: 'purchase_order_rejected',
+                description: 'Purchase order #PO-2024-003 rejected - supplier unavailable',
+                created_at: '2024-01-18 15:30:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+
+            // DELIVERY EVENTS
+            {
+                id: 12,
+                type: 'delivery_created',
+                description: 'Created new delivery for Office World Suppliers',
+                created_at: '2024-01-16 14:30:00',
+                user_id: 2004,
+                user_name: 'Sarah Wilson'
+            },
+            {
+                id: 13,
+                type: 'delivery_updated',
+                description: 'Updated delivery schedule for REC-2024-004',
+                created_at: '2024-01-17 10:15:00',
+                user_id: 2004,
+                user_name: 'Sarah Wilson'
+            },
+            {
+                id: 14,
                 type: 'delivery_completed',
                 description: 'Delivery #REC-2024-004 completed successfully',
                 created_at: '2024-01-20 14:20:00',
                 user_id: 2003,
                 user_name: 'David Johnson'
             },
+
+            // RETURN EVENTS
             {
-                id: 5,
-                type: 'inventory_updated',
-                description: 'Updated stock levels for Power Drill Machine',
+                id: 15,
+                type: 'return_created',
+                description: 'Created return request for damaged items from delivery #REC-2024-003',
+                created_at: '2024-01-18 13:40:00',
+                user_id: 2002,
+                user_name: 'Maria Garcia'
+            },
+            {
+                id: 16,
+                type: 'return_issued',
+                description: 'Return #RET-2024-001 issued to supplier',
+                created_at: '2024-01-19 09:25:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
+                id: 17,
+                type: 'return_rejected',
+                description: 'Return #RET-2024-002 rejected - items not eligible for return',
+                created_at: '2024-01-20 16:10:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
+                id: 18,
+                type: 'return_replaced',
+                description: 'Replaced items from return #RET-2024-001 with new stock',
+                created_at: '2024-01-21 11:30:00',
+                user_id: 2002,
+                user_name: 'Maria Garcia'
+            },
+
+            // INVENTORY MANAGEMENT EVENTS
+            {
+                id: 19,
+                type: 'item_created',
+                description: 'Created new item "Wireless Keyboard" in inventory',
+                created_at: '2024-01-15 10:00:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
+                id: 20,
+                type: 'item_updated',
+                description: 'Updated price and stock level for "Power Drill Machine"',
                 created_at: '2024-01-19 16:45:00',
                 user_id: 2004,
                 user_name: 'Sarah Wilson'
             },
             {
-                id: 6,
+                id: 21,
+                type: 'item_removed',
+                description: 'Removed obsolete item "VGA Cable" from inventory',
+                created_at: '2024-01-18 14:20:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+
+            // SUPPLIER MANAGEMENT
+            {
+                id: 22,
+                type: 'supplier_created',
+                description: 'Added new supplier "TechGadgets Inc."',
+                created_at: '2024-01-17 11:30:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
+                id: 23,
+                type: 'supplier_updated',
+                description: 'Updated contact information for "Office World Suppliers"',
+                created_at: '2024-01-19 15:45:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+
+            // USER MANAGEMENT
+            {
+                id: 24,
+                type: 'user_login',
+                description: 'User logged into the system',
+                created_at: '2024-01-20 09:30:00',
+                user_id: 2001,
+                user_name: 'John Doe'
+            },
+            {
+                id: 25,
                 type: 'user_created',
                 description: 'Created new user account for Michael Brown',
                 created_at: '2024-01-19 13:10:00',
@@ -214,36 +394,12 @@ export default function AuditLogs() {
                 user_name: 'John Doe'
             },
             {
-                id: 7,
+                id: 26,
                 type: 'permission_updated',
                 description: 'Updated user permissions for Maria Garcia',
                 created_at: '2024-01-18 15:30:00',
                 user_id: 2001,
                 user_name: 'John Doe'
-            },
-            {
-                id: 8,
-                type: 'requisition_declined',
-                description: 'Declined requisition #5002 due to budget constraints',
-                created_at: '2024-01-18 11:20:00',
-                user_id: 2001,
-                user_name: 'John Doe'
-            },
-            {
-                id: 9,
-                type: 'user_login',
-                description: 'User logged into the system',
-                created_at: '2024-01-17 08:45:00',
-                user_id: 2003,
-                user_name: 'David Johnson'
-            },
-            {
-                id: 10,
-                type: 'delivery_created',
-                description: 'Created new delivery for Office World Suppliers',
-                created_at: '2024-01-16 14:30:00',
-                user_id: 2004,
-                user_name: 'Sarah Wilson'
             }
         ];
 
