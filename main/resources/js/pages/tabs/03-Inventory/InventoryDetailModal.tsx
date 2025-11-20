@@ -187,20 +187,20 @@ export default function InventoryDetailModal({
                                 </div>
                             </div>
 
-                            {/* Manufacturer Information */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Manufacturer Information
-                                </h3>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Brand/Manufacturer
-                                    </label>
-                                    <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                        {item?.MAKE_NAME || 'Unknown manufacturer'}
-                                    </p>
-                                </div>
-                            </div>
+                            {/*/!* Manufacturer Information *!/*/}
+                            {/*<div className="border-t border-sidebar-border pt-6">*/}
+                            {/*    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">*/}
+                            {/*        Manufacturer Information*/}
+                            {/*    </h3>*/}
+                            {/*    <div>*/}
+                            {/*        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">*/}
+                            {/*            Brand/Manufacturer*/}
+                            {/*        </label>*/}
+                            {/*        <p className="text-sm text-gray-900 dark:text-white font-medium">*/}
+                            {/*            {item?.MAKE_NAME || 'Unknown manufacturer'}*/}
+                            {/*        </p>*/}
+                            {/*    </div>*/}
+                            {/*</div>*/}
 
                             {/* Additional Details */}
                             <div className="space-y-4 border-t border-sidebar-border pt-6">
