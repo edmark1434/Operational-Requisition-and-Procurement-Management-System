@@ -10,6 +10,20 @@ interface RequisitionsListProps {
 }
 
 export default function RequisitionsList({ requisitions, onRequisitionClick }: RequisitionsListProps) {
+    const getStatusDisplayName = (status: string): string => {
+        const statusMap: { [key: string]: string } = {
+            'pending': 'Pending',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'partially_approved': 'Partially Approved',
+            'ordered': 'Ordered',
+            'delivered': 'Delivered',
+            'awaiting_pickup': 'Awaiting Pickup',
+            'received': 'Received'
+        };
+        return statusMap[status?.toLowerCase()] || status;
+    };
+
     if (requisitions.length === 0) {
         return (
             <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
@@ -66,6 +80,7 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
                                 key={requisition.ID}
                                 requisition={requisition}
                                 onClick={() => onRequisitionClick(requisition)}
+                                getStatusDisplayName={getStatusDisplayName}
                             />
                         ))}
                     </div>
@@ -75,7 +90,15 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
     );
 }
 
-function RequisitionListItem({ requisition, onClick }: { requisition: any; onClick: () => void }) {
+function RequisitionListItem({
+                                 requisition,
+                                 onClick,
+                                 getStatusDisplayName
+                             }: {
+    requisition: any;
+    onClick: () => void;
+    getStatusDisplayName: (status: string) => string;
+}) {
     return (
         <div
             onClick={onClick}
@@ -92,8 +115,8 @@ function RequisitionListItem({ requisition, onClick }: { requisition: any; onCli
                 {/* STATUS */}
                 <div className="col-span-2 mb-3 lg:mb-0">
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(requisition.STATUS)}`}>
-                        {StatusIcons[requisition.STATUS.toLowerCase() as keyof typeof StatusIcons]}
-                        {requisition.STATUS}
+                        {StatusIcons[requisition.STATUS?.toLowerCase() as keyof typeof StatusIcons] || StatusIcons.pending}
+                        {getStatusDisplayName(requisition.STATUS)}
                     </div>
                 </div>
 
@@ -102,9 +125,16 @@ function RequisitionListItem({ requisition, onClick }: { requisition: any; onCli
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {requisition.REQUESTOR}
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-1">
-                        {requisition.REMARKS || requisition.NOTES || 'No remarks'}
-                    </p>
+                    {/* Show REMARKS in red only for rejected status, otherwise show NOTES */}
+                    {requisition.STATUS === 'rejected' && requisition.REMARKS ? (
+                        <p className="text-xs text-red-600 dark:text-red-400 truncate mt-1 font-medium">
+                            {requisition.REMARKS}
+                        </p>
+                    ) : (
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-1">
+                            {requisition.NOTES || 'No remarks'}
+                        </p>
+                    )}
                     <div className="flex gap-2 mt-2">
                         {requisition.CATEGORIES.slice(0, 2).map((category: string, index: number) => (
                             <span key={index} className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border">

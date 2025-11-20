@@ -14,7 +14,7 @@ const requisitions = [
         REQ_ID: 5002,
         DATE_REQUESTED: "2024-01-16 11:15:00",
         DATE_UPDATED: "2024-01-16 16:45:00",
-        STATUS: "Declined",
+        STATUS: "Rejected",
         NOTES: "Urgent requirement",
         PRIORITY: "Urgent",
         US_ID: 2002,
