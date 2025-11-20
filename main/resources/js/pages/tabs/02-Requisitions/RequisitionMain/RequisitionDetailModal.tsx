@@ -123,34 +123,57 @@ export default function RequisitionDetailModal({
                                                 </button>
 
                                                 {showStatusDropdown && (
-                                                    <div className="absolute top-full left-0 mt-1 w-72 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
-                                                        <div className="p-2">
-                                                            {statusOptions.map((status) => (
-                                                                <button
-                                                                    key={status.value}
-                                                                    onClick={() => handleStatusChange(status.value)}
-                                                                    className={`w-full text-left px-3 py-2 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
-                                                                        requisition?.STATUS === status.value
-                                                                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                                                                            : 'text-gray-700 dark:text-gray-300'
-                                                                    }`}
-                                                                >
-                                                                    <div className={`mt-1 w-2 h-2 rounded-full ${
-                                                                        requisition?.STATUS === status.value ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-600'
-                                                                    }`} />
-                                                                    <div className="flex-1">
-                                                                        <div className="font-medium">{status.label}</div>
-                                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                            {status.description}
+                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                        <div className="p-3">
+                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                Update Status
+                                                            </div>
+                                                            {/* Scrollable container with fixed height */}
+                                                            <div className="max-h-48 overflow-y-auto pr-1"> {/* Shows ~4 items at a time */}
+                                                                {statusOptions.map((status) => (
+                                                                    <button
+                                                                        key={status.value}
+                                                                        onClick={() => handleStatusChange(status.value)}
+                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                            requisition?.STATUS === status.value
+                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                : 'border border-transparent'
+                                                                        }`}
+                                                                    >
+                                                                        {/* Status indicator with dot and check */}
+                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                                                                requisition?.STATUS === status.value
+                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                            }`}>
+                                                                                {requisition?.STATUS === status.value && (
+                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                    </svg>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium text-gray-900 dark:text-white">
+                                                                                    {status.label}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                    {status.description}
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                    {requisition?.STATUS === status.value && (
-                                                                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                        </svg>
-                                                                    )}
-                                                                </button>
-                                                            ))}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+
+                                                            {/* Optional: Show scroll indicator when there are more items */}
+                                                            {statusOptions.length > 4 && (
+                                                                <div className="mt-2 pt-2 border-t border-sidebar-border">
+                                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                                                                        Scroll for more options
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
