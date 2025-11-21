@@ -11,6 +11,11 @@ interface ReturnsListProps {
     isLoading?: boolean;
 }
 
+// Helper function to capitalize status display
+const capitalizeStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
 export default function ReturnsList({ returns, onReturnClick, viewMode, isLoading = false }: ReturnsListProps) {
     if (isLoading) {
         return (
@@ -98,7 +103,7 @@ export default function ReturnsList({ returns, onReturnClick, viewMode, isLoadin
                             <div className="col-span-2 flex items-center">
                                 <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getReturnsStatusColor(returnItem.STATUS)}`}>
                                     {ReturnsIcons[returnItem.STATUS.toLowerCase() as keyof typeof ReturnsIcons]}
-                                    {returnItem.STATUS}
+                                    {capitalizeStatus(returnItem.STATUS)}
                                 </div>
                             </div>
 
@@ -191,7 +196,7 @@ function ReturnCard({ returnItem, onClick, viewMode }: {
                 <div className="space-y-1">
                     <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getReturnsStatusColor(returnItem.STATUS)}`}>
                         {ReturnsIcons[returnItem.STATUS.toLowerCase() as keyof typeof ReturnsIcons]}
-                        {returnItem.STATUS}
+                        {capitalizeStatus(returnItem.STATUS)}
                     </div>
 
                     <div className="flex justify-between text-xs">
@@ -252,7 +257,7 @@ function ReturnCard({ returnItem, onClick, viewMode }: {
             <div className="mb-3">
                 <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getReturnsStatusColor(returnItem.STATUS)}`}>
                     {ReturnsIcons[returnItem.STATUS.toLowerCase() as keyof typeof ReturnsIcons]}
-                    {returnItem.STATUS}
+                    {capitalizeStatus(returnItem.STATUS)}
                 </div>
             </div>
 

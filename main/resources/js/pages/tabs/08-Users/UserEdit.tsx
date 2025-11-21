@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import roles from '@/pages/datasets/role';
 import userRoles from '@/pages/datasets/user_role';
 import mockUsers from '@/pages/datasets/user';
+import permissions from '@/pages/datasets/permissions';
 
 interface UserEditProps {
     auth: any;
@@ -36,7 +37,8 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
         PASSWORD: '',
         CONFIRM_PASSWORD: '',
         ROLE_ID: '',
-        STATUS: 'active' as 'active' | 'inactive'
+        STATUS: 'active' as 'active' | 'inactive',
+        PERMISSIONS: [] as string[] // ADDED: Match Add component
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -48,27 +50,23 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
         loadUserData();
     }, [userId]);
 
-// UserEdit.tsx - Update the loadUserData function
     const loadUserData = () => {
         setIsLoading(true);
 
         try {
-            // DEBUG: Log what we're looking for
             console.log('Looking for user with ID:', userId);
             console.log('Available mockUsers:', mockUsers);
             console.log('Available userRoles:', userRoles);
 
-            // Find the user to edit - Use the transformed data structure
-            // Since Users.tsx transforms the data, we need to replicate that logic here
+            // Find the user to edit
             const transformedUsers = mockUsers.map(user => {
-                // Find user roles (same logic as Users.tsx)
                 const userRoleRelations = userRoles.filter(ur => ur.US_ID === user.US_ID);
                 const primaryRole = userRoleRelations.length > 0
                     ? roles.find(role => role.RO_ID === userRoleRelations[0].RO_ID)
                     : null;
 
                 return {
-                    id: user.US_ID, // This matches what Users.tsx creates
+                    id: user.US_ID,
                     fullname: user.FULLNAME,
                     username: user.NAME,
                     role: primaryRole ? primaryRole.NAME : 'User',
@@ -79,18 +77,15 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
                 };
             });
 
-            // Now find the user in the transformed data
             const user = transformedUsers.find(u => u.id === userId);
 
             if (!user) {
                 console.error(`User #${userId} not found in transformed data`);
-                console.log('Available transformed users:', transformedUsers.map(u => ({ id: u.id, username: u.username })));
                 alert('User not found!');
                 router.visit(users().url);
                 return;
             }
 
-            // Now we have the user data, but we need the original user data for form filling
             const originalUser = mockUsers.find(u => u.US_ID === userId);
 
             if (!originalUser) {
@@ -103,6 +98,13 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
             // Find user's role from original data
             const userRole = userRoles.find(ur => ur.US_ID === userId);
 
+            // ADDED: Find user's existing permissions
+            // In a real app, you'd have a user_permissions dataset
+            // For now, we'll simulate by getting permissions based on role
+            const userPermissions = permissions
+                // .filter(p => p.ROLE_ID === userRole?.RO_ID)
+                .map(p => p.PERMISSION_ID);
+
             // Parse full name into components
             const nameParts = originalUser.FULLNAME.split(' ').filter(part => part.trim() !== '');
 
@@ -111,12 +113,10 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
             let middleName = '';
             let suffix = '';
 
-            // Handle middle names and suffix
             if (nameParts.length > 2) {
                 const middleParts = nameParts.slice(1, -1);
                 const suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'Jr', 'Sr'];
 
-                // Check if last middle part is a suffix
                 const lastMiddlePart = middleParts[middleParts.length - 1];
                 if (suffixes.includes(lastMiddlePart)) {
                     suffix = lastMiddlePart;
@@ -135,13 +135,15 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
                 PASSWORD: '', // Don't load existing password
                 CONFIRM_PASSWORD: '',
                 ROLE_ID: userRole?.RO_ID.toString() || '',
-                STATUS: 'active'
+                STATUS: 'active',
+                PERMISSIONS: userPermissions // ADDED: Load existing permissions
             });
 
             console.log('Successfully loaded user data for editing:', {
                 userId,
                 username: user.username,
-                fullname: user.fullname
+                fullname: user.fullname,
+                permissions: userPermissions
             });
 
         } catch (error) {
@@ -191,7 +193,6 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
         const { FIRST_NAME, MIDDLE_NAME, LAST_NAME, SUFFIX } = formData;
         let fullName = FIRST_NAME;
 
-        // Convert middle name to middle initial (first letter only)
         if (MIDDLE_NAME) {
             const middleInitial = MIDDLE_NAME.charAt(0).toUpperCase() + '.';
             fullName += ` ${middleInitial}`;
@@ -211,6 +212,27 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
 
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: '' }));
+        }
+    };
+
+    // ADDED: Match Add component's permission handling
+    const handlePermissionChange = (permissionId: string, isChecked: boolean) => {
+        setFormData(prev => {
+            if (isChecked) {
+                return {
+                    ...prev,
+                    PERMISSIONS: [...prev.PERMISSIONS, permissionId]
+                };
+            } else {
+                return {
+                    ...prev,
+                    PERMISSIONS: prev.PERMISSIONS.filter(id => id !== permissionId)
+                };
+            }
+        });
+
+        if (errors.PERMISSIONS) {
+            setErrors(prev => ({ ...prev, PERMISSIONS: '' }));
         }
     };
 
@@ -240,8 +262,15 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
                 RO_ID: parseInt(formData.ROLE_ID)
             };
 
+            // ADDED: Prepare permissions data
+            const userPermissionsData = formData.PERMISSIONS.map(permissionId => ({
+                US_ID: userId,
+                PERMISSION_ID: permissionId
+            }));
+
             console.log('Updated User Data:', updatedUserData);
             console.log('Updated User Role Data:', userRoleData);
+            console.log('Updated User Permissions Data:', userPermissionsData); // ADDED
 
             // In real application, you would send PATCH request to backend
             alert('User updated successfully!');
@@ -505,7 +534,7 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
                                                 </div>
                                             </div>
 
-                                            {/* Role Information */}
+                                            {/* Role Information - ADDED Permissions Section */}
                                             <div className="space-y-6">
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
                                                     Role Information
@@ -532,6 +561,47 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
                                                     {errors.ROLE_ID && (
                                                         <p className="text-red-500 text-xs mt-1">{errors.ROLE_ID}</p>
                                                     )}
+                                                </div>
+
+                                                {/* ADDED: Permissions Dropdown - Match Add component */}
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Permissions
+                                                    </label>
+                                                    <div className={`w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                        errors.PERMISSIONS ? 'border-red-500' : 'border-sidebar-border'
+                                                    }`}>
+                                                        <div className="max-h-48 overflow-y-auto">
+                                                            {permissions.map(permission => (
+                                                                <div key={permission.PERMISSION_ID} className="flex items-center py-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        id={`permission-${permission.PERMISSION_ID}`}
+                                                                        checked={formData.PERMISSIONS.includes(permission.PERMISSION_ID)}
+                                                                        onChange={(e) => handlePermissionChange(permission.PERMISSION_ID, e.target.checked)}
+                                                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label
+                                                                        htmlFor={`permission-${permission.PERMISSION_ID}`}
+                                                                        className="ml-3 text-sm text-gray-700 dark:text-gray-300"
+                                                                    >
+                                                                        {permission.NAME}
+                                                                        {permission.DESCRIPTION && (
+                                                                            <span className="text-xs text-gray-500 dark:text-gray-400 block">
+                                                                                {permission.DESCRIPTION}
+                                                                            </span>
+                                                                        )}
+                                                                    </label>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    {errors.PERMISSIONS && (
+                                                        <p className="text-red-500 text-xs mt-1">{errors.PERMISSIONS}</p>
+                                                    )}
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        Select one or more permissions for this user
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -604,7 +674,7 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
                 </div>
             )}
 
-            {/* Preview Modal */}
+            {/* Preview Modal - UPDATED to include Permissions */}
             {showPreview && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-sidebar rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-sidebar-border">
@@ -722,6 +792,35 @@ export default function UserEdit({ auth, userId }: UserEditProps) {
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                         {roles.find(role => role.RO_ID === parseInt(formData.ROLE_ID))?.DESCRIPTION}
                                     </p>
+                                </div>
+                            </div>
+
+                            {/* ADDED: Permissions Information */}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                    Permissions
+                                </h3>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Selected Permissions
+                                    </label>
+                                    {formData.PERMISSIONS.length > 0 ? (
+                                        <ul className="text-sm text-gray-900 dark:text-white space-y-1">
+                                            {formData.PERMISSIONS.map(permissionId => {
+                                                const permission = permissions.find(p => p.PERMISSION_ID === permissionId);
+                                                return permission ? (
+                                                    <li key={permissionId} className="flex items-center">
+                                                        <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                        </svg>
+                                                        {permission.NAME}
+                                                    </li>
+                                                ) : null;
+                                            })}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">No permissions selected</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

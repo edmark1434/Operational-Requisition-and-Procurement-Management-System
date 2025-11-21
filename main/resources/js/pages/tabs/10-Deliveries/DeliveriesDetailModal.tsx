@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DeliveriesIcons } from './utils/icons';
 import { getDeliveriesStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
@@ -12,6 +12,18 @@ interface DeliveriesDetailModalProps {
     onStatusChange: (deliveryId: number, newStatus: string) => void;
 }
 
+// Add this helper function to format status display
+function formatStatusDisplay(status: string): string {
+    switch (status?.toLowerCase()) {
+        case 'received':
+            return 'Received';
+        case 'with returns':
+            return 'With Returns';
+        default:
+            return status;
+    }
+}
+
 export default function DeliveriesDetailModal({
                                                   delivery,
                                                   isOpen,
@@ -21,6 +33,8 @@ export default function DeliveriesDetailModal({
                                                   onStatusChange
                                               }: DeliveriesDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = () => {
         if (delivery) {
@@ -30,23 +44,31 @@ export default function DeliveriesDetailModal({
     };
 
     const handleStatusChange = (newStatus: string) => {
-        onStatusChange(delivery.ID, newStatus);
+        if (delivery) {
+            onStatusChange(delivery.ID, newStatus);
+        }
+        setShowStatusDropdown(false);
+        onClose(); // Auto-close the modal after status change
     };
 
-    const getStatusClasses = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'pending':
-                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800';
-            case 'delivered':
-                return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800';
-            case 'in-transit':
-                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800';
-            case 'cancelled':
-                return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border-gray-200 dark:border-gray-700';
-        }
-    };
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowStatusDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const statusOptions = [
+        { value: 'received', label: 'Received', description: 'All items have been received successfully' },
+        { value: 'with returns', label: 'With Returns', description: 'Some items were returned or had issues' }
+    ];
 
     if (!isOpen || !delivery) return null;
 
@@ -86,16 +108,68 @@ export default function DeliveriesDetailModal({
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Status
                                         </label>
-                                        <select
-                                            value={delivery.STATUS}
-                                            onChange={(e) => handleStatusChange(e.target.value)}
-                                            className={`w-full px-3 py-2 rounded-full text-sm font-medium border-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer transition-colors ${getStatusClasses(delivery.STATUS)}`}
-                                        >
-                                            <option value="pending" className="bg-white dark:bg-input text-gray-900 dark:text-white">Pending</option>
-                                            <option value="in-transit" className="bg-white dark:bg-input text-gray-900 dark:text-white">In Transit</option>
-                                            <option value="delivered" className="bg-white dark:bg-input text-gray-900 dark:text-white">Delivered</option>
-                                            <option value="cancelled" className="bg-white dark:bg-input text-gray-900 dark:text-white">Cancelled</option>
-                                        </select>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getDeliveriesStatusColor(delivery?.STATUS)}`}>
+                                                <DeliveryStatusIcon status={delivery?.STATUS} />
+                                                {formatStatusDisplay(delivery?.STATUS)}
+                                            </div>
+                                            <div className="relative" ref={dropdownRef}>
+                                                <button
+                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                    Change Status
+                                                </button>
+
+                                                {showStatusDropdown && (
+                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                        <div className="p-3">
+                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                Update Status
+                                                            </div>
+                                                            <div className="max-h-48 overflow-y-auto pr-1">
+                                                                {statusOptions.map((status) => (
+                                                                    <button
+                                                                        key={status.value}
+                                                                        onClick={() => handleStatusChange(status.value)}
+                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                            delivery?.STATUS === status.value
+                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                : 'border border-transparent'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                                                                delivery?.STATUS === status.value
+                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                            }`}>
+                                                                                {delivery?.STATUS === status.value && (
+                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                    </svg>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium text-gray-900 dark:text-white">
+                                                                                    {status.label}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                    {status.description}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -289,4 +363,28 @@ export default function DeliveriesDetailModal({
             )}
         </>
     );
+}
+
+// Delivery Status Icon Component
+function DeliveryStatusIcon({ status }: { status: string }) {
+    switch (status?.toLowerCase()) {
+        case 'received':
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+            );
+        case 'with returns':
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+            );
+        default:
+            return (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            );
+    }
 }

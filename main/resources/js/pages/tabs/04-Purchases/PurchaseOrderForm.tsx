@@ -17,10 +17,27 @@ import { getSuggestedSuppliers, getBestSupplier, type SuggestedSupplier } from '
 // Import modular components
 import OrderInfo from './PurchaseOrderForm/OrderInfo';
 import SelectSupplier from './PurchaseOrderForm/SelectSupplier';
-import SelectApprovedRequisition from './PurchaseOrderForm/SelectApprovedRequisition';
 import OrderItems from './PurchaseOrderForm/OrderItems';
 import AdditionalInfo from './PurchaseOrderForm/AdditionalInfo';
 import PreviewModal from './PurchaseOrderForm/PreviewModal';
+
+// Import UI components
+import { Button } from '@/components/ui/button';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import { Check, ChevronsUpDown, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PageProps {
     purchaseId?: number;
@@ -47,20 +64,21 @@ export default function PurchaseOrderForm() {
 
     const [formData, setFormData] = useState({
         REFERENCE_NO: '',
-        REQUISITION_ID: '',
+        REQUISITION_IDS: [] as string[],
         SUPPLIER_ID: '',
         PAYMENT_TYPE: 'cash',
         REMARKS: '',
         ITEMS: [] as any[]
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
-    const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
+    const [selectedRequisitions, setSelectedRequisitions] = useState<any[]>([]);
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
     const [approvedRequisitions, setApprovedRequisitions] = useState<any[]>([]);
     const [suggestedSuppliers, setSuggestedSuppliers] = useState<SuggestedSupplier[]>([]);
     const [bestSupplier, setBestSupplier] = useState<SuggestedSupplier | null>(null);
     const [originalQuantities, setOriginalQuantities] = useState<{[key: number]: number}>({});
     const [showPreview, setShowPreview] = useState(false);
+    const [requisitionOpen, setRequisitionOpen] = useState(false);
 
     // Load data based on mode
     useEffect(() => {
@@ -70,7 +88,7 @@ export default function PurchaseOrderForm() {
             // Pre-fill form with existing purchase order data
             setFormData({
                 REFERENCE_NO: currentPurchase.REFERENCE_NO,
-                REQUISITION_ID: currentPurchase.REQUISITION_ID.toString(),
+                REQUISITION_IDS: [currentPurchase.REQUISITION_ID.toString()],
                 SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
                 PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
                 REMARKS: currentPurchase.REMARKS,
@@ -95,16 +113,18 @@ export default function PurchaseOrderForm() {
         }
     }, [formData.ITEMS]);
 
-    // Store original quantities when requisition is selected
+    // Store original quantities when requisitions are selected
     useEffect(() => {
-        if (selectedRequisition) {
+        if (selectedRequisitions.length > 0) {
             const originalQty: {[key: number]: number} = {};
-            selectedRequisition.ITEMS.forEach((item: any) => {
-                originalQty[item.ID] = item.QUANTITY;
+            selectedRequisitions.forEach(requisition => {
+                requisition.ITEMS.forEach((item: any) => {
+                    originalQty[item.ID] = item.QUANTITY;
+                });
             });
             setOriginalQuantities(originalQty);
         }
-    }, [selectedRequisition]);
+    }, [selectedRequisitions]);
 
     // Update selected supplier when formData.SUPPLIER_ID changes
     useEffect(() => {
@@ -133,7 +153,8 @@ export default function PurchaseOrderForm() {
                         CATEGORY: category?.NAME || reqItem.CATEGORY,
                         CATEGORY_ID: category?.CAT_ID,
                         UNIT_PRICE: itemDetails?.UNIT_PRICE || 0,
-                        SELECTED: true
+                        SELECTED: true,
+                        REQUISITION_ID: requisition.REQ_ID
                     };
                 });
 
@@ -167,8 +188,8 @@ export default function PurchaseOrderForm() {
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
 
-        if (!formData.REQUISITION_ID) {
-            newErrors.REQUISITION_ID = 'Please select a requisition';
+        if (formData.REQUISITION_IDS.length === 0) {
+            newErrors.REQUISITION_IDS = 'Please select at least one requisition';
         }
 
         if (!formData.SUPPLIER_ID) {
@@ -200,24 +221,48 @@ export default function PurchaseOrderForm() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleRequisitionChange = (requisitionId: string) => {
+    const handleRequisitionSelect = (requisitionId: string) => {
         const requisition = approvedRequisitions.find(req => req.ID.toString() === requisitionId);
-        setSelectedRequisition(requisition);
 
-        if (requisition) {
+        if (requisition && !formData.REQUISITION_IDS.includes(requisitionId)) {
+            // Add requisition
+            const newRequisitionIds = [...formData.REQUISITION_IDS, requisitionId];
+            const newSelectedRequisitions = [...selectedRequisitions, requisition];
+
+            // Add items from this requisition
+            const newItems = [...formData.ITEMS, ...requisition.ITEMS];
+
             setFormData(prev => ({
                 ...prev,
-                REQUISITION_ID: requisitionId,
-                ITEMS: requisition.ITEMS.map((item: any) => ({
-                    ...item,
-                    SELECTED: true // Auto-select all items from requisition
-                }))
+                REQUISITION_IDS: newRequisitionIds,
+                ITEMS: newItems
             }));
 
-            if (errors.REQUISITION_ID) {
-                setErrors(prev => ({ ...prev, REQUISITION_ID: '' }));
+            setSelectedRequisitions(newSelectedRequisitions);
+
+            if (errors.REQUISITION_IDS) {
+                setErrors(prev => ({ ...prev, REQUISITION_IDS: '' }));
             }
         }
+
+        setRequisitionOpen(false);
+    };
+
+    const handleRemoveRequisition = (requisitionId: string) => {
+        // Remove requisition
+        const newRequisitionIds = formData.REQUISITION_IDS.filter(id => id !== requisitionId);
+        const newSelectedRequisitions = selectedRequisitions.filter(req => req.ID.toString() !== requisitionId);
+
+        // Remove items from this requisition
+        const newItems = formData.ITEMS.filter(item => item.REQUISITION_ID !== parseInt(requisitionId));
+
+        setFormData(prev => ({
+            ...prev,
+            REQUISITION_IDS: newRequisitionIds,
+            ITEMS: newItems
+        }));
+
+        setSelectedRequisitions(newSelectedRequisitions);
     };
 
     const handleSupplierChange = (supplierId: string) => {
@@ -310,25 +355,27 @@ export default function PurchaseOrderForm() {
 
         const purchaseOrderData = {
             REFERENCE_NO: formData.REFERENCE_NO,
-            REQUISITION_ID: parseInt(formData.REQUISITION_ID),
+            REQUISITION_IDS: formData.REQUISITION_IDS.map(id => parseInt(id)),
             SUPPLIER_ID: parseInt(formData.SUPPLIER_ID),
             PAYMENT_TYPE: formData.PAYMENT_TYPE,
             TOTAL_COST: totalCost,
-            STATUS: isEditMode ? currentPurchase?.STATUS : 'pending_approval', // Changed from 'draft'
+            STATUS: isEditMode ? currentPurchase?.STATUS : 'pending_approval',
             REMARKS: formData.REMARKS,
             CREATED_AT: isEditMode ? currentPurchase?.CREATED_AT : new Date().toISOString(),
             UPDATED_AT: new Date().toISOString(),
             ITEMS: selectedItems.map(item => ({
                 ITEM_ID: item.ITEM_ID,
                 QUANTITY: item.QUANTITY,
-                UNIT_PRICE: item.UNIT_PRICE
+                UNIT_PRICE: item.UNIT_PRICE,
+                REQUISITION_ID: item.REQUISITION_ID
             }))
         };
 
         console.log('Purchase Order Data:', purchaseOrderData);
+        console.log('Merged Requisitions:', formData.REQUISITION_IDS);
 
         // In real application, you would send POST/PUT request to backend
-        alert(`Purchase order ${isEditMode ? 'updated' : 'created'} successfully!`);
+        alert(`Purchase order ${isEditMode ? 'updated' : 'created'} successfully! ${formData.REQUISITION_IDS.length > 1 ? `(Merged ${formData.REQUISITION_IDS.length} requisitions)` : ''}`);
 
         // Close preview and redirect
         setShowPreview(false);
@@ -353,7 +400,7 @@ export default function PurchaseOrderForm() {
             // Reset to original values in edit mode
             setFormData({
                 REFERENCE_NO: currentPurchase.REFERENCE_NO,
-                REQUISITION_ID: currentPurchase.REQUISITION_ID.toString(),
+                REQUISITION_IDS: [currentPurchase.REQUISITION_ID.toString()],
                 SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
                 PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
                 REMARKS: currentPurchase.REMARKS,
@@ -362,7 +409,7 @@ export default function PurchaseOrderForm() {
         } else {
             setFormData({
                 REFERENCE_NO: '',
-                REQUISITION_ID: '',
+                REQUISITION_IDS: [],
                 SUPPLIER_ID: '',
                 PAYMENT_TYPE: 'cash',
                 REMARKS: '',
@@ -372,7 +419,7 @@ export default function PurchaseOrderForm() {
         }
         setErrors({});
         setSelectedSupplier(null);
-        setSelectedRequisition(null);
+        setSelectedRequisitions([]);
         setOriginalQuantities({});
     };
 
@@ -428,9 +475,21 @@ export default function PurchaseOrderForm() {
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
                                         {isEditMode
                                             ? `Update purchase order ${currentPurchase?.REFERENCE_NO}`
-                                            : 'Select an approved requisition and supplier to create a purchase order'
+                                            : 'Select one or more approved requisitions and supplier to create a purchase order'
                                         }
                                     </p>
+                                    {!isEditMode && formData.REQUISITION_IDS.length > 1 && (
+                                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                            <div className="flex items-center gap-2">
+                                                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                </svg>
+                                                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                                    Merging {formData.REQUISITION_IDS.length} requisitions into one purchase order
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6">
@@ -457,18 +516,140 @@ export default function PurchaseOrderForm() {
 
                                         {/* Right Column - Requisition, Items, and Additional Info */}
                                         <div className="xl:col-span-2 space-y-6">
-                                            <SelectApprovedRequisition
-                                                formData={formData}
-                                                selectedRequisition={selectedRequisition}
-                                                approvedRequisitions={approvedRequisitions}
-                                                errors={errors}
-                                                onRequisitionChange={handleRequisitionChange}
-                                                isEditMode={isEditMode}
-                                            />
+                                            {/* Approved Requisitions Selection */}
+                                            <div className="space-y-4">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-2">
+                                                    Select Approved Requisitions
+                                                </h3>
+
+                                                <div className="space-y-3">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Requisitions
+                                                    </label>
+
+                                                    {/* Selected Requisitions Tags */}
+                                                    {formData.REQUISITION_IDS.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2 mb-3">
+                                                            {selectedRequisitions.map((requisition) => (
+                                                                <div
+                                                                    key={requisition.ID}
+                                                                    className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+                                                                >
+                                                                    <span>Req #{requisition.ID}</span>
+                                                                    <span className="text-blue-600 dark:text-blue-400">•</span>
+                                                                    <span>{requisition.REQUESTOR}</span>
+                                                                    <span className="text-blue-600 dark:text-blue-400">•</span>
+                                                                    <span>{requisition.ITEMS.length} items</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveRequisition(requisition.ID.toString())}
+                                                                        className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Combobox for requisition selection */}
+                                                    <Popover open={requisitionOpen} onOpenChange={setRequisitionOpen}>
+                                                        <PopoverTrigger asChild>
+                                                            <Button
+                                                                variant="outline"
+                                                                role="combobox"
+                                                                aria-expanded={requisitionOpen}
+                                                                className="w-full justify-between"
+                                                            >
+                                                                {formData.REQUISITION_IDS.length > 0
+                                                                    ? `${formData.REQUISITION_IDS.length} requisition(s) selected`
+                                                                    : "Select requisitions..."}
+                                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-full p-0">
+                                                            <Command>
+                                                                <CommandInput placeholder="Search requisitions..." className="h-9" />
+                                                                <CommandList>
+                                                                    <CommandEmpty>No requisitions found.</CommandEmpty>
+                                                                    <CommandGroup>
+                                                                        {approvedRequisitions.map((requisition) => (
+                                                                            <CommandItem
+                                                                                key={requisition.ID}
+                                                                                value={requisition.ID.toString()}
+                                                                                onSelect={handleRequisitionSelect}
+                                                                                disabled={formData.REQUISITION_IDS.includes(requisition.ID.toString())}
+                                                                            >
+                                                                                <div className="flex flex-col">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <span className="font-medium">Req #{requisition.ID}</span>
+                                                                                        <span className="text-gray-500 dark:text-gray-400">•</span>
+                                                                                        <span>{requisition.REQUESTOR}</span>
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                        {requisition.ITEMS.length} items • {requisition.PRIORITY} priority
+                                                                                    </div>
+                                                                                </div>
+                                                                                <Check
+                                                                                    className={cn(
+                                                                                        "ml-auto h-4 w-4",
+                                                                                        formData.REQUISITION_IDS.includes(requisition.ID.toString()) ? "opacity-100" : "opacity-0"
+                                                                                    )}
+                                                                                />
+                                                                            </CommandItem>
+                                                                        ))}
+                                                                    </CommandGroup>
+                                                                </CommandList>
+                                                            </Command>
+                                                        </PopoverContent>
+                                                    </Popover>
+
+                                                    {errors.REQUISITION_IDS && (
+                                                        <p className="text-sm text-red-600 dark:text-red-400">{errors.REQUISITION_IDS}</p>
+                                                    )}
+
+                                                    {/* Selected Requisitions Details */}
+                                                    {selectedRequisitions.length > 0 && (
+                                                        <div className="mt-4 space-y-3">
+                                                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                Selected Requisitions Details:
+                                                            </h4>
+                                                            {selectedRequisitions.map((requisition) => (
+                                                                <div key={requisition.ID} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                                                                    <div className="flex justify-between items-start mb-2">
+                                                                        <div>
+                                                                            <span className="font-medium text-gray-900 dark:text-white">
+                                                                                Requisition #{requisition.ID}
+                                                                            </span>
+                                                                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                                                                                by {requisition.REQUESTOR}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                                            requisition.PRIORITY === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                                requisition.PRIORITY === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                                        }`}>
+                                                                            {requisition.PRIORITY}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                                                                        <p><strong>Items:</strong> {requisition.ITEMS.length}</p>
+                                                                        <p><strong>Requested:</strong> {new Date(requisition.CREATED_AT).toLocaleDateString()}</p>
+                                                                        {requisition.NOTES && (
+                                                                            <p><strong>Notes:</strong> {requisition.NOTES}</p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
 
                                             <OrderItems
                                                 formData={formData}
-                                                selectedRequisition={selectedRequisition}
+                                                selectedRequisition={selectedRequisitions}
                                                 originalQuantities={originalQuantities}
                                                 errors={errors}
                                                 onToggleItemSelection={toggleItemSelection}
@@ -536,31 +717,56 @@ export default function PurchaseOrderForm() {
 
                                     {/* Action Buttons */}
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
-                                        <div className="flex gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={handleReset}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
-                                                {isEditMode ? 'Reset Changes' : 'Reset Form'}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleCancel}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
-                                                Cancel
-                                            </button>
+                                        <div className="flex gap-3 justify-between">
+                                            <div className="flex gap-3">
+                                                {/* Reset Button - Circle with icon and tooltip */}
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleReset}
+                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    </button>
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        {isEditMode ? 'Reset Changes' : 'Reset Form'}
+                                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Cancel Button - Circle with X icon and tooltip */}
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCancel}
+                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Cancel
+                                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Submit Button */}
                                             <button
                                                 type="submit"
                                                 disabled={approvedRequisitions.length === 0 && !isEditMode}
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="flex-1 max-w-xs bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {isEditMode
                                                     ? 'Update Purchase Order'
                                                     : approvedRequisitions.length === 0
                                                         ? 'No Approved Requisitions'
-                                                        : 'Create Purchase Order'
+                                                        : formData.REQUISITION_IDS.length > 1
+                                                            ? `Create Merged PO (${formData.REQUISITION_IDS.length})`
+                                                            : 'Create Purchase Order'
                                                 }
                                             </button>
                                         </div>
@@ -577,7 +783,7 @@ export default function PurchaseOrderForm() {
                 <PreviewModal
                     formData={formData}
                     selectedSupplier={selectedSupplier}
-                    selectedRequisition={selectedRequisition}
+                    selectedRequisition={selectedRequisitions}
                     selectedItems={getSelectedItems()}
                     totalCost={calculateTotal()}
                     onConfirm={handleConfirmSubmit}

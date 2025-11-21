@@ -45,6 +45,8 @@ Follow these steps to set up the project locally.
 > - npm install
 > - npm install --save-dev @vitejs/plugin-react
 > - npm install @inertia/react
+> - npx shadcn@latest add command
+> - npx shadcn@latest add popover
 
 #### 4. Start the Development
 > - php artisan serve

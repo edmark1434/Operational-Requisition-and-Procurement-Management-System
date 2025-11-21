@@ -13,8 +13,10 @@ const formatCurrency = (amount: number) => {
 export default function PurchaseStats({ purchases }: PurchaseStatsProps) {
     const totalOrders = purchases.length;
     const totalValue = purchases.reduce((sum, purchase) => sum + purchase.TOTAL_COST, 0);
-    const pendingOrders = purchases.filter(p => p.STATUS === 'ordered' || p.STATUS === 'draft').length;
-    const deliveredOrders = purchases.filter(p => p.STATUS === 'delivered').length;
+
+    // FIXED: Use correct status values from your system
+    const pendingOrders = purchases.filter(p => p.STATUS === 'pending' || p.STATUS === 'issued').length;
+    const deliveredOrders = purchases.filter(p => p.STATUS === 'delivered' || p.STATUS === 'received').length;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -39,15 +41,15 @@ export default function PurchaseStats({ purchases }: PurchaseStatsProps) {
                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                     {pendingOrders}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Pending/Issued</div>
             </div>
 
-            {/* Delivered Orders */}
+            {/* Delivered/Received Orders */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {deliveredOrders}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Delivered</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Delivered/Received</div>
             </div>
         </div>
     );

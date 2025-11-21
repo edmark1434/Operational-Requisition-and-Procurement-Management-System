@@ -12,49 +12,42 @@ const formatCurrency = (amount: number) => {
 
 export default function DeliveriesStats({ deliveries }: DeliveriesStatsProps) {
     const totalDeliveries = deliveries.length;
-    const pendingDeliveries = deliveries.filter(d => d.STATUS === 'pending').length;
-    const deliveredDeliveries = deliveries.filter(d => d.STATUS === 'delivered').length;
-    const inTransitDeliveries = deliveries.filter(d => d.STATUS === 'in-transit').length;
+    const receivedDeliveries = deliveries.filter(d => d.STATUS === 'received').length;
+    const withReturnsDeliveries = deliveries.filter(d => d.STATUS === 'with returns').length;
     const totalValue = deliveries.reduce((sum, delivery) => sum + delivery.TOTAL_VALUE, 0);
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {/* Combined first two columns */}
-            <div className="md:col-span-2 bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalDeliveries}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Total Deliveries</div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
-                            {formatCurrency(totalValue)}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Total Value</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Remaining 3 columns divided equally */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Combined first column */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {pendingDeliveries}
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {totalDeliveries}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Total Deliveries</div>
             </div>
 
+            {/* Total Value */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
-                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                    {inTransitDeliveries}
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
+                    {formatCurrency(totalValue)}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">In Transit</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Total Value</div>
             </div>
 
+            {/* Received */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {deliveredDeliveries}
+                    {receivedDeliveries}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Delivered</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Received</div>
+            </div>
+
+            {/* With Returns */}
+            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    {withReturnsDeliveries}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">With Returns</div>
             </div>
         </div>
     );

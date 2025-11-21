@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import CATEGORY_OPTIONS from '@/pages/datasets/category';
 import SUPPLIER_OPTIONS from '@/pages/datasets/supplier';
 import itemsData from "@/pages/datasets/items";
+import categorySuppliers from '@/pages/datasets/category_supplier'; // Import the mapping
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -24,8 +25,8 @@ export default function ItemAdd({ auth }: { auth: any }) {
         NAME: '',
         BARCODE: '',
         CATEGORY: '',
-        UNIT_PRICE: 0,
-        CURRENT_STOCK: 0,
+        UNIT_PRICE: '',
+        CURRENT_STOCK: '',
         DIMENSIONS: '',
         MAKE_ID: 1,
         SUPPLIER_ID: '',
@@ -34,17 +35,42 @@ export default function ItemAdd({ auth }: { auth: any }) {
         SUPPLIER_CONTACT_NUMBER: ''
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
+    const [filteredSuppliers, setFilteredSuppliers] = useState(SUPPLIER_OPTIONS);
 
-    // Generate barcode on component mount
+    // Filter suppliers based on selected category
     useEffect(() => {
-        generateBarcode();
-    }, []);
+        if (formData.CATEGORY) {
+            // Find the category ID from CATEGORY_OPTIONS
+            const selectedCategory = CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY);
 
-    const generateBarcode = () => {
-        const randomPart = Math.floor(1000000000 + Math.random() * 9000000000).toString().substring(0, 7);
-        const barcode = `880609${randomPart}`;
-        setFormData(prev => ({ ...prev, BARCODE: barcode }));
-    };
+            if (selectedCategory) {
+                // Find supplier IDs that match this category
+                const supplierIdsForCategory = categorySuppliers
+                    .filter(cs => cs.CATEGORY_ID === selectedCategory.CAT_ID)
+                    .map(cs => cs.SUPPLIER_ID);
+
+                // Filter suppliers based on the matched IDs
+                const filtered = SUPPLIER_OPTIONS.filter(supplier =>
+                    supplierIdsForCategory.includes(supplier.ID)
+                );
+                setFilteredSuppliers(filtered);
+
+                // If current selected supplier is not in the filtered list, clear it
+                if (formData.SUPPLIER_ID && !filtered.some(s => s.ID.toString() === formData.SUPPLIER_ID)) {
+                    setFormData(prev => ({
+                        ...prev,
+                        SUPPLIER_ID: '',
+                        SUPPLIER_NAME: '',
+                        SUPPLIER_EMAIL: '',
+                        SUPPLIER_CONTACT_NUMBER: ''
+                    }));
+                }
+            }
+        } else {
+            // If no category selected, show all suppliers
+            setFilteredSuppliers(SUPPLIER_OPTIONS);
+        }
+    }, [formData.CATEGORY, formData.SUPPLIER_ID]);
 
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
@@ -53,15 +79,19 @@ export default function ItemAdd({ auth }: { auth: any }) {
             newErrors.NAME = 'Item name is required';
         }
 
+        if (!formData.BARCODE.trim()) {
+            newErrors.BARCODE = 'Barcode is required';
+        }
+
         if (!formData.CATEGORY) {
             newErrors.CATEGORY = 'Category is required';
         }
 
-        if (!formData.UNIT_PRICE || formData.UNIT_PRICE <= 0) {
+        if (!formData.UNIT_PRICE || parseFloat(formData.UNIT_PRICE) <= 0) {
             newErrors.UNIT_PRICE = 'Unit price must be greater than 0';
         }
 
-        if (formData.CURRENT_STOCK < 0) {
+        if (!formData.CURRENT_STOCK || parseInt(formData.CURRENT_STOCK) < 0) {
             newErrors.CURRENT_STOCK = 'Current stock cannot be negative';
         }
 
@@ -104,6 +134,8 @@ export default function ItemAdd({ auth }: { auth: any }) {
             const itemData = {
                 ITEM_ID: newItemId,
                 ...formData,
+                UNIT_PRICE: parseFloat(formData.UNIT_PRICE),
+                CURRENT_STOCK: parseInt(formData.CURRENT_STOCK),
                 CATEGORY_ID: CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY)?.CAT_ID || 1,
                 SUPPLIER_ID: parseInt(formData.SUPPLIER_ID),
                 CREATED_AT: new Date().toISOString(),
@@ -136,8 +168,8 @@ export default function ItemAdd({ auth }: { auth: any }) {
             NAME: '',
             BARCODE: '',
             CATEGORY: '',
-            UNIT_PRICE: 0,
-            CURRENT_STOCK: 0,
+            UNIT_PRICE: '',
+            CURRENT_STOCK: '',
             DIMENSIONS: '',
             MAKE_ID: 1,
             SUPPLIER_ID: '',
@@ -146,7 +178,6 @@ export default function ItemAdd({ auth }: { auth: any }) {
             SUPPLIER_CONTACT_NUMBER: ''
         });
         setErrors({});
-        generateBarcode();
     };
 
     const handleCancel = () => {
@@ -219,16 +250,23 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Barcode
+                                                        Barcode <span className="text-red-500">*</span>
                                                     </label>
                                                     <input
                                                         type="text"
-                                                        readOnly
+                                                        required
                                                         value={formData.BARCODE}
-                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-900 dark:text-white font-mono cursor-not-allowed"
+                                                        onChange={(e) => handleInputChange('BARCODE', e.target.value)}
+                                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white font-mono ${
+                                                            errors.BARCODE ? 'border-red-500' : 'border-sidebar-border'
+                                                        }`}
+                                                        placeholder="Enter barcode"
                                                     />
+                                                    {errors.BARCODE && (
+                                                        <p className="text-red-500 text-xs mt-1">{errors.BARCODE}</p>
+                                                    )}
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        Auto-generated barcode
+                                                        Enter the barcode for this item
                                                     </p>
                                                 </div>
                                             </div>
@@ -267,7 +305,7 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                                         min="0"
                                                         step="0.01"
                                                         value={formData.UNIT_PRICE}
-                                                        onChange={(e) => handleInputChange('UNIT_PRICE', parseFloat(e.target.value) || 0)}
+                                                        onChange={(e) => handleInputChange('UNIT_PRICE', e.target.value)}
                                                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
                                                             errors.UNIT_PRICE ? 'border-red-500' : 'border-sidebar-border'
                                                         }`}
@@ -289,7 +327,7 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                                         required
                                                         min="0"
                                                         value={formData.CURRENT_STOCK}
-                                                        onChange={(e) => handleInputChange('CURRENT_STOCK', parseInt(e.target.value) || 0)}
+                                                        onChange={(e) => handleInputChange('CURRENT_STOCK', e.target.value)}
                                                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
                                                             errors.CURRENT_STOCK ? 'border-red-500' : 'border-sidebar-border'
                                                         }`}
@@ -339,35 +377,102 @@ export default function ItemAdd({ auth }: { auth: any }) {
                                                         }`}
                                                     >
                                                         <option value="">Select a supplier</option>
-                                                        {SUPPLIER_OPTIONS.map(supplier => (
-                                                            <option key={supplier.ID} value={supplier.ID}>
-                                                                {supplier.NAME}
-                                                            </option>
-                                                        ))}
+                                                        {filteredSuppliers.map(supplier => {
+                                                            // Find the category names for this supplier
+                                                            const supplierCategories = categorySuppliers
+                                                                .filter(cs => cs.SUPPLIER_ID === supplier.ID)
+                                                                .map(cs => {
+                                                                    const category = CATEGORY_OPTIONS.find(cat => cat.CAT_ID === cs.CATEGORY_ID);
+                                                                    return category ? category.NAME : '';
+                                                                })
+                                                                .filter(name => name !== '');
+
+                                                            return (
+                                                                <option key={supplier.ID} value={supplier.ID}>
+                                                                    {supplier.NAME}
+                                                                    {supplierCategories.length > 0 && ` (${supplierCategories.join(', ')})`}
+                                                                </option>
+                                                            );
+                                                        })}
                                                     </select>
                                                     {errors.SUPPLIER_ID && (
                                                         <p className="text-red-500 text-xs mt-1">{errors.SUPPLIER_ID}</p>
+                                                    )}
+                                                    {formData.CATEGORY && (
+                                                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                            Showing {filteredSuppliers.length} supplier(s) compatible with{" "}
+                                                            <span className="font-semibold">{formData.CATEGORY}</span>
+                                                        </p>
+                                                    )}
+                                                    {formData.CATEGORY && filteredSuppliers.length === 0 && (
+                                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                                            No suppliers found for <span className="font-semibold">{formData.CATEGORY}</span>. Please select a different category.
+                                                        </p>
                                                     )}
                                                 </div>
 
                                                 {/* Display selected supplier info */}
                                                 {formData.SUPPLIER_ID && (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                                    <div className="space-y-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                                        {/* Supplier Categories */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                Email
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                                Supplier Categories
                                                             </label>
-                                                            <p className="text-sm text-gray-900 dark:text-white">
-                                                                {formData.SUPPLIER_EMAIL}
-                                                            </p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {(() => {
+                                                                    const selectedSupplierCategories = categorySuppliers
+                                                                        .filter(cs => cs.SUPPLIER_ID === parseInt(formData.SUPPLIER_ID))
+                                                                        .map(cs => {
+                                                                            const category = CATEGORY_OPTIONS.find(cat => cat.CAT_ID === cs.CATEGORY_ID);
+                                                                            return category ? category.NAME : '';
+                                                                        })
+                                                                        .filter(name => name !== '');
+
+                                                                    return selectedSupplierCategories.map((categoryName, index) => (
+                                                                        <span
+                                                                            key={index}
+                                                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                                                categoryName === formData.CATEGORY
+                                                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border border-green-300 dark:border-green-700'
+                                                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600'
+                                                                            }`}
+                                                                        >
+                                    {categoryName}
+                                                                            {categoryName === formData.CATEGORY && (
+                                                                                <svg className="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                </svg>
+                                                                            )}
+                                </span>
+                                                                    ));
+                                                                })()}
+                                                            </div>
+                                                            {formData.CATEGORY && (
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                                    <span className="text-green-600 dark:text-green-400">Green tags</span> indicate categories that match your selected item category
+                                                                </p>
+                                                            )}
                                                         </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                Contact Number
-                                                            </label>
-                                                            <p className="text-sm text-gray-900 dark:text-white">
-                                                                {formData.SUPPLIER_CONTACT_NUMBER}
-                                                            </p>
+
+                                                        {/* Supplier Contact Information */}
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                    Email
+                                                                </label>
+                                                                <p className="text-sm text-gray-900 dark:text-white">
+                                                                    {formData.SUPPLIER_EMAIL}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                    Contact Number
+                                                                </label>
+                                                                <p className="text-sm text-gray-900 dark:text-white">
+                                                                    {formData.SUPPLIER_CONTACT_NUMBER}
+                                                                </p>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )}
@@ -377,24 +482,47 @@ export default function ItemAdd({ auth }: { auth: any }) {
 
                                     {/* Action Buttons */}
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
-                                        <div className="flex gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={handleReset}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
-                                                Reset Form
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleCancel}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
-                                                Cancel
-                                            </button>
+                                        <div className="flex gap-3 justify-between">
+                                            <div className="flex gap-3">
+                                                {/* Reset Button - Circle with icon and tooltip */}
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleReset}
+                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    </button>
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Reset Form
+                                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Cancel Button - Circle with X icon and tooltip */}
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCancel}
+                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Cancel
+                                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Add Item Button - Kept as before */}
                                             <button
                                                 type="submit"
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                className="flex-1 max-w-xs bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
                                             >
                                                 Add Item
                                             </button>
