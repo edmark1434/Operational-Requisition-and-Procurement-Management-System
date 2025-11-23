@@ -11,6 +11,6 @@ class Audit extends Controller
     protected $base_path = "tabs/07-AuditLogs";
     public function index()
     {
-        return Inertia::render($this->base_path .'/audit');
+        return Inertia::render($this->base_path .'/Main');
     }
 }

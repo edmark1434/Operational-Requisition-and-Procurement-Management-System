@@ -11,6 +11,6 @@ class Dashboard extends Controller
     protected $base_path = "tabs/01-Dashboard";
     public function index()
     {
-        return Inertia::render($this->base_path . '/dashboard');
+        return Inertia::render($this->base_path . '/Main');
     }
 }
