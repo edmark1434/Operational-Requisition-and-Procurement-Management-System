@@ -10,6 +10,11 @@ use App\Http\Controllers\WebPages\Deliveries;
 use App\Http\Controllers\WebPages\Returns;
 use App\Http\Controllers\WebPages\Users;
 use App\Http\Controllers\WebPages\Roles;
+use App\Http\Controllers\WebPages\MakesAndCategories;
+use App\Http\Controllers\WebPages\Reworks;
+use App\Http\Controllers\WebPages\Notifications;
+use App\Http\Controllers\WebPages\Contacts;
+use App\Http\Controllers\WebPages\Services;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -59,6 +64,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('users/{id}/edit',[Users::class,"edit"])->name('useredit');
 
     Route::get('roles',[Roles::class,'index'])->name('roles');
+
+    Route::get('makesandcategories',[MakesAndCategories::class,'index'])->name('makesandcategories');
+    Route::get('services',[Services::class,'index'])->name('services');
+    Route::get('reworks',[Reworks::class,'index'])->name('reworks');
+    Route::get('contacts',[Contacts::class,'index'])->name('contacts');
+    Route::get('notifications',[Notifications::class,'index'])->name('notifications');
 
 });
 
