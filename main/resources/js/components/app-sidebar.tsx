@@ -10,10 +10,19 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, requisitions, inventory, purchases, suppliers, delivery, returns, audit, users, roles } from '@/routes';
+import { dashboard, requisitions, inventory, purchases,
+         suppliers, delivery, returns, audit, users,
+         roles, makesandcategories, services, reworks,
+         contacts, notifications
+        } from '@/routes';
+
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, NotepadTextIcon, Package, ShoppingCart, Contact, SquareArrowDownIcon, LucideLogs, User, Shield, Truck } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, NotepadTextIcon,
+         Package, ShoppingCart, Contact, SquareArrowDownIcon,
+         LucideLogs, User, Shield, Truck, Tags, HandPlatter, Waypoints,
+         Container, Bell
+        } from 'lucide-react';
 import AppLogo from './app-logo';
 
 // Group 1: Dashboard & Inventory
@@ -27,6 +36,16 @@ const group1NavItems: NavItem[] = [
         title: 'Inventory',
         href: inventory(),
         icon: Package,
+    },
+    {
+        title: 'Makes & Categories',
+        href: makesandcategories(),
+        icon: Tags,
+    },
+    {
+        title: 'Services',
+        href: services(),
+        icon: HandPlatter,
     },
 ];
 
@@ -52,13 +71,23 @@ const group2NavItems: NavItem[] = [
         href: returns(),
         icon: SquareArrowDownIcon,
     },
+    {
+        title: 'Reworks',
+        href: reworks(),
+        icon: Waypoints,
+    },
 ];
 
-// Group 3: Suppliers & Users
+// Group 3: Vendors (Suppliers) & Users
 const group3NavItems: NavItem[] = [
     {
-        title: 'Suppliers',
+        title: 'Vendors',
         href: suppliers(),
+        icon: Container,
+    },
+    {
+        title: 'Contacts',
+        href: contacts(),
         icon: Contact,
     },
     {
@@ -66,9 +95,14 @@ const group3NavItems: NavItem[] = [
         href: users(),
         icon: User,
     },
+    {
+        title: 'Roles & Permissions',
+        href: roles(),
+        icon: Shield,
+    },
 ];
 
-// Group 4: Audit Logs & Roles & Permissions
+// Group 4: MISC
 const group4NavItems: NavItem[] = [
     {
         title: 'Audit Logs',
@@ -76,10 +110,11 @@ const group4NavItems: NavItem[] = [
         icon: LucideLogs,
     },
     {
-        title: 'Roles & Permissions',
-        href: roles(),
-        icon: Shield,
+        title: 'Notifications',
+        href: notifications(),
+        icon: Bell,
     },
+
 ];
 
 const footerNavItems: NavItem[] = [
