@@ -65,7 +65,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('roles',[Roles::class,'index'])->name('roles');
 
-    Route::get('makesandcategories',[MakesAndCategories::class,'index'])->name('makesandcategories');
+    Route::get('makes-categories',[MakesAndCategories::class,'index'])->name('makesandcategories');
+    Route::get('makes-categories/category/add',[MakesAndCategories::class,"store_category"])->name('categoryadd');
+    Route::get('makes-categories/category/{id}/edit',[MakesAndCategories::class,"edit_category"])->name('categoryedit');
+    Route::get('makes-categories/make/add',[MakesAndCategories::class,"store_make"])->name('makeadd');
+    Route::get('makes-categories/make/{id}/edit',[MakesAndCategories::class,"edit_make"])->name('makeedit');
 
     Route::get('services',[Services::class,'index'])->name('services');
     Route::get('services/add',[Services::class,"store"])->name('servicesadd');
