@@ -63,7 +63,7 @@ export default function RequisitionDetailModal({
     };
 
     const handleCreatePurchaseOrder = () => {
-        router.get('/purchases');
+        router.get('/purchases/create');
         onClose();
     };
 
