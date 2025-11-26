@@ -66,7 +66,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('roles',[Roles::class,'index'])->name('roles');
 
     Route::get('makesandcategories',[MakesAndCategories::class,'index'])->name('makesandcategories');
+
     Route::get('services',[Services::class,'index'])->name('services');
+    Route::get('services/add',[Services::class,"store"])->name('servicesadd');
+    Route::get('services/{id}/edit',[Services::class,"edit"])->name('servicesedit');
+
     Route::get('reworks',[Reworks::class,'index'])->name('reworks');
     Route::get('contacts',[Contacts::class,'index'])->name('contacts');
     Route::get('notifications',[Notifications::class,'index'])->name('notifications');
