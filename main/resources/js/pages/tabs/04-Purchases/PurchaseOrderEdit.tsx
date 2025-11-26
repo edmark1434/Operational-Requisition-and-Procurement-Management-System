@@ -6,7 +6,9 @@ import { type BreadcrumbItem } from '@/types';
 // Import datasets
 import requisitionsData from '@/pages/datasets/requisition';
 import requisitionItemsData from '@/pages/datasets/requisition_item';
+import requisitionServiceData from '@/pages/datasets/requisition_service';
 import itemsData from '@/pages/datasets/items';
+import serviceData from '@/pages/datasets/service';
 import categoriesData from '@/pages/datasets/category';
 import suppliersData from '@/pages/datasets/supplier';
 import { purchaseOrdersData } from '@/pages/datasets/purchase_order';
@@ -18,6 +20,7 @@ import { getSuggestedSuppliers, getBestSupplier, type SuggestedSupplier } from '
 import OrderInfo from './PurchaseOrderForm/OrderInfo';
 import SelectSupplier from './PurchaseOrderForm/SelectSupplier';
 import OrderItems from './PurchaseOrderForm/OrderItems';
+import OrderService from './PurchaseOrderForm/OrderService';
 import AdditionalInfo from './PurchaseOrderForm/AdditionalInfo';
 import PreviewModal from './PurchaseOrderForm/PreviewModal';
 
@@ -58,13 +61,27 @@ interface PurchaseOrderItem {
     CATEGORY?: string;
 }
 
+interface PurchaseOrderService {
+    ID: number;
+    SERVICE_ID: number;
+    NAME: string;
+    DESCRIPTION: string;
+    QUANTITY: number;
+    UNIT_PRICE: number;
+    SELECTED: boolean;
+    REQUISITION_ID?: number;
+    CATEGORY?: string;
+}
+
 interface FormData {
     REFERENCE_NO: string;
     REQUISITION_IDS: string[];
     SUPPLIER_ID: string;
     PAYMENT_TYPE: string;
+    ORDER_TYPE?: string;
     REMARKS: string;
     ITEMS: PurchaseOrderItem[];
+    SERVICES: PurchaseOrderService[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -89,8 +106,10 @@ export default function PurchaseOrderEdit() {
         REQUISITION_IDS: [],
         SUPPLIER_ID: '',
         PAYMENT_TYPE: 'cash',
+        ORDER_TYPE: 'items',
         REMARKS: '',
-        ITEMS: []
+        ITEMS: [],
+        SERVICES: []
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [selectedRequisitions, setSelectedRequisitions] = useState<any[]>([]);
@@ -110,7 +129,10 @@ export default function PurchaseOrderEdit() {
             const transformedRequisitions = requisitionsData
                 .filter(req => req.STATUS === 'Approved')
                 .map(requisition => {
-                    const requisitionItems = requisitionItemsData.filter(item => item.REQ_ID === requisition.REQ_ID);
+                    // Handle items requisitions
+                    const requisitionItems = requisitionItemsData.filter(item => item.REQ_ID === requisition.ID);
+                    // Handle services requisitions
+                    const requisitionServices = requisitionServiceData.filter(service => service.REQ_ID === requisition.ID);
 
                     const itemsWithDetails = requisitionItems.map(reqItem => {
                         const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
@@ -124,23 +146,48 @@ export default function PurchaseOrderEdit() {
                             CATEGORY_ID: category?.CAT_ID,
                             UNIT_PRICE: itemDetails?.UNIT_PRICE || 0,
                             SELECTED: true,
-                            REQUISITION_ID: requisition.REQ_ID
+                            REQUISITION_ID: requisition.ID,
+                            TYPE: 'item'
                         };
                     });
 
-                    const categories = [...new Set(itemsWithDetails.map(item => item.CATEGORY))];
+                    // Services with details
+                    const servicesWithDetails = requisitionServices.map(reqService => {
+                        const serviceDetails = serviceData.find(service => service.ID === reqService.SERVICE_ID);
+                        const category = categoriesData.find(cat => cat.CAT_ID === serviceDetails?.CATEGORY_ID);
+                        return {
+                            ID: reqService.ID,
+                            SERVICE_ID: reqService.SERVICE_ID,
+                            NAME: serviceDetails?.NAME || 'Unknown Service',
+                            DESCRIPTION: serviceDetails?.DESCRIPTION || '',
+                            QUANTITY: reqService.QUANTITY,
+                            CATEGORY: category?.NAME || 'Unknown Category',
+                            CATEGORY_ID: category?.CAT_ID,
+                            UNIT_PRICE: serviceDetails?.HOURLY_RATE || reqService.UNIT_PRICE,
+                            SELECTED: true,
+                            REQUISITION_ID: requisition.ID,
+                            TYPE: 'service'
+                        };
+                    });
+
+                    const categories = [...new Set([
+                        ...itemsWithDetails.map(item => item.CATEGORY),
+                        ...servicesWithDetails.map(service => service.CATEGORY)
+                    ])];
 
                     return {
-                        ID: requisition.REQ_ID,
-                        CREATED_AT: requisition.DATE_REQUESTED,
-                        UPDATED_AT: requisition.DATE_UPDATED,
+                        ID: requisition.ID,
+                        CREATED_AT: requisition.CREATED_AT,
+                        UPDATED_AT: requisition.UPDATED_AT,
                         STATUS: requisition.STATUS,
-                        REMARKS: requisition.REASON || '',
-                        USER_ID: requisition.US_ID,
+                        REMARKS: requisition.REMARKS || '',
+                        USER_ID: requisition.USER_ID,
                         REQUESTOR: requisition.REQUESTOR,
                         PRIORITY: requisition.PRIORITY,
                         NOTES: requisition.NOTES,
+                        TYPE: requisition.TYPE,
                         ITEMS: itemsWithDetails,
+                        SERVICES: servicesWithDetails,
                         CATEGORIES: categories,
                     };
                 });
@@ -154,10 +201,7 @@ export default function PurchaseOrderEdit() {
     // Load data based on mode after approvedRequisitions is set
     useEffect(() => {
         if (currentPurchase) {
-            // Enhanced edit mode initialization with multi-requisition support
             const requisitionIds = [currentPurchase.REQUISITION_ID.toString()];
-
-            // Find the current requisition
             const currentRequisition = approvedRequisitions.find(req => req.ID === currentPurchase.REQUISITION_ID);
             const initialSelectedRequisitions = currentRequisition ? [currentRequisition] : [];
 
@@ -175,13 +219,34 @@ export default function PurchaseOrderEdit() {
                 };
             });
 
+            // Transform services
+            const servicesWithRequisition: PurchaseOrderService[] = currentPurchase.SERVICES.map(service => {
+                const originalService = serviceData.find(svc => svc.ID === service.SERVICE_ID);
+                const category = categoriesData.find(cat => cat.CAT_ID === originalService?.CATEGORY_ID);
+
+                return {
+                    ...service,
+                    CATEGORY: category?.NAME || 'Unknown Category',
+                    SELECTED: true,
+                    REQUISITION_ID: currentPurchase.REQUISITION_ID
+                };
+            });
+
+            // Determine order type based on requisition and content
+            let orderType = currentPurchase.ORDER_TYPE;
+            if (!orderType) {
+                orderType = currentRequisition?.TYPE || (servicesWithRequisition.length > 0 ? 'services' : 'items');
+            }
+
             setFormData({
                 REFERENCE_NO: currentPurchase.REFERENCE_NO,
                 REQUISITION_IDS: requisitionIds,
                 SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
                 PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
+                ORDER_TYPE: orderType,
                 REMARKS: currentPurchase.REMARKS,
-                ITEMS: itemsWithRequisition
+                ITEMS: itemsWithRequisition,
+                SERVICES: servicesWithRequisition
             });
 
             setSelectedRequisitions(initialSelectedRequisitions);
@@ -195,27 +260,35 @@ export default function PurchaseOrderEdit() {
         setIsLoading(false);
     }, [currentPurchase, approvedRequisitions]);
 
-    // Update supplier suggestions when items change
+    // Update supplier suggestions when items/services change
     useEffect(() => {
         const selectedItems = formData.ITEMS.filter((item: PurchaseOrderItem) => item.SELECTED);
-        if (selectedItems.length > 0) {
-            const suggestions = getSuggestedSuppliers(selectedItems);
-            const best = getBestSupplier(selectedItems);
+        const selectedServices = formData.SERVICES.filter((service: PurchaseOrderService) => service.SELECTED);
+
+        if (selectedItems.length > 0 || selectedServices.length > 0) {
+            // CORRECTED: Pass the required parameters
+            const suggestions = getSuggestedSuppliers(selectedItems, selectedServices, formData.ORDER_TYPE);
+            const best = getBestSupplier(selectedItems, selectedServices, formData.ORDER_TYPE);
             setSuggestedSuppliers(suggestions);
             setBestSupplier(best);
         } else {
             setSuggestedSuppliers([]);
             setBestSupplier(null);
         }
-    }, [formData.ITEMS]);
+    }, [formData.ITEMS, formData.SERVICES, formData.ORDER_TYPE]);
 
     // Store original quantities when requisitions are selected
     useEffect(() => {
         if (selectedRequisitions.length > 0) {
             const originalQty: {[key: number]: number} = {};
             selectedRequisitions.forEach(requisition => {
+                // Items
                 requisition.ITEMS.forEach((item: any) => {
                     originalQty[item.ID] = item.QUANTITY;
+                });
+                // Services
+                requisition.SERVICES.forEach((service: any) => {
+                    originalQty[service.ID] = service.QUANTITY;
                 });
             });
             setOriginalQuantities(originalQty);
@@ -247,8 +320,11 @@ export default function PurchaseOrderEdit() {
             newErrors.PAYMENT_TYPE = 'Please select a payment type';
         }
 
-        if (formData.ITEMS.length === 0) {
+        // Validate based on order type
+        if (formData.ORDER_TYPE === 'items' && formData.ITEMS.filter(item => item.SELECTED).length === 0) {
             newErrors.ITEMS = 'No items selected for purchase';
+        } else if (formData.ORDER_TYPE === 'services' && formData.SERVICES.filter(service => service.SELECTED).length === 0) {
+            newErrors.SERVICES = 'No services selected for purchase';
         }
 
         // Validate supplier payment method compatibility
@@ -268,35 +344,86 @@ export default function PurchaseOrderEdit() {
         return Object.keys(newErrors).length === 0;
     };
 
+    // Handle order type change
+    const handleOrderTypeChange = (orderType: string) => {
+        if (!isEditable) return;
+
+        setFormData(prev => ({
+            ...prev,
+            ORDER_TYPE: orderType
+        }));
+
+        // Clear items/services when order type changes to avoid mixed content
+        if (orderType === 'items') {
+            setFormData(prev => ({
+                ...prev,
+                SERVICES: prev.SERVICES.map(service => ({ ...service, SELECTED: false }))
+            }));
+        } else if (orderType === 'services') {
+            setFormData(prev => ({
+                ...prev,
+                ITEMS: prev.ITEMS.map(item => ({ ...item, SELECTED: false }))
+            }));
+        }
+    };
+
     const handleRequisitionSelect = (requisitionId: string) => {
         if (!isEditable) return;
 
         const requisition = approvedRequisitions.find(req => req.ID.toString() === requisitionId);
 
         if (requisition && !formData.REQUISITION_IDS.includes(requisitionId)) {
+            // Auto-set order type based on requisition type if not set
+            let orderType = formData.ORDER_TYPE;
+            if (!orderType) {
+                orderType = requisition.TYPE;
+                setFormData(prev => ({ ...prev, ORDER_TYPE: requisition.TYPE }));
+            }
+
+            // Validate order type consistency
+            if (orderType && requisition.TYPE !== orderType) {
+                alert(`Cannot add ${requisition.TYPE} requisition to ${orderType} purchase order. Please select ${orderType} requisitions only.`);
+                return;
+            }
+
             // Add requisition
             const newRequisitionIds = [...formData.REQUISITION_IDS, requisitionId];
             const newSelectedRequisitions = [...selectedRequisitions, requisition];
 
-            // Add items from this requisition
-            const newItems: PurchaseOrderItem[] = [
-                ...formData.ITEMS,
-                ...requisition.ITEMS.map((item: any) => ({
-                    ...item,
-                    SELECTED: true,
-                    REQUISITION_ID: requisition.ID
-                }))
-            ];
+            // Add items/services from this requisition based on type
+            let newItems = [...formData.ITEMS];
+            let newServices = [...formData.SERVICES];
+
+            if (requisition.TYPE === 'items') {
+                newItems = [
+                    ...newItems,
+                    ...requisition.ITEMS.map((item: any) => ({
+                        ...item,
+                        SELECTED: true,
+                        REQUISITION_ID: requisition.ID
+                    }))
+                ];
+            } else if (requisition.TYPE === 'services') {
+                newServices = [
+                    ...newServices,
+                    ...requisition.SERVICES.map((service: any) => ({
+                        ...service,
+                        SELECTED: true,
+                        REQUISITION_ID: requisition.ID
+                    }))
+                ];
+            }
 
             setFormData(prev => ({
                 ...prev,
                 REQUISITION_IDS: newRequisitionIds,
-                ITEMS: newItems
+                ITEMS: newItems,
+                SERVICES: newServices
             }));
 
             setSelectedRequisitions(newSelectedRequisitions);
 
-            // Reset supplier when requisition changes since items may be different
+            // Reset supplier when requisition changes since items/services may be different
             if (formData.SUPPLIER_ID) {
                 setFormData(prev => ({ ...prev, SUPPLIER_ID: '' }));
                 setSelectedSupplier(null);
@@ -323,19 +450,22 @@ export default function PurchaseOrderEdit() {
         const newRequisitionIds = formData.REQUISITION_IDS.filter(id => id !== requisitionId);
         const newSelectedRequisitions = selectedRequisitions.filter(req => req.ID.toString() !== requisitionId);
 
-        // Remove items from this requisition
-        const newItems = formData.ITEMS.filter(item => item.REQUISITION_ID !== parseInt(requisitionId));
+        // Remove items/services from this requisition
+        const requisitionIdNum = parseInt(requisitionId);
+        const newItems = formData.ITEMS.filter(item => item.REQUISITION_ID !== requisitionIdNum);
+        const newServices = formData.SERVICES.filter(service => service.REQUISITION_ID !== requisitionIdNum);
 
         setFormData(prev => ({
             ...prev,
             REQUISITION_IDS: newRequisitionIds,
-            ITEMS: newItems
+            ITEMS: newItems,
+            SERVICES: newServices
         }));
 
         setSelectedRequisitions(newSelectedRequisitions);
 
-        // Reset supplier if no items left
-        if (newItems.length === 0 && formData.SUPPLIER_ID) {
+        // Reset supplier if no items/services left
+        if (newItems.length === 0 && newServices.length === 0 && formData.SUPPLIER_ID) {
             setFormData(prev => ({ ...prev, SUPPLIER_ID: '' }));
             setSelectedSupplier(null);
         }
@@ -389,6 +519,20 @@ export default function PurchaseOrderEdit() {
         }));
     };
 
+    // Toggle service selection
+    const toggleServiceSelection = (serviceId: number) => {
+        if (!isEditable) return;
+
+        setFormData(prev => ({
+            ...prev,
+            SERVICES: prev.SERVICES.map(service =>
+                service.ID === serviceId
+                    ? { ...service, SELECTED: !service.SELECTED }
+                    : service
+            )
+        }));
+    };
+
     const updateItemQuantity = (itemId: number, quantity: number) => {
         if (!isEditable) return;
         if (quantity < 1) return;
@@ -411,14 +555,48 @@ export default function PurchaseOrderEdit() {
         }));
     };
 
+    // Update service quantity
+    const updateServiceQuantity = (serviceId: number, quantity: number) => {
+        if (!isEditable) return;
+        if (quantity < 1) return;
+
+        // Get the original quantity from requisition
+        const originalQty = originalQuantities[serviceId] || 1;
+
+        // Don't allow decreasing below original requisition quantity
+        if (quantity < originalQty) {
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            SERVICES: prev.SERVICES.map(service =>
+                service.ID === serviceId
+                    ? { ...service, QUANTITY: quantity }
+                    : service
+            )
+        }));
+    };
+
     const calculateTotal = () => {
-        return formData.ITEMS
+        const itemsTotal = formData.ITEMS
             .filter((item: PurchaseOrderItem) => item.SELECTED)
             .reduce((total: number, item: PurchaseOrderItem) => total + (item.QUANTITY * item.UNIT_PRICE), 0);
+
+        const servicesTotal = formData.SERVICES
+            .filter((service: PurchaseOrderService) => service.SELECTED)
+            .reduce((total: number, service: PurchaseOrderService) => total + (service.QUANTITY * service.UNIT_PRICE), 0);
+
+        return itemsTotal + servicesTotal;
     };
 
     const getSelectedItems = () => {
         return formData.ITEMS.filter((item: PurchaseOrderItem) => item.SELECTED);
+    };
+
+    // Get selected services
+    const getSelectedServices = () => {
+        return formData.SERVICES.filter((service: PurchaseOrderService) => service.SELECTED);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -437,6 +615,7 @@ export default function PurchaseOrderEdit() {
 
     const handleConfirmSubmit = () => {
         const selectedItems = getSelectedItems();
+        const selectedServices = getSelectedServices();
         const totalCost = calculateTotal();
 
         const purchaseOrderData = {
@@ -445,6 +624,7 @@ export default function PurchaseOrderEdit() {
             REQUISITION_IDS: formData.REQUISITION_IDS.map(id => parseInt(id)),
             SUPPLIER_ID: parseInt(formData.SUPPLIER_ID),
             PAYMENT_TYPE: formData.PAYMENT_TYPE,
+            ORDER_TYPE: formData.ORDER_TYPE,
             TOTAL_COST: totalCost,
             STATUS: currentPurchase?.STATUS || 'pending_approval',
             REMARKS: formData.REMARKS,
@@ -458,6 +638,14 @@ export default function PurchaseOrderEdit() {
                 NAME: item.NAME,
                 CATEGORY_ID: item.CATEGORY_ID,
                 REQUISITION_ID: item.REQUISITION_ID
+            })),
+            SERVICES: selectedServices.map(service => ({
+                SERVICE_ID: service.SERVICE_ID,
+                QUANTITY: service.QUANTITY,
+                UNIT_PRICE: service.UNIT_PRICE,
+                NAME: service.NAME,
+                DESCRIPTION: service.DESCRIPTION,
+                REQUISITION_ID: service.REQUISITION_ID
             }))
         };
 
@@ -508,13 +696,28 @@ export default function PurchaseOrderEdit() {
                 };
             });
 
+            // Reset services
+            const servicesWithRequisition: PurchaseOrderService[] = currentPurchase.SERVICES.map(service => {
+                const originalService = serviceData.find(svc => svc.ID === service.SERVICE_ID);
+                const category = categoriesData.find(cat => cat.CAT_ID === originalService?.CATEGORY_ID);
+
+                return {
+                    ...service,
+                    CATEGORY: category?.NAME || 'Unknown Category',
+                    SELECTED: true,
+                    REQUISITION_ID: currentPurchase.REQUISITION_ID
+                };
+            });
+
             setFormData({
                 REFERENCE_NO: currentPurchase.REFERENCE_NO,
                 REQUISITION_IDS: requisitionIds,
                 SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
                 PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
+                ORDER_TYPE: currentPurchase.ORDER_TYPE,
                 REMARKS: currentPurchase.REMARKS,
-                ITEMS: itemsWithRequisition
+                ITEMS: itemsWithRequisition,
+                SERVICES: servicesWithRequisition
             });
 
             setSelectedRequisitions(initialSelectedRequisitions);
@@ -528,6 +731,12 @@ export default function PurchaseOrderEdit() {
             router.visit('/purchases');
         }
     };
+
+    // Filter requisitions by order type for the combobox
+    const filteredRequisitions = approvedRequisitions.filter(req => {
+        if (!formData.ORDER_TYPE) return true;
+        return req.TYPE === formData.ORDER_TYPE;
+    });
 
     if (isLoading) {
         return (
@@ -654,6 +863,7 @@ export default function PurchaseOrderEdit() {
                         </h1>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             Editing {currentPurchase.REFERENCE_NO} • {getStatusDisplayName(currentPurchase.STATUS)}
+                            {formData.ORDER_TYPE && ` • ${formData.ORDER_TYPE.charAt(0).toUpperCase() + formData.ORDER_TYPE.slice(1)} Order`}
                         </p>
                     </div>
                     <Link
@@ -678,6 +888,7 @@ export default function PurchaseOrderEdit() {
                                             </h2>
                                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                                 Update purchase order {currentPurchase.REFERENCE_NO} • Created {new Date(currentPurchase.CREATED_AT).toLocaleDateString()}
+                                                {formData.ORDER_TYPE && ` • ${formData.ORDER_TYPE.charAt(0).toUpperCase() + formData.ORDER_TYPE.slice(1)} Order`}
                                             </p>
                                         </div>
                                     </div>
@@ -724,6 +935,11 @@ export default function PurchaseOrderEdit() {
                                                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                                             Current status - {isEditable ? 'Editable' : 'Read Only'}
                                                         </p>
+                                                        {formData.ORDER_TYPE && (
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                                Order Type: <span className="font-medium capitalize">{formData.ORDER_TYPE}</span>
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -734,6 +950,7 @@ export default function PurchaseOrderEdit() {
                                                 errors={errors}
                                                 onInputChange={handleInputChange}
                                                 isEditMode={true}
+                                                onOrderTypeChange={handleOrderTypeChange}
                                             />
 
                                             <SelectSupplier
@@ -746,7 +963,7 @@ export default function PurchaseOrderEdit() {
                                             />
                                         </div>
 
-                                        {/* Right Column - Requisition, Items, and Additional Info */}
+                                        {/* Right Column - Requisition, Items/Services, and Additional Info */}
                                         <div className="xl:col-span-2 space-y-6">
                                             {/* Approved Requisitions Selection */}
                                             <div className="space-y-4">
@@ -758,6 +975,20 @@ export default function PurchaseOrderEdit() {
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                         Requisitions
                                                     </label>
+
+                                                    {/* Order Type Requirement */}
+                                                    {!formData.ORDER_TYPE && (
+                                                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                                                            <div className="flex items-center">
+                                                                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                                                </svg>
+                                                                <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+                                                                    Please select an Order Type first to see available requisitions
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
 
                                                     {/* Selected Requisitions Tags */}
                                                     {formData.REQUISITION_IDS.length > 0 && (
@@ -771,7 +1002,14 @@ export default function PurchaseOrderEdit() {
                                                                     <span className="text-blue-600 dark:text-blue-400">•</span>
                                                                     <span>{requisition.REQUESTOR}</span>
                                                                     <span className="text-blue-600 dark:text-blue-400">•</span>
-                                                                    <span>{requisition.ITEMS.length} items</span>
+                                                                    <span className="capitalize">{requisition.TYPE}</span>
+                                                                    <span className="text-blue-600 dark:text-blue-400">•</span>
+                                                                    <span>
+                                                                        {requisition.TYPE === 'items'
+                                                                            ? `${requisition.ITEMS.length} items`
+                                                                            : `${requisition.SERVICES.length} services`
+                                                                        }
+                                                                    </span>
                                                                     {formData.REQUISITION_IDS.length > 1 && (
                                                                         <button
                                                                             type="button"
@@ -794,20 +1032,28 @@ export default function PurchaseOrderEdit() {
                                                                 role="combobox"
                                                                 aria-expanded={requisitionOpen}
                                                                 className="w-full justify-between"
+                                                                disabled={!formData.ORDER_TYPE}
                                                             >
                                                                 {formData.REQUISITION_IDS.length > 0
-                                                                    ? `${formData.REQUISITION_IDS.length} requisition(s) selected`
-                                                                    : "Select requisitions..."}
+                                                                    ? `${formData.REQUISITION_IDS.length} ${formData.ORDER_TYPE} requisition(s) selected`
+                                                                    : formData.ORDER_TYPE
+                                                                        ? `Select ${formData.ORDER_TYPE} requisitions...`
+                                                                        : "Select order type first..."}
                                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                             </Button>
                                                         </PopoverTrigger>
                                                         <PopoverContent className="w-full p-0">
                                                             <Command>
-                                                                <CommandInput placeholder="Search requisitions..." className="h-9" />
+                                                                <CommandInput placeholder={`Search ${formData.ORDER_TYPE} requisitions...`} className="h-9" />
                                                                 <CommandList>
-                                                                    <CommandEmpty>No requisitions found.</CommandEmpty>
+                                                                    <CommandEmpty>
+                                                                        {!formData.ORDER_TYPE
+                                                                            ? "Please select an order type first"
+                                                                            : `No ${formData.ORDER_TYPE} requisitions found.`
+                                                                        }
+                                                                    </CommandEmpty>
                                                                     <CommandGroup>
-                                                                        {approvedRequisitions.map((requisition) => (
+                                                                        {filteredRequisitions.map((requisition) => (
                                                                             <CommandItem
                                                                                 key={requisition.ID}
                                                                                 value={requisition.ID.toString()}
@@ -819,9 +1065,19 @@ export default function PurchaseOrderEdit() {
                                                                                         <span className="font-medium">Req #{requisition.ID}</span>
                                                                                         <span className="text-gray-500 dark:text-gray-400">•</span>
                                                                                         <span>{requisition.REQUESTOR}</span>
+                                                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
+                                                                                            requisition.TYPE === 'items'
+                                                                                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                                                                : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                                                                        }`}>
+                                                                                            {requisition.TYPE}
+                                                                                        </span>
                                                                                     </div>
                                                                                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                                        {requisition.ITEMS.length} items • {requisition.PRIORITY} priority
+                                                                                        {requisition.TYPE === 'items'
+                                                                                            ? `${requisition.ITEMS.length} items • ${requisition.PRIORITY} priority`
+                                                                                            : `${requisition.SERVICES.length} services • ${requisition.PRIORITY} priority`
+                                                                                        }
                                                                                     </div>
                                                                                 </div>
                                                                                 <Check
@@ -858,6 +1114,13 @@ export default function PurchaseOrderEdit() {
                                                                             <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                                                                                 by {requisition.REQUESTOR}
                                                                             </span>
+                                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ml-2 capitalize ${
+                                                                                requisition.TYPE === 'items'
+                                                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                                                            }`}>
+                                                                                {requisition.TYPE}
+                                                                            </span>
                                                                         </div>
                                                                         <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                                                                             requisition.PRIORITY === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
@@ -868,7 +1131,15 @@ export default function PurchaseOrderEdit() {
                                                                         </span>
                                                                     </div>
                                                                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                                                                        <p><strong>Items:</strong> {requisition.ITEMS.length}</p>
+                                                                        <p>
+                                                                            <strong>
+                                                                                {requisition.TYPE === 'items' ? 'Items:' : 'Services:'}
+                                                                            </strong>
+                                                                            {requisition.TYPE === 'items'
+                                                                                ? ` ${requisition.ITEMS.length}`
+                                                                                : ` ${requisition.SERVICES.length}`
+                                                                            }
+                                                                        </p>
                                                                         <p><strong>Requested:</strong> {new Date(requisition.CREATED_AT).toLocaleDateString()}</p>
                                                                         {requisition.NOTES && (
                                                                             <p><strong>Notes:</strong> {requisition.NOTES}</p>
@@ -881,14 +1152,28 @@ export default function PurchaseOrderEdit() {
                                                 </div>
                                             </div>
 
-                                            <OrderItems
-                                                formData={formData}
-                                                selectedRequisition={selectedRequisitions}
-                                                originalQuantities={originalQuantities}
-                                                errors={errors}
-                                                onToggleItemSelection={toggleItemSelection}
-                                                onUpdateItemQuantity={updateItemQuantity}
-                                            />
+                                            {/* Conditional rendering based on order type */}
+                                            {formData.ORDER_TYPE === 'items' && (
+                                                <OrderItems
+                                                    formData={formData}
+                                                    selectedRequisition={selectedRequisitions}
+                                                    originalQuantities={originalQuantities}
+                                                    errors={errors}
+                                                    onToggleItemSelection={toggleItemSelection}
+                                                    onUpdateItemQuantity={updateItemQuantity}
+                                                />
+                                            )}
+
+                                            {formData.ORDER_TYPE === 'services' && (
+                                                <OrderService
+                                                    formData={formData}
+                                                    selectedRequisition={selectedRequisitions[0]}
+                                                    originalQuantities={originalQuantities}
+                                                    errors={errors}
+                                                    onToggleServiceSelection={toggleServiceSelection}
+                                                    onUpdateServiceQuantity={updateServiceQuantity}
+                                                />
+                                            )}
 
                                             {/* Selected Supplier Display */}
                                             {selectedSupplier && (
@@ -972,7 +1257,7 @@ export default function PurchaseOrderEdit() {
                                             >
                                                 {formData.REQUISITION_IDS.length > 1
                                                     ? `Update Merged PO (${formData.REQUISITION_IDS.length})`
-                                                    : 'Update Purchase Order'
+                                                    : `Update ${formData.ORDER_TYPE ? formData.ORDER_TYPE.charAt(0).toUpperCase() + formData.ORDER_TYPE.slice(1) : ''} Purchase Order`
                                                 }
                                             </button>
                                         </div>
@@ -991,6 +1276,7 @@ export default function PurchaseOrderEdit() {
                     selectedSupplier={selectedSupplier}
                     selectedRequisition={selectedRequisitions}
                     selectedItems={getSelectedItems()}
+                    selectedServices={getSelectedServices()}
                     totalCost={calculateTotal()}
                     onConfirm={handleConfirmSubmit}
                     onCancel={() => setShowPreview(false)}
