@@ -53,7 +53,6 @@ export default function PurchaseDetailModal({
 
     if (!isOpen || !purchase) return null;
 
-// Update the statusOptions array in PurchaseDetailModal.tsx
     const statusOptions = [
         { value: 'pending_approval', label: 'Pending Approval', description: 'Automatically created when requisition is approved' },
         { value: 'merged', label: 'Merged', description: 'When merged with other purchase orders' },
@@ -63,6 +62,17 @@ export default function PurchaseDetailModal({
         { value: 'partially_delivered', label: 'Partially Delivered', description: 'When delivery is created, but return is also created' },
         { value: 'received', label: 'Received', description: 'When encoder marks it received via requisition' }
     ];
+
+    // Get items or services based on order type
+    const getOrderItems = () => {
+        if (purchase.ORDER_TYPE === 'services') {
+            return purchase.SERVICES || [];
+        }
+        return purchase.ITEMS || [];
+    };
+
+    const orderItems = getOrderItems();
+    const isServiceOrder = purchase.ORDER_TYPE === 'services';
 
     return (
         <>
@@ -75,9 +85,18 @@ export default function PurchaseDetailModal({
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                     {purchase?.REFERENCE_NO}
                                 </h2>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                    Purchase Order Details
-                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Purchase Order Details
+                                    </p>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                        isServiceOrder
+                                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                    }`}>
+                                        {isServiceOrder ? 'Services' : 'Items'}
+                                    </span>
+                                </div>
                             </div>
                             <button
                                 onClick={onClose}
@@ -122,7 +141,6 @@ export default function PurchaseDetailModal({
                                                             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
                                                                 Update Status
                                                             </div>
-                                                            {/* Scrollable container with fixed height */}
                                                             <div className="max-h-48 overflow-y-auto pr-1">
                                                                 {statusOptions.map((status) => (
                                                                     <button
@@ -208,10 +226,10 @@ export default function PurchaseDetailModal({
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Items Count
+                                            {isServiceOrder ? 'Services Count' : 'Items Count'}
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {purchase?.ITEMS?.length || 0} items
+                                            {orderItems.length} {isServiceOrder ? 'services' : 'items'}
                                         </p>
                                     </div>
                                 </div>
@@ -287,34 +305,41 @@ export default function PurchaseDetailModal({
                                         <p>{purchase?.REQUISITION_DATE ? formatDate(purchase.REQUISITION_DATE) : 'N/A'}</p>
                                     </div>
                                     <div>
-                                        <span className="text-gray-600 dark:text-gray-400">Items:</span>
-                                        <p>{purchase?.ITEMS?.length || 0}</p>
+                                        <span className="text-gray-600 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
+                                        <p>{orderItems.length}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Items List */}
+                            {/* Items/Services List */}
                             <div className="border-t border-sidebar-border pt-6">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Order Items
+                                    Order {isServiceOrder ? 'Services' : 'Items'}
                                 </h3>
                                 <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
                                     <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                        <div className="col-span-6">Item</div>
-                                        <div className="col-span-2 text-right">Quantity</div>
-                                        <div className="col-span-2 text-right">Unit Price</div>
+                                        <div className="col-span-6">{isServiceOrder ? 'Service' : 'Item'}</div>
+                                        <div className="col-span-2 text-right">{isServiceOrder ? 'Hours' : 'Quantity'}</div>
+                                        <div className="col-span-2 text-right">{isServiceOrder ? 'Hourly Rate' : 'Unit Price'}</div>
                                         <div className="col-span-2 text-right">Total</div>
                                     </div>
                                     <div className="divide-y divide-sidebar-border">
-                                        {purchase?.ITEMS?.map((item: any) => (
+                                        {orderItems.map((item: any) => (
                                             <div key={item.ID} className="grid grid-cols-12 gap-4 px-4 py-3">
                                                 <div className="col-span-6">
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                         {item.NAME}
                                                     </p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {item.CATEGORY}
-                                                    </p>
+                                                    {isServiceOrder && item.DESCRIPTION && (
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            {item.DESCRIPTION}
+                                                        </p>
+                                                    )}
+                                                    {!isServiceOrder && (
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {item.CATEGORY}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="col-span-2 text-right">
                                                     <p className="text-sm text-gray-900 dark:text-white font-medium">
@@ -324,6 +349,7 @@ export default function PurchaseDetailModal({
                                                 <div className="col-span-2 text-right">
                                                     <p className="text-sm text-gray-600 dark:text-gray-400">
                                                         {formatCurrency(item.UNIT_PRICE)}
+                                                        {isServiceOrder && '/hr'}
                                                     </p>
                                                 </div>
                                                 <div className="col-span-2 text-right">
@@ -452,7 +478,6 @@ export default function PurchaseDetailModal({
 }
 
 // Status Icon Component
-// Updated Purchase Status Icon Component
 function PurchaseStatusIcon({ status }: { status: string }) {
     switch (status?.toLowerCase()) {
         case 'pending':
