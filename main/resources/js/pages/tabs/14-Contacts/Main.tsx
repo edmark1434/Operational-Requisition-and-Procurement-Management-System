@@ -1,16 +1,55 @@
+import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import {contacts} from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+
+// Import components
+import ContactStats from './ContactStats';
+import SearchAndFilters from './SearchAndFilters';
+import ContactList from './ContactList';
+import ContactDetailModal from './ContactDetailModal';
+
+// Import utilities
+import { transformContactsData } from './utils';
+import { useContactFilters } from './utils/hooks';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Contacts',
-        href: contacts().url,
+        href: '/contacts',
     },
 ];
 
 export default function Contacts() {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [vendorFilter, setVendorFilter] = useState('All');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [selectedContact, setSelectedContact] = useState<any>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [contacts, setContacts] = useState(transformContactsData());
+    const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
+
+    const {
+        filteredContacts,
+        vendors,
+        statuses
+    } = useContactFilters(contacts, searchTerm, vendorFilter, statusFilter);
+
+    const handleDeleteContact = (id: number) => {
+        setContacts(prev => prev.filter(contact => contact.ID !== id));
+        setIsDetailModalOpen(false);
+    };
+
+    const openDetailModal = (contact: any) => {
+        setSelectedContact(contact);
+        setIsDetailModalOpen(true);
+    };
+
+    const closeAllModals = () => {
+        setIsDetailModalOpen(false);
+        setSelectedContact(null);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Contacts" />
@@ -18,21 +57,56 @@ export default function Contacts() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">EMPTY SAMPLE</h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-
-                        </p>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Vendor Contacts</h1>
                     </div>
+                    <Link
+                        href="/contacts/add"
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add New Contact
+                    </Link>
                 </div>
 
-                {/* Content Area */}
-                <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-8 text-center">
-                    <div className="py-12">
-                        <p className="text-gray-500 dark:text-gray-400">
-                            content will be displayed here.
-                        </p>
-                    </div>
-                </div>
+                {/* Stats */}
+                <ContactStats contacts={contacts} />
+
+                {/* Search and Filters */}
+                <SearchAndFilters
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    vendorFilter={vendorFilter}
+                    setVendorFilter={setVendorFilter}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    vendors={vendors}
+                    statuses={statuses}
+                    resultsCount={filteredContacts.length}
+                    viewMode={viewMode}
+                    setViewMode={setViewMode}
+                />
+
+                {/* Contact List */}
+                <ContactList
+                    contacts={filteredContacts}
+                    onContactClick={openDetailModal}
+                    viewMode={viewMode}
+                />
+
+                {/* View Detail Modal */}
+                {isDetailModalOpen && (
+                    <ContactDetailModal
+                        contact={selectedContact}
+                        isOpen={isDetailModalOpen}
+                        onClose={closeAllModals}
+                        onEdit={() => {
+                            window.location.href = `/contacts/${selectedContact.ID}/edit`;
+                        }}
+                        onDelete={handleDeleteContact}
+                    />
+                )}
             </div>
         </AppLayout>
     );
