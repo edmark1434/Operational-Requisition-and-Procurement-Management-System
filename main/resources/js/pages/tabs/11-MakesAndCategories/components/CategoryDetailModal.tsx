@@ -18,7 +18,7 @@ export default function CategoryDetailModal({
                                             }: CategoryDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const typeText = category?.TYPE === 'item' ? 'Item Category' : 'Service Category';
+    const typeText = category?.TYPE === 'item' ? 'Item' : 'Service';
 
     const handleDelete = () => {
         if (category) {

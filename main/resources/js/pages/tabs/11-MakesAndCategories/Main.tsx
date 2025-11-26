@@ -24,6 +24,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function MakesAndCategories() {
     const [makesSearchTerm, setMakesSearchTerm] = useState('');
     const [categoriesSearchTerm, setCategoriesSearchTerm] = useState('');
+    const [makeStatusFilter, setMakeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [categoryTypeFilter, setCategoryTypeFilter] = useState<'all' | 'item' | 'service'>('all');
     const [selectedMake, setSelectedMake] = useState<any>(null);
     const [selectedCategory, setSelectedCategory] = useState<any>(null);
     const [isMakeModalOpen, setIsMakeModalOpen] = useState(false);
@@ -35,7 +37,14 @@ export default function MakesAndCategories() {
     const {
         filteredMakes,
         filteredCategories
-    } = useMakesCategoriesFilters(makes, categories, makesSearchTerm, categoriesSearchTerm);
+    } = useMakesCategoriesFilters(
+        makes,
+        categories,
+        makesSearchTerm,
+        categoriesSearchTerm,
+        makeStatusFilter,
+        categoryTypeFilter
+    );
 
     const handleDeleteMake = (id: number) => {
         setMakes(prev => prev.filter(make => make.ID !== id));
@@ -62,6 +71,16 @@ export default function MakesAndCategories() {
         setIsCategoryModalOpen(false);
         setSelectedMake(null);
         setSelectedCategory(null);
+    };
+
+    const clearMakesFilters = () => {
+        setMakesSearchTerm('');
+        setMakeStatusFilter('all');
+    };
+
+    const clearCategoriesFilters = () => {
+        setCategoriesSearchTerm('');
+        setCategoryTypeFilter('all');
     };
 
     return (
@@ -96,12 +115,31 @@ export default function MakesAndCategories() {
                 {/* Stats */}
                 <MakesCategoriesStats makes={makes} categories={categories} />
 
-                {/* Makes Section */}
-                <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
-                    <div className="border-b border-sidebar-border p-6">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Makes</h2>
-                            <div className="w-64">
+                {/* Split Layout - Makes on Left, Categories on Right */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1">
+                    {/* Makes Section - Left Side */}
+                    <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden flex flex-col">
+                        <div className="border-b border-sidebar-border p-6 flex-shrink-0">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Makes</h2>
+                                <div className="flex items-center gap-2">
+                                    {(makesSearchTerm || makeStatusFilter !== 'all') && (
+                                        <button
+                                            onClick={clearMakesFilters}
+                                            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                        >
+                                            Clear Filters
+                                        </button>
+                                    )}
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                                        {filteredMakes.length} {filteredMakes.length === 1 ? 'make' : 'makes'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Makes Filters */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Search */}
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,21 +154,52 @@ export default function MakesAndCategories() {
                                         className="w-full pl-10 pr-4 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                     />
                                 </div>
+
+                                {/* Status Filter */}
+                                <div>
+                                    <select
+                                        value={makeStatusFilter}
+                                        onChange={(e) => setMakeStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
+                                    >
+                                        <option value="all">All Status</option>
+                                        <option value="active">Active Only</option>
+                                        <option value="inactive">Inactive Only</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
+                        <div className="flex-1">
+                            <MakesList
+                                makes={filteredMakes}
+                                onMakeClick={openMakeModal}
+                            />
+                        </div>
                     </div>
-                    <MakesList
-                        makes={filteredMakes}
-                        onMakeClick={openMakeModal}
-                    />
-                </div>
 
-                {/* Categories Section */}
-                <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
-                    <div className="border-b border-sidebar-border p-6">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Categories</h2>
-                            <div className="w-64">
+                    {/* Categories Section - Right Side */}
+                    <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden flex flex-col">
+                        <div className="border-b border-sidebar-border p-6 flex-shrink-0">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Categories</h2>
+                                <div className="flex items-center gap-2">
+                                    {(categoriesSearchTerm || categoryTypeFilter !== 'all') && (
+                                        <button
+                                            onClick={clearCategoriesFilters}
+                                            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                        >
+                                            Clear Filters
+                                        </button>
+                                    )}
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                                        {filteredCategories.length} {filteredCategories.length === 1 ? 'category' : 'categories'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Categories Filters */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Search */}
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,13 +214,28 @@ export default function MakesAndCategories() {
                                         className="w-full pl-10 pr-4 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                     />
                                 </div>
+
+                                {/* Type Filter */}
+                                <div>
+                                    <select
+                                        value={categoryTypeFilter}
+                                        onChange={(e) => setCategoryTypeFilter(e.target.value as 'all' | 'item' | 'service')}
+                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
+                                    >
+                                        <option value="all">All Types</option>
+                                        <option value="item">Item Categories</option>
+                                        <option value="service">Service Categories</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
+                        <div className="flex-1">
+                            <CategoriesList
+                                categories={filteredCategories}
+                                onCategoryClick={openCategoryModal}
+                            />
+                        </div>
                     </div>
-                    <CategoriesList
-                        categories={filteredCategories}
-                        onCategoryClick={openCategoryModal}
-                    />
                 </div>
 
                 {/* Modals */}

@@ -25,7 +25,7 @@ export default function CategoriesList({ categories, onCategoryClick }: Categori
     return (
         <div className="divide-y divide-sidebar-border">
             {categories.map((category) => {
-                const typeText = category.TYPE === 'item' ? 'Item Category' : 'Service Category';
+                const typeText = category.TYPE === 'item' ? 'Item' : 'Service';
 
                 return (
                     <div
