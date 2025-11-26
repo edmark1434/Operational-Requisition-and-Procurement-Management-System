@@ -1,3 +1,4 @@
+// RequisitionPreviewModal.tsx
 interface RequisitionPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -12,6 +13,11 @@ export default function RequisitionPreviewModal({
                                                     formData
                                                 }: RequisitionPreviewModalProps) {
     if (!isOpen) return null;
+
+    const isServiceRequisition = formData?.type === 'services';
+    const itemsCount = formData?.items?.length || 0;
+    const servicesCount = formData?.services?.length || 0;
+    const totalItems = isServiceRequisition ? servicesCount : itemsCount;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -57,9 +63,23 @@ export default function RequisitionPreviewModal({
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Total Items
+                                    Type
                                 </label>
-                                <p className="text-sm text-gray-900 dark:text-white">{formData?.items?.length || 0}</p>
+                                <p className="text-sm text-gray-900 dark:text-white capitalize">{formData?.type}</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Total {isServiceRequisition ? 'Services' : 'Items'}
+                                </label>
+                                <p className="text-sm text-gray-900 dark:text-white">{totalItems}</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Total Amount
+                                </label>
+                                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                    ${formData?.total_amount?.toFixed(2) || '0.00'}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -76,10 +96,10 @@ export default function RequisitionPreviewModal({
                         </div>
                     )}
 
-                    {/* Items List - TABLE LAYOUT */}
+                    {/* Items/Services List - TABLE LAYOUT */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                            Requested Items ({formData?.items?.length || 0})
+                            Requested {isServiceRequisition ? 'Services' : 'Items'} ({totalItems})
                         </label>
                         <div className="border border-sidebar-border rounded-lg overflow-hidden bg-white dark:bg-sidebar-accent">
                             <table className="w-full">
@@ -89,38 +109,98 @@ export default function RequisitionPreviewModal({
                                         #
                                     </th>
                                     <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                        Quantity
+                                        {isServiceRequisition ? 'Hours' : 'Quantity'}
                                     </th>
                                     <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Item Name
+                                        {isServiceRequisition ? 'Service Name' : 'Item Name'}
                                     </th>
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Category
+                                    {!isServiceRequisition && (
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Category
+                                        </th>
+                                    )}
+                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                        Unit Price
+                                    </th>
+                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                        Total
                                     </th>
                                 </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border">
-                                {formData?.items?.map((item: any, index: number) => (
-                                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-sidebar">
-                                        <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                {isServiceRequisition ? (
+                                    // Services Table
+                                    formData?.services?.map((service: any, index: number) => (
+                                        <tr key={service.id} className="hover:bg-gray-50 dark:hover:bg-sidebar">
+                                            <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
                                                 <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
                                                     {index + 1}
                                                 </span>
-                                        </td>
-                                        <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
-                                            {item.quantity}
-                                        </td>
-                                        <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                            {item.itemName}
-                                        </td>
-                                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                {service.quantity}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {service.serviceName}
+                                                    </div>
+                                                    {service.description && (
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            {service.description}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                ${service.unit_price || '0.00'}/hr
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
+                                                ${service.total || '0.00'}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    // Items Table
+                                    formData?.items?.map((item: any, index: number) => (
+                                        <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-sidebar">
+                                            <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
+                                                    {index + 1}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                {item.quantity}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                {item.itemName}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-sidebar border border-sidebar-border">
                                                     {item.category}
                                                 </span>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                ${item.unit_price || '0.00'}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
+                                                ${item.total || '0.00'}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                                 </tbody>
+                                {/* Total Row */}
+                                <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                <tr>
+                                    <td colSpan={isServiceRequisition ? 4 : 5} className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white text-right">
+                                        Grand Total:
+                                    </td>
+                                    <td className="py-3 px-4 text-lg font-bold text-green-600 dark:text-green-400">
+                                        ${formData?.total_amount?.toFixed(2) || '0.00'}
+                                    </td>
+                                </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>

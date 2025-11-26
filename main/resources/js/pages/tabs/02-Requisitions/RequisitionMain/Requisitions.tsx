@@ -18,7 +18,7 @@ import RequisitionsList from './RequisitionsList';
 import RequisitionDetailModal from './RequisitionDetailModal';
 
 // Import utilities
-import { transformRequisitionData } from './utils';
+import { transformRequisitionData } from './utils/index';
 import { useRequisitionFilters } from './hooks';
 
 const breadcrumbs: BreadcrumbItem[] = [

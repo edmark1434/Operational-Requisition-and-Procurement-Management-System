@@ -1,3 +1,4 @@
+// RequisitionForm.tsx
 import AppLayout from '@/layouts/app-layout';
 import { requisitions, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -8,11 +9,13 @@ import { useState } from 'react';
 import itemsData from "@/pages/datasets/items";
 import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
+import serviceData from '@/pages/datasets/service'; // ADD THIS IMPORT
 
 // Import components
 import RequestorInformation from './RequestorInformation';
 import RequisitionDetails from './RequisitionDetails';
 import RequestedItems from './RequestedItems';
+import RequisitionService from './RequisitionService';
 import RequisitionPreviewModal from './RequisitionPreviewModal';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -33,9 +36,22 @@ interface RequisitionItem {
     itemId?: number;
 }
 
+interface RequisitionService {
+    id: string;
+    serviceId?: string;
+    serviceName: string;
+    description: string;
+    quantity: string;
+    unit_price: string;
+    total: string;
+    isSaved: boolean;
+    hourlyRate?: string; // ADD THIS
+}
+
 interface ValidationErrors {
     requestor?: string;
     items?: string;
+    services?: string;
     [key: string]: string | undefined;
 }
 
@@ -45,6 +61,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
     const [selectedUser, setSelectedUser] = useState('');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [priority, setPriority] = useState('normal');
+    const [type, setType] = useState('items'); // 'items' or 'services'
     const [notes, setNotes] = useState('');
     const [items, setItems] = useState<RequisitionItem[]>([
         {
@@ -55,6 +72,18 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             unit_price: '',
             total: '',
             isSaved: false
+        }
+    ]);
+    const [services, setServices] = useState<RequisitionService[]>([
+        {
+            id: '1',
+            serviceName: '',
+            description: '',
+            quantity: '',
+            unit_price: '',
+            total: '',
+            isSaved: false,
+            hourlyRate: '' // ADD THIS
         }
     ]);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -85,6 +114,17 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         barcode: item.BARCODE
     }));
 
+    // Use actual services from dataset - ADD THIS
+    const systemServices = serviceData;
+
+    // Reset items/services when type changes
+    const handleTypeChange = (newType: string) => {
+        setType(newType);
+        // Clear validation errors when switching types
+        setValidationErrors(prev => ({ ...prev, items: undefined, services: undefined }));
+    };
+
+    // Items functions
     const addNewItem = () => {
         const newItem = {
             id: Date.now().toString(),
@@ -174,8 +214,96 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         ));
     };
 
+    // Services functions
+    const addNewService = () => {
+        const newService = {
+            id: Date.now().toString(),
+            serviceName: '',
+            description: '',
+            quantity: '',
+            unit_price: '',
+            total: '',
+            isSaved: false,
+            hourlyRate: '' // ADD THIS
+        };
+        setServices(prev => [newService, ...prev]);
+        setValidationErrors(prev => ({ ...prev, services: undefined }));
+    };
+
+    const removeService = (id: string) => {
+        if (services.length > 1) {
+            setServices(prev => prev.filter(service => service.id !== id));
+        }
+    };
+
+    const updateService = (id: string, field: keyof RequisitionService, value: string) => {
+        setServices(prev => prev.map(service => {
+            if (service.id === id) {
+                const updatedService = { ...service, [field]: value, isSaved: false };
+
+                // Calculate total when quantity OR unit_price is changed
+                if (field === 'quantity' && service.unit_price) {
+                    const quantity = parseFloat(value) || 0;
+                    const unitPrice = parseFloat(service.unit_price) || 0;
+                    updatedService.total = (quantity * unitPrice).toFixed(2);
+                } else if (field === 'unit_price' && service.quantity) {
+                    const quantity = parseFloat(service.quantity) || 0;
+                    const unitPrice = parseFloat(value) || 0;
+                    updatedService.total = (quantity * unitPrice).toFixed(2);
+                }
+
+                return updatedService;
+            }
+            return service;
+        }));
+
+        if (field === 'quantity' || field === 'serviceName') {
+            setValidationErrors(prev => ({ ...prev, services: undefined }));
+        }
+    };
+
+    const saveService = (id: string) => {
+        const serviceToSave = services.find(service => service.id === id);
+        if (!serviceToSave) return;
+
+        // Validate required fields
+        if (!serviceToSave.serviceName.trim() || !serviceToSave.quantity.trim()) {
+            alert('Please fill in service name and quantity before saving the service.');
+            return;
+        }
+
+        setServices(prev => {
+            const updatedServices = prev.map(service =>
+                service.id === id ? {
+                    ...service,
+                    isSaved: true
+                } : service
+            );
+
+            const savedService = updatedServices.find(service => service.id === id);
+            if (savedService) {
+                const filteredServices = updatedServices.filter(service => service.id !== id);
+                return [...filteredServices, savedService];
+            }
+
+            return updatedServices;
+        });
+    };
+
+    const editService = (id: string) => {
+        setServices(prev => prev.map(service =>
+            service.id === id
+                ? { ...service, isSaved: false }
+                : service
+        ));
+    };
+
     const getTotalAmount = () => {
-        return items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+        if (type === 'items') {
+            return items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+        } else {
+            return services.reduce((sum, service) => sum + (parseFloat(service.total) || 0), 0);
+        }
     };
 
     const validateForm = () => {
@@ -186,21 +314,40 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             errors.requestor = 'Please select or enter a requestor name';
         }
 
-        // Validate items
-        const unsavedItems = items.filter(item => !item.isSaved);
-        if (unsavedItems.length > 0) {
-            errors.items = 'Please save all items before submitting';
-        }
+        if (type === 'items') {
+            // Validate items
+            const unsavedItems = items.filter(item => !item.isSaved);
+            if (unsavedItems.length > 0) {
+                errors.items = 'Please save all items before submitting';
+            }
 
-        if (items.length === 0) {
-            errors.items = 'Please add at least one item';
-        }
+            if (items.length === 0) {
+                errors.items = 'Please add at least one item';
+            }
 
-        const invalidItems = items.filter(item =>
-            !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
-        );
-        if (invalidItems.length > 0) {
-            errors.items = 'All items must have category, item name and quantity filled out before saving';
+            const invalidItems = items.filter(item =>
+                !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
+            );
+            if (invalidItems.length > 0) {
+                errors.items = 'All items must have category, item name and quantity filled out before saving';
+            }
+        } else {
+            // Validate services
+            const unsavedServices = services.filter(service => !service.isSaved);
+            if (unsavedServices.length > 0) {
+                errors.services = 'Please save all services before submitting';
+            }
+
+            if (services.length === 0) {
+                errors.services = 'Please add at least one service';
+            }
+
+            const invalidServices = services.filter(service =>
+                !service.isSaved && (!service.serviceName.trim() || !service.quantity.trim())
+            );
+            if (invalidServices.length > 0) {
+                errors.services = 'All services must have service name and quantity filled out before saving';
+            }
         }
 
         setValidationErrors(errors);
@@ -221,11 +368,15 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         const formData = {
             requestor: finalRequestor,
             priority,
+            type,
             notes,
-            items: items.map(item => ({
+            items: type === 'items' ? items.map(item => ({
                 ...item,
                 itemId: item.itemId || null
-            })),
+            })) : [],
+            services: type === 'services' ? services.map(service => ({
+                ...service
+            })) : [],
             total_amount: getTotalAmount(),
             us_id: requestorType === 'self' ? auth.user.id :
                 selectedUser ? parseInt(selectedUser) : null
@@ -248,6 +399,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         setOtherRequestor('');
         setSelectedUser('');
         setPriority('normal');
+        setType('items');
         setNotes('');
         setItems([{
             id: '1',
@@ -258,19 +410,40 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             total: '',
             isSaved: false
         }]);
+        setServices([{
+            id: '1',
+            serviceName: '',
+            description: '',
+            quantity: '',
+            unit_price: '',
+            total: '',
+            isSaved: false,
+            hourlyRate: '' // ADD THIS
+        }]);
         setValidationErrors({});
     };
 
-    const hasError = (itemId: string, field: 'quantity' | 'category' | 'itemName') => {
-        const item = items.find(item => item.id === itemId);
-        if (!item || item.isSaved) return false;
+    const hasError = (id: string, field: string) => {
+        if (type === 'items') {
+            const item = items.find(item => item.id === id);
+            if (!item || item.isSaved) return false;
 
-        if (validationErrors.items) {
-            if (field === 'quantity' && !item.quantity.trim()) return true;
-            if (field === 'category' && !item.category.trim()) return true;
-            if (field === 'itemName' && !item.itemName.trim()) return true;
+            if (validationErrors.items) {
+                if (field === 'quantity' && !item.quantity.trim()) return true;
+                if (field === 'category' && !item.category.trim()) return true;
+                if (field === 'itemName' && !item.itemName.trim()) return true;
+            }
+            return false;
+        } else {
+            const service = services.find(service => service.id === id);
+            if (!service || service.isSaved) return false;
+
+            if (validationErrors.services) {
+                if (field === 'quantity' && !service.quantity.trim()) return true;
+                if (field === 'serviceName' && !service.serviceName.trim()) return true;
+            }
+            return false;
         }
-        return false;
     };
 
     const getItemSuggestions = (itemName: string) => {
@@ -332,28 +505,47 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                             <RequisitionDetails
                                                 priority={priority}
                                                 setPriority={setPriority}
+                                                type={type}
+                                                setType={handleTypeChange}
                                                 notes={notes}
                                                 setNotes={setNotes}
                                             />
                                         </div>
 
-                                        {/* Right Column - Items Section (Wider) */}
-                                        <RequestedItems
-                                            items={items}
-                                            setItems={setItems}
-                                            validationErrors={validationErrors}
-                                            setValidationErrors={setValidationErrors}
-                                            categories={categories}
-                                            systemItems={systemItems}
-                                            getTotalAmount={getTotalAmount}
-                                            updateItem={updateItem}
-                                            saveItem={saveItem}
-                                            removeItem={removeItem}
-                                            addNewItem={addNewItem}
-                                            hasError={hasError}
-                                            getItemSuggestions={getItemSuggestions}
-                                            editItem={editItem}
-                                        />
+                                        {/* Right Column - Items/Services Section (Wider) */}
+                                        {type === 'items' ? (
+                                            <RequestedItems
+                                                items={items}
+                                                setItems={setItems}
+                                                validationErrors={validationErrors}
+                                                setValidationErrors={setValidationErrors}
+                                                categories={categories}
+                                                systemItems={systemItems}
+                                                getTotalAmount={getTotalAmount}
+                                                updateItem={updateItem}
+                                                saveItem={saveItem}
+                                                removeItem={removeItem}
+                                                addNewItem={addNewItem}
+                                                hasError={hasError}
+                                                getItemSuggestions={getItemSuggestions}
+                                                editItem={editItem}
+                                            />
+                                        ) : (
+                                            <RequisitionService
+                                                services={services}
+                                                setServices={setServices}
+                                                validationErrors={validationErrors}
+                                                setValidationErrors={setValidationErrors}
+                                                getTotalAmount={getTotalAmount}
+                                                updateService={updateService}
+                                                saveService={saveService}
+                                                removeService={removeService}
+                                                addNewService={addNewService}
+                                                hasError={hasError}
+                                                editService={editService}
+                                                systemServices={systemServices} // ADD THIS PROP
+                                            />
+                                        )}
                                     </div>
 
                                     {/* Action Buttons */}
