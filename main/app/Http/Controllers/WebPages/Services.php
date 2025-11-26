@@ -10,4 +10,12 @@ class Services extends Controller
     {
         return Inertia::render($this->base_path . '/Main');
     }
+    public function store(){
+        return Inertia::render($this->base_path .'/ServiceAdd');
+    }
+    public function edit($id){
+        return Inertia::render($this->base_path .'/ServiceEdit', [
+            'serviceId' => (int)$id
+        ]);
+    }
 }
