@@ -5,6 +5,8 @@ interface SupplierCardProps {
     isBestMatch?: boolean;
     matchPercentage?: number;
     matchingCategories?: string[];
+    orderType?: string;
+    supplierActualCategories?: string[]; // Add this prop to receive categories from parent
 }
 
 export default function SupplierCard({
@@ -13,10 +15,39 @@ export default function SupplierCard({
                                          onSelect,
                                          isBestMatch = false,
                                          matchPercentage = 0,
-                                         matchingCategories = []
+                                         matchingCategories = [],
+                                         orderType = 'items',
+                                         supplierActualCategories = [] // Default to empty array
                                      }: SupplierCardProps) {
-    // Get all available categories for this supplier from the dataset
-    const supplierCategories = ['Electrical', 'Consumables', 'Tools', 'Parts', 'Equipment', 'Office Supplies'];
+    // If supplierActualCategories is not provided, use matchingCategories as fallback
+    const displayCategories = supplierActualCategories.length > 0 ? supplierActualCategories : matchingCategories;
+
+    // Determine supplier type based on their actual categories
+    const getSupplierType = () => {
+        const hasServices = displayCategories.some(cat =>
+            ['IT Services', 'Electrical Services', 'Plumbing Services', 'Cleaning Services',
+                'Catering Services', 'Security Services', 'HVAC Services', 'Landscaping Services',
+                'Equipment Services'].includes(cat)
+        );
+
+        const hasItems = displayCategories.some(cat =>
+            ['Electrical', 'Consumables', 'Tools', 'Parts', 'Equipment', 'Office Supplies'].includes(cat)
+        );
+
+        if (orderType === 'services' && hasServices) {
+            return { type: 'Service Supplier', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' };
+        } else if (orderType === 'items' && hasItems) {
+            return { type: 'Item Supplier', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
+        } else if (hasServices && hasItems) {
+            return { type: 'Mixed Supplier', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' };
+        } else if (hasServices) {
+            return { type: 'Service Specialist', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' };
+        } else {
+            return { type: 'Item Specialist', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
+        }
+    };
+
+    const supplierType = getSupplierType();
 
     return (
         <div
@@ -49,11 +80,20 @@ export default function SupplierCard({
                         {supplier.EMAIL}
                     </p>
 
-                    {/* All Categories with Color Coding */}
+                    {/* Supplier Type Indicator */}
                     <div className="mb-2">
-                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Categories:</p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${supplierType.color}`}>
+                            {supplierType.type}
+                        </span>
+                    </div>
+
+                    {/* Actual Supplier Categories */}
+                    <div className="mb-2">
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {orderType === 'services' ? 'Service Categories:' : 'Item Categories:'}
+                        </p>
                         <div className="flex flex-wrap gap-1">
-                            {supplierCategories.map((category, index) => {
+                            {displayCategories.map((category, index) => {
                                 const isMatch = matchingCategories.includes(category);
                                 return (
                                     <span
@@ -64,11 +104,16 @@ export default function SupplierCard({
                                                 : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                         }`}
                                     >
-                                        {isMatch ? ' ' : ' '}{category}
+                                        {category}
                                     </span>
                                 );
                             })}
                         </div>
+                        {displayCategories.length === 0 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                No {orderType === 'services' ? 'service' : 'item'} categories available
+                            </p>
+                        )}
                     </div>
 
                     {/* Payment Methods */}
