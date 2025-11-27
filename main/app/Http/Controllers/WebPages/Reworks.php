@@ -10,4 +10,12 @@ class Reworks extends Controller
     {
         return Inertia::render($this->base_path . '/Main');
     }
+    public function store(){
+        return Inertia::render($this->base_path .'/ReworkAdd');
+    }
+    public function edit($id){
+        return Inertia::render($this->base_path .'/ReworkEdit', [
+            'reworkId' => (int)$id
+        ]);
+    }
 }

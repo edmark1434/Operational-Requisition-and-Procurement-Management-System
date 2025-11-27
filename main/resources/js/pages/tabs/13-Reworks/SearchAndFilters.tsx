@@ -5,13 +5,7 @@ interface SearchAndFiltersProps {
     setSearchTerm: (term: string) => void;
     statusFilter: string;
     setStatusFilter: (filter: string) => void;
-    typeFilter: string;
-    setTypeFilter: (filter: string) => void;
-    dateFilter: string;
-    setDateFilter: (filter: string) => void;
     statuses: string[];
-    deliveryTypes: string[];
-    dateRanges: string[];
     resultsCount: number;
     viewMode: 'comfortable' | 'compact' | 'condensed';
     setViewMode: (mode: 'comfortable' | 'compact' | 'condensed') => void;
@@ -22,13 +16,7 @@ export default function SearchAndFilters({
                                              setSearchTerm,
                                              statusFilter,
                                              setStatusFilter,
-                                             typeFilter,
-                                             setTypeFilter,
-                                             dateFilter,
-                                             setDateFilter,
                                              statuses,
-                                             deliveryTypes,
-                                             dateRanges,
                                              resultsCount,
                                              viewMode,
                                              setViewMode
@@ -45,7 +33,7 @@ export default function SearchAndFilters({
                     </div>
                     <input
                         type="text"
-                        placeholder="Search by receipt number, supplier..."
+                        placeholder="Search reworks, suppliers, remarks, or services..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
@@ -65,7 +53,7 @@ export default function SearchAndFilters({
                 {/* Filters and View Controls Row */}
                 <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                     {/* Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 w-full lg:flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 w-full lg:flex-1">
                         {/* Status Filter */}
                         <div className="w-full">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -76,48 +64,17 @@ export default function SearchAndFilters({
                                 onChange={(e) => setStatusFilter(e.target.value)}
                                 className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                             >
-                                {statuses.map((status: string) => (
+                                <option value="All">All Status</option>
+                                {statuses.map(status => (
                                     <option key={status} value={status}>{status}</option>
                                 ))}
                             </select>
                         </div>
 
-                        {/* Delivery Type Filter */}
-                        <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Delivery Type
-                            </label>
-                            <select
-                                value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value)}
-                                className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                            >
-                                {deliveryTypes.map((type: string) => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Date Filter */}
-                        <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Date Range
-                            </label>
-                            <select
-                                value={dateFilter}
-                                onChange={(e) => setDateFilter(e.target.value)}
-                                className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                            >
-                                {dateRanges.map((range: string) => (
-                                    <option key={range} value={range}>{range}</option>
-                                ))}
-                            </select>
-                        </div>
-
                         {/* Results Count */}
-                        <div className="flex items-end sm:col-span-2 lg:col-span-2">
+                        <div className="flex items-end sm:col-span-2 lg:col-span-1">
                             <div className="text-sm text-gray-600 dark:text-gray-400">
-                                <span className="font-medium text-gray-900 dark:text-white">{resultsCount}</span> deliveries found
+                                <span className="font-medium text-gray-900 dark:text-white">{resultsCount}</span> reworks found
                             </div>
                         </div>
                     </div>
@@ -125,7 +82,7 @@ export default function SearchAndFilters({
                     {/* View Mode Controls */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                            View:
+                            Density:
                         </span>
                         <div className="flex bg-gray-100 dark:bg-sidebar-accent rounded-lg p-1 w-full sm:w-auto">
                             <button

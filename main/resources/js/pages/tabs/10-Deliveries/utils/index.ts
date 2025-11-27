@@ -55,7 +55,9 @@ export const getAvailablePurchaseOrders = () => {
             PAYMENT_TYPE: po.PAYMENT_TYPE,
             STATUS: po.STATUS,
             REMARKS: po.REMARKS,
-            ITEMS: po.ITEMS || []
+            ORDER_TYPE: po.ORDER_TYPE,
+            ITEMS: po.ITEMS || [],
+            SERVICES: po.SERVICES || []
         };
     });
 };

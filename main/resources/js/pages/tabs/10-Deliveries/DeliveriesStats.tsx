@@ -1,5 +1,32 @@
+interface DeliveryItem {
+    ID: number;
+    ITEM_ID: number;
+    ITEM_NAME: string;
+    QUANTITY: number;
+    UNIT_PRICE: number;
+    BARCODE?: string;
+    CATEGORY?: string;
+}
+
+interface Delivery {
+    ID: number;
+    RECEIPT_NO: string;
+    DELIVERY_DATE: string;
+    TOTAL_COST: number;
+    STATUS: string;
+    REMARKS: string;
+    RECEIPT_PHOTO: string;
+    PO_ID: number;
+    PO_REFERENCE: string;
+    SUPPLIER_ID?: number;
+    SUPPLIER_NAME: string;
+    TOTAL_ITEMS: number;
+    TOTAL_VALUE: number;
+    ITEMS: DeliveryItem[];
+}
+
 interface DeliveriesStatsProps {
-    deliveries: any[];
+    deliveries: Delivery[];
 }
 
 const formatCurrency = (amount: number) => {

@@ -3,13 +3,47 @@ import { DeliveriesIcons } from './utils/icons';
 import { getDeliveriesStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
 
+// Add proper TypeScript interfaces
+interface DeliveryItem {
+    ID: number;
+    ITEM_ID: number;
+    ITEM_NAME: string;
+    QUANTITY: number;
+    UNIT_PRICE: number;
+    BARCODE?: string;
+    CATEGORY?: string;
+}
+
+interface Delivery {
+    ID: number;
+    RECEIPT_NO: string;
+    DELIVERY_DATE: string;
+    TOTAL_COST: number;
+    STATUS: string;
+    REMARKS: string;
+    RECEIPT_PHOTO: string;
+    PO_ID: number;
+    PO_REFERENCE: string;
+    SUPPLIER_ID?: number;
+    SUPPLIER_NAME: string;
+    TOTAL_ITEMS: number;
+    TOTAL_VALUE: number;
+    ITEMS: DeliveryItem[];
+}
+
 interface DeliveriesDetailModalProps {
-    delivery: any;
+    delivery: Delivery;
     isOpen: boolean;
     onClose: () => void;
     onEdit: () => void;
     onDelete: (id: number) => void;
     onStatusChange: (deliveryId: number, newStatus: string) => void;
+}
+
+interface StatusOption {
+    value: string;
+    label: string;
+    description: string;
 }
 
 // Add this helper function to format status display
@@ -32,21 +66,17 @@ export default function DeliveriesDetailModal({
                                                   onDelete,
                                                   onStatusChange
                                               }: DeliveriesDetailModalProps) {
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+    const [showStatusDropdown, setShowStatusDropdown] = useState<boolean>(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = () => {
-        if (delivery) {
-            onDelete(delivery.ID);
-        }
+        onDelete(delivery.ID);
         setShowDeleteConfirm(false);
     };
 
     const handleStatusChange = (newStatus: string) => {
-        if (delivery) {
-            onStatusChange(delivery.ID, newStatus);
-        }
+        onStatusChange(delivery.ID, newStatus);
         setShowStatusDropdown(false);
         onClose(); // Auto-close the modal after status change
     };
@@ -65,7 +95,7 @@ export default function DeliveriesDetailModal({
         };
     }, []);
 
-    const statusOptions = [
+    const statusOptions: StatusOption[] = [
         { value: 'received', label: 'Received', description: 'All items have been received successfully' },
         { value: 'with returns', label: 'With Returns', description: 'Some items were returned or had issues' }
     ];
@@ -274,7 +304,7 @@ export default function DeliveriesDetailModal({
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        {delivery.ITEMS?.map((item: any) => (
+                                        {delivery.ITEMS?.map((item: DeliveryItem) => (
                                             <tr key={item.ID} className="border-b border-sidebar-border last:border-b-0">
                                                 <td className="p-3 text-sm text-gray-900 dark:text-white">{item.ITEM_NAME}</td>
                                                 <td className="p-3 text-sm text-gray-900 dark:text-white">{item.QUANTITY}</td>
@@ -366,7 +396,11 @@ export default function DeliveriesDetailModal({
 }
 
 // Delivery Status Icon Component
-function DeliveryStatusIcon({ status }: { status: string }) {
+interface DeliveryStatusIconProps {
+    status: string;
+}
+
+function DeliveryStatusIcon({ status }: DeliveryStatusIconProps) {
     switch (status?.toLowerCase()) {
         case 'received':
             return (
