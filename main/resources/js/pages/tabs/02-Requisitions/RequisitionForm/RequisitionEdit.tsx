@@ -1,4 +1,4 @@
-// RequisitionEdit.tsx - Updated version (without description field)
+// RequisitionEdit.tsx - Updated version with services support
 import AppLayout from '@/layouts/app-layout';
 import { requisitions } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -11,11 +11,14 @@ import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
 import requisitionsData from '@/pages/datasets/requisition';
 import requisitionItemsData from "@/pages/datasets/requisition_item";
+import requisitionServiceData from "@/pages/datasets/requisition_service"; // ADD THIS
+import serviceData from "@/pages/datasets/service"; // ADD THIS
 
 // Import components
 import RequestorInformation from './RequestorInformation';
 import RequisitionDetails from './RequisitionDetails';
 import RequestedItems from './RequestedItems';
+import RequisitionService from './RequisitionService'; // ADD THIS
 import RequisitionPreviewModal from './RequisitionPreviewModal';
 
 interface RequisitionEditProps {
@@ -35,9 +38,23 @@ interface RequisitionItem {
     originalItemId?: number;
 }
 
+interface RequisitionService {
+    id: string;
+    serviceId?: string;
+    serviceName: string;
+    description: string;
+    quantity: string;
+    unit_price: string;
+    total: string;
+    isSaved: boolean;
+    hourlyRate?: string;
+    originalServiceId?: number;
+}
+
 interface ValidationErrors {
     requestor?: string;
     items?: string;
+    services?: string;
     [key: string]: string | undefined;
 }
 
@@ -58,8 +75,10 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
     const [selectedUser, setSelectedUser] = useState('');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [priority, setPriority] = useState('normal');
+    const [type, setType] = useState('items'); // 'items' or 'services'
     const [notes, setNotes] = useState('');
     const [items, setItems] = useState<RequisitionItem[]>([]);
+    const [services, setServices] = useState<RequisitionService[]>([]);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
@@ -90,6 +109,16 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         barcode: item.BARCODE
     }));
 
+    // Use actual services from dataset
+    const systemServices = serviceData;
+
+    // Reset items/services when type changes
+    const handleTypeChange = (newType: string) => {
+        setType(newType);
+        // Clear validation errors when switching types
+        setValidationErrors(prev => ({ ...prev, items: undefined, services: undefined }));
+    };
+
     // Load requisition data on component mount
     useEffect(() => {
         loadRequisitionData();
@@ -100,7 +129,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
 
         try {
             // Find the requisition to edit
-            const requisition = requisitionsData.find(req => req.REQ_ID === requisitionId);
+            const requisition = requisitionsData.find(req => req.ID === requisitionId);
 
             if (!requisition) {
                 console.error(`Requisition #${requisitionId} not found`);
@@ -113,10 +142,11 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
 
             // Set basic form data
             setPriority(requisition.PRIORITY.toLowerCase());
+            setType(requisition.TYPE); // Set the type from requisition data
             setNotes(requisition.NOTES || '');
 
             // Determine requestor type and set requestor fields
-            const isSelf = requisition.US_ID === auth.user.id;
+            const isSelf = requisition.USER_ID === auth.user.id;
             setRequestorType(isSelf ? 'self' : 'other');
 
             if (isSelf) {
@@ -129,7 +159,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                 );
 
                 if (userInSystem) {
-                    setSelectedUser(userInSystem.name);
+                    setSelectedUser(userInSystem.id);
                     setOtherRequestor('');
                 } else {
                     setSelectedUser('');
@@ -137,27 +167,54 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                 }
             }
 
-            // Load requisition items
-            const requisitionItems = requisitionItemsData
-                .filter(item => item.REQ_ID === requisitionId)
-                .map(reqItem => {
-                    const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
-                    const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
+            // Load requisition items if it's an items requisition
+            if (requisition.TYPE === 'items') {
+                const requisitionItems = requisitionItemsData
+                    .filter(item => item.REQ_ID === requisitionId)
+                    .map(reqItem => {
+                        const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
+                        const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
 
-                    return {
-                        id: `existing_${reqItem.REQT_ID}`,
-                        category: reqItem.CATEGORY || category?.NAME || '',
-                        itemName: itemDetails?.NAME || '',
-                        quantity: reqItem.QUANTITY.toString(),
-                        unit_price: itemDetails?.UNIT_PRICE?.toString() || '0',
-                        total: ((itemDetails?.UNIT_PRICE || 0) * reqItem.QUANTITY).toFixed(2),
-                        isSaved: true,
-                        itemId: reqItem.ITEM_ID,
-                        originalItemId: reqItem.ITEM_ID
-                    };
-                });
+                        return {
+                            id: `existing_${reqItem.REQT_ID}`,
+                            category: reqItem.CATEGORY || category?.NAME || '',
+                            itemName: itemDetails?.NAME || '',
+                            quantity: reqItem.QUANTITY.toString(),
+                            unit_price: itemDetails?.UNIT_PRICE?.toString() || '0',
+                            total: ((itemDetails?.UNIT_PRICE || 0) * reqItem.QUANTITY).toFixed(2),
+                            isSaved: true,
+                            itemId: reqItem.ITEM_ID,
+                            originalItemId: reqItem.ITEM_ID
+                        };
+                    });
 
-            setItems(requisitionItems);
+                setItems(requisitionItems.length > 0 ? requisitionItems : [createNewItem()]);
+            } else {
+                // Load requisition services if it's a services requisition - FIXED VERSION
+                const requisitionServices = requisitionServiceData
+                    .filter(service => service.REQ_ID === requisitionId)
+                    .map(reqService => {
+                        const serviceDetails = serviceData.find(service => service.ID === reqService.SERVICE_ID);
+
+                        // Ensure serviceId matches the system service ID for combobox recognition
+                        const serviceId = reqService.SERVICE_ID?.toString();
+
+                        return {
+                            id: `existing_${reqService.ID}`,
+                            serviceId: serviceId, // This is crucial for combobox selection
+                            serviceName: serviceDetails?.NAME || '',
+                            description: serviceDetails?.DESCRIPTION || '',
+                            quantity: reqService.QUANTITY.toString(),
+                            unit_price: reqService.UNIT_PRICE.toString(),
+                            total: reqService.TOTAL.toString(),
+                            isSaved: true,
+                            hourlyRate: serviceDetails?.HOURLY_RATE.toString() || reqService.UNIT_PRICE.toString(),
+                            originalServiceId: reqService.SERVICE_ID
+                        };
+                    });
+
+                setServices(requisitionServices.length > 0 ? requisitionServices : [createNewService()]);
+            }
         } catch (error) {
             console.error('Error loading requisition data:', error);
             alert('Error loading requisition data!');
@@ -167,16 +224,56 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         }
     };
 
+    // Add this useEffect in RequisitionEdit.tsx after the loadRequisitionData function
+    useEffect(() => {
+        if (!isLoading && type === 'services' && services.length > 0) {
+            // Force update services to ensure they're properly linked to system data
+            const updatedServices = services.map(service => {
+                if (service.serviceId) {
+                    const systemService = systemServices.find(sys => sys.ID.toString() === service.serviceId);
+                    if (systemService) {
+                        return {
+                            ...service,
+                            serviceName: systemService.NAME,
+                            description: systemService.DESCRIPTION,
+                            hourlyRate: systemService.HOURLY_RATE.toString(),
+                            unit_price: systemService.HOURLY_RATE.toString()
+                        };
+                    }
+                }
+                return service;
+            });
+
+            // Only update if changes were made
+            if (JSON.stringify(updatedServices) !== JSON.stringify(services)) {
+                setServices(updatedServices);
+            }
+        }
+    }, [isLoading, type, services, systemServices]);
+
+    const createNewItem = (): RequisitionItem => ({
+        id: Date.now().toString(),
+        category: '',
+        itemName: '',
+        quantity: '',
+        unit_price: '',
+        total: '',
+        isSaved: false
+    });
+
+    const createNewService = (): RequisitionService => ({
+        id: Date.now().toString(),
+        serviceName: '',
+        description: '',
+        quantity: '',
+        unit_price: '',
+        total: '',
+        isSaved: false
+    });
+
+    // Items functions
     const addNewItem = () => {
-        const newItem = {
-            id: Date.now().toString(),
-            category: '',
-            itemName: '',
-            quantity: '',
-            unit_price: '',
-            total: '',
-            isSaved: false
-        };
+        const newItem = createNewItem();
         setItems(prev => [newItem, ...prev]);
         setValidationErrors(prev => ({ ...prev, items: undefined }));
     };
@@ -193,7 +290,6 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                 const updatedItem = { ...item, [field]: value, isSaved: false };
 
                 // Only calculate total when quantity OR unit_price is manually changed
-                // Not when itemName is selected
                 if (field === 'quantity' && item.unit_price) {
                     const quantity = parseFloat(value) || 0;
                     const unitPrice = parseFloat(item.unit_price) || 0;
@@ -256,8 +352,87 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         ));
     };
 
+    // Services functions
+    const addNewService = () => {
+        const newService = createNewService();
+        setServices(prev => [newService, ...prev]);
+        setValidationErrors(prev => ({ ...prev, services: undefined }));
+    };
+
+    const removeService = (id: string) => {
+        if (services.length > 1) {
+            setServices(prev => prev.filter(service => service.id !== id));
+        }
+    };
+
+    const updateService = (id: string, field: keyof RequisitionService, value: string) => {
+        setServices(prev => prev.map(service => {
+            if (service.id === id) {
+                const updatedService = { ...service, [field]: value, isSaved: false };
+
+                // Calculate total when quantity OR unit_price is changed
+                if (field === 'quantity' && service.unit_price) {
+                    const quantity = parseFloat(value) || 0;
+                    const unitPrice = parseFloat(service.unit_price) || 0;
+                    updatedService.total = (quantity * unitPrice).toFixed(2);
+                } else if (field === 'unit_price' && service.quantity) {
+                    const quantity = parseFloat(service.quantity) || 0;
+                    const unitPrice = parseFloat(value) || 0;
+                    updatedService.total = (quantity * unitPrice).toFixed(2);
+                }
+
+                return updatedService;
+            }
+            return service;
+        }));
+
+        if (field === 'quantity' || field === 'serviceName') {
+            setValidationErrors(prev => ({ ...prev, services: undefined }));
+        }
+    };
+
+    const saveService = (id: string) => {
+        const serviceToSave = services.find(service => service.id === id);
+        if (!serviceToSave) return;
+
+        // Validate required fields
+        if (!serviceToSave.serviceName.trim() || !serviceToSave.quantity.trim()) {
+            alert('Please fill in service name and quantity before saving the service.');
+            return;
+        }
+
+        setServices(prev => {
+            const updatedServices = prev.map(service =>
+                service.id === id ? {
+                    ...service,
+                    isSaved: true
+                } : service
+            );
+
+            const savedService = updatedServices.find(service => service.id === id);
+            if (savedService) {
+                const filteredServices = updatedServices.filter(service => service.id !== id);
+                return [...filteredServices, savedService];
+            }
+
+            return updatedServices;
+        });
+    };
+
+    const editService = (id: string) => {
+        setServices(prev => prev.map(service =>
+            service.id === id
+                ? { ...service, isSaved: false }
+                : service
+        ));
+    };
+
     const getTotalAmount = () => {
-        return items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+        if (type === 'items') {
+            return items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+        } else {
+            return services.reduce((sum, service) => sum + (parseFloat(service.total) || 0), 0);
+        }
     };
 
     const validateForm = () => {
@@ -268,21 +443,40 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
             errors.requestor = 'Please select or enter a requestor name';
         }
 
-        // Validate items
-        const unsavedItems = items.filter(item => !item.isSaved);
-        if (unsavedItems.length > 0) {
-            errors.items = 'Please save all items before submitting';
-        }
+        if (type === 'items') {
+            // Validate items
+            const unsavedItems = items.filter(item => !item.isSaved);
+            if (unsavedItems.length > 0) {
+                errors.items = 'Please save all items before submitting';
+            }
 
-        if (items.length === 0) {
-            errors.items = 'Please add at least one item';
-        }
+            if (items.length === 0) {
+                errors.items = 'Please add at least one item';
+            }
 
-        const invalidItems = items.filter(item =>
-            !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
-        );
-        if (invalidItems.length > 0) {
-            errors.items = 'All items must have category, item name and quantity filled out before saving';
+            const invalidItems = items.filter(item =>
+                !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
+            );
+            if (invalidItems.length > 0) {
+                errors.items = 'All items must have category, item name and quantity filled out before saving';
+            }
+        } else {
+            // Validate services
+            const unsavedServices = services.filter(service => !service.isSaved);
+            if (unsavedServices.length > 0) {
+                errors.services = 'Please save all services before submitting';
+            }
+
+            if (services.length === 0) {
+                errors.services = 'Please add at least one service';
+            }
+
+            const invalidServices = services.filter(service =>
+                !service.isSaved && (!service.serviceName.trim() || !service.quantity.trim())
+            );
+            if (invalidServices.length > 0) {
+                errors.services = 'All services must have service name and quantity filled out before saving';
+            }
         }
 
         setValidationErrors(errors);
@@ -298,18 +492,23 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
 
         const finalRequestor = requestorType === 'self'
             ? auth.user.name
-            : selectedUser || otherRequestor;
+            : selectedUser ? systemUsers.find(user => user.id === selectedUser)?.name || '' : otherRequestor;
 
         const formData = {
             requisitionId,
             requestor: finalRequestor,
             priority,
+            type,
             notes,
-            items: items.map(item => ({
+            items: type === 'items' ? items.map(item => ({
                 ...item,
                 itemId: item.itemId || null,
                 originalItemId: item.originalItemId
-            })),
+            })) : [],
+            services: type === 'services' ? services.map(service => ({
+                ...service,
+                originalServiceId: service.originalServiceId
+            })) : [],
             total_amount: getTotalAmount(),
             us_id: requestorType === 'self' ? auth.user.id :
                 selectedUser ? parseInt(selectedUser) : null
@@ -332,16 +531,28 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         }
     };
 
-    const hasError = (itemId: string, field: 'quantity' | 'category' | 'itemName') => {
-        const item = items.find(item => item.id === itemId);
-        if (!item || item.isSaved) return false;
+    const hasError = (id: string, field: 'quantity' | 'serviceName' | 'description' | 'category' | 'itemName') => {
+        if (type === 'items') {
+            const item = items.find(item => item.id === id);
+            if (!item || item.isSaved) return false;
 
-        if (validationErrors.items) {
-            if (field === 'quantity' && !item.quantity.trim()) return true;
-            if (field === 'category' && !item.category.trim()) return true;
-            if (field === 'itemName' && !item.itemName.trim()) return true;
+            if (validationErrors.items) {
+                if (field === 'quantity' && !item.quantity.trim()) return true;
+                if (field === 'category' && !item.category.trim()) return true;
+                if (field === 'itemName' && !item.itemName.trim()) return true;
+            }
+            return false;
+        } else {
+            const service = services.find(service => service.id === id);
+            if (!service || service.isSaved) return false;
+
+            if (validationErrors.services) {
+                if (field === 'quantity' && !service.quantity.trim()) return true;
+                if (field === 'serviceName' && !service.serviceName.trim()) return true;
+                if (field === 'description' && !service.description.trim()) return true;
+            }
+            return false;
         }
-        return false;
     };
 
     const getItemSuggestions = (itemName: string) => {
@@ -379,7 +590,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                     <div>
                         <h1 className="text-2xl font-bold">Edit Requisition</h1>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Editing Requisition #{requisitionId}
+                            Editing Requisition #{requisitionId} ({type})
                         </p>
                     </div>
                     <Link
@@ -394,7 +605,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                {/* Header Section - Updated colors and removed warning */}
+                                {/* Header Section - Updated colors */}
                                 <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                         Edit Requisition #{requisitionId}
@@ -427,28 +638,47 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                                             <RequisitionDetails
                                                 priority={priority}
                                                 setPriority={setPriority}
+                                                type={type}
+                                                setType={handleTypeChange}
                                                 notes={notes}
                                                 setNotes={setNotes}
                                             />
                                         </div>
 
-                                        {/* Right Column - Items Section (Wider) */}
-                                        <RequestedItems
-                                            items={items}
-                                            setItems={setItems}
-                                            validationErrors={validationErrors}
-                                            setValidationErrors={setValidationErrors}
-                                            categories={categories}
-                                            systemItems={systemItems}
-                                            getTotalAmount={getTotalAmount}
-                                            updateItem={updateItem}
-                                            saveItem={saveItem}
-                                            removeItem={removeItem}
-                                            addNewItem={addNewItem}
-                                            hasError={hasError}
-                                            getItemSuggestions={getItemSuggestions}
-                                            editItem={editItem}
-                                        />
+                                        {/* Right Column - Items/Services Section (Wider) */}
+                                        {type === 'items' ? (
+                                            <RequestedItems
+                                                items={items}
+                                                setItems={setItems}
+                                                validationErrors={validationErrors}
+                                                setValidationErrors={setValidationErrors}
+                                                categories={categories}
+                                                systemItems={systemItems}
+                                                getTotalAmount={getTotalAmount}
+                                                updateItem={updateItem}
+                                                saveItem={saveItem}
+                                                removeItem={removeItem}
+                                                addNewItem={addNewItem}
+                                                hasError={hasError}
+                                                getItemSuggestions={getItemSuggestions}
+                                                editItem={editItem}
+                                            />
+                                        ) : (
+                                            <RequisitionService
+                                                services={services}
+                                                setServices={setServices}
+                                                validationErrors={validationErrors}
+                                                setValidationErrors={setValidationErrors}
+                                                getTotalAmount={getTotalAmount}
+                                                updateService={updateService}
+                                                saveService={saveService}
+                                                removeService={removeService}
+                                                addNewService={addNewService}
+                                                hasError={hasError}
+                                                editService={editService}
+                                                systemServices={systemServices}
+                                            />
+                                        )}
                                     </div>
 
                                     {/* Action Buttons */}

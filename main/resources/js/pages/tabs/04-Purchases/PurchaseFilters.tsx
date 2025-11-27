@@ -7,8 +7,11 @@ interface PurchaseFiltersProps {
     setStatusFilter: (filter: string) => void;
     supplierFilter: string;
     setSupplierFilter: (filter: string) => void;
+    orderTypeFilter: string;
+    setOrderTypeFilter: (filter: string) => void;
     statuses: string[];
     suppliers: string[];
+    orderTypes: string[];
     resultsCount: number;
     viewMode: 'comfortable' | 'compact' | 'condensed';
     setViewMode: (mode: 'comfortable' | 'compact' | 'condensed') => void;
@@ -21,8 +24,11 @@ export default function PurchaseFilters({
                                             setStatusFilter,
                                             supplierFilter,
                                             setSupplierFilter,
+                                            orderTypeFilter,
+                                            setOrderTypeFilter,
                                             statuses,
                                             suppliers,
+                                            orderTypes,
                                             resultsCount,
                                             viewMode,
                                             setViewMode
@@ -39,7 +45,7 @@ export default function PurchaseFilters({
                     </div>
                     <input
                         type="text"
-                        placeholder="Search by reference number, supplier, or items..."
+                        placeholder="Search by reference number, supplier, items, or services..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
@@ -59,7 +65,7 @@ export default function PurchaseFilters({
                 {/* Filters and View Controls Row */}
                 <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                     {/* Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full lg:flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 w-full lg:flex-1">
                         {/* Status Filter */}
                         <div className="w-full">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -90,6 +96,23 @@ export default function PurchaseFilters({
                                 <option value="All">All Suppliers</option>
                                 {suppliers.map(supplier => (
                                     <option key={supplier} value={supplier}>{supplier}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Order Type Filter */}
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Order Type
+                            </label>
+                            <select
+                                value={orderTypeFilter}
+                                onChange={(e) => setOrderTypeFilter(e.target.value)}
+                                className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
+                            >
+                                <option value="All">All Types</option>
+                                {orderTypes.map(type => (
+                                    <option key={type} value={type}>{type}</option>
                                 ))}
                             </select>
                         </div>

@@ -5,9 +5,12 @@ interface SearchAndFiltersProps {
     setSearchTerm: (term: string) => void;
     statusFilter: string;
     setStatusFilter: (filter: string) => void;
+    typeFilter: string;
+    setTypeFilter: (filter: string) => void;
     dateFilter: string;
     setDateFilter: (filter: string) => void;
     statuses: string[];
+    deliveryTypes: string[];
     dateRanges: string[];
     resultsCount: number;
     viewMode: 'comfortable' | 'compact' | 'condensed';
@@ -19,9 +22,12 @@ export default function SearchAndFilters({
                                              setSearchTerm,
                                              statusFilter,
                                              setStatusFilter,
+                                             typeFilter,
+                                             setTypeFilter,
                                              dateFilter,
                                              setDateFilter,
                                              statuses,
+                                             deliveryTypes,
                                              dateRanges,
                                              resultsCount,
                                              viewMode,
@@ -59,7 +65,7 @@ export default function SearchAndFilters({
                 {/* Filters and View Controls Row */}
                 <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                     {/* Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full lg:flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 w-full lg:flex-1">
                         {/* Status Filter */}
                         <div className="w-full">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -70,8 +76,24 @@ export default function SearchAndFilters({
                                 onChange={(e) => setStatusFilter(e.target.value)}
                                 className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                             >
-                                {statuses.map(status => (
+                                {statuses.map((status: string) => (
                                     <option key={status} value={status}>{status}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Delivery Type Filter */}
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Delivery Type
+                            </label>
+                            <select
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value)}
+                                className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
+                            >
+                                {deliveryTypes.map((type: string) => (
+                                    <option key={type} value={type}>{type}</option>
                                 ))}
                             </select>
                         </div>
@@ -86,7 +108,7 @@ export default function SearchAndFilters({
                                 onChange={(e) => setDateFilter(e.target.value)}
                                 className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                             >
-                                {dateRanges.map(range => (
+                                {dateRanges.map((range: string) => (
                                     <option key={range} value={range}>{range}</option>
                                 ))}
                             </select>

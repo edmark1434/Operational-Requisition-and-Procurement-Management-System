@@ -13,7 +13,7 @@ use App\Http\Controllers\WebPages\Roles;
 use App\Http\Controllers\WebPages\MakesAndCategories;
 use App\Http\Controllers\WebPages\Reworks;
 use App\Http\Controllers\WebPages\Notifications;
-use App\Http\Controllers\WebPages\Contacts;
+use App\Http\Controllers\WebPages\Contact;
 use App\Http\Controllers\WebPages\Services;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -65,10 +65,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('roles',[Roles::class,'index'])->name('roles');
 
-    Route::get('makesandcategories',[MakesAndCategories::class,'index'])->name('makesandcategories');
+    Route::get('makes-categories',[MakesAndCategories::class,'index'])->name('makesandcategories');
+    Route::get('makes-categories/category/add',[MakesAndCategories::class,"store_category"])->name('categoryadd');
+    Route::get('makes-categories/category/{id}/edit',[MakesAndCategories::class,"edit_category"])->name('categoryedit');
+    Route::get('makes-categories/make/add',[MakesAndCategories::class,"store_make"])->name('makeadd');
+    Route::get('makes-categories/make/{id}/edit',[MakesAndCategories::class,"edit_make"])->name('makeedit');
+
     Route::get('services',[Services::class,'index'])->name('services');
+    Route::get('services/add',[Services::class,"store"])->name('servicesadd');
+    Route::get('services/{id}/edit',[Services::class,"edit"])->name('servicesedit');
+
     Route::get('reworks',[Reworks::class,'index'])->name('reworks');
-    Route::get('contacts',[Contacts::class,'index'])->name('contacts');
+    Route::get('reworks/add',[Reworks::class,"store"])->name('reworksadd');
+    Route::get('reworks/{id}/edit',[Reworks::class,"edit"])->name('reworksedit');
+
+    Route::get('contacts',[Contact::class,'index'])->name('contacts');
+    Route::get('contacts/add',[Contact::class,"store"])->name('contactsadd');
+    Route::get('contacts/{id}/edit',[Contact::class,"edit"])->name('contactsedit');
+
     Route::get('notifications',[Notifications::class,'index'])->name('notifications');
 
 });

@@ -6,38 +6,27 @@ import { type BreadcrumbItem } from '@/types';
 // Import datasets
 import requisitionsData from '@/pages/datasets/requisition';
 import requisitionItemsData from '@/pages/datasets/requisition_item';
+import requisitionServiceData from '@/pages/datasets/requisition_service';
+import serviceData from '@/pages/datasets/service';
 import itemsData from '@/pages/datasets/items';
 import categoriesData from '@/pages/datasets/category';
 import suppliersData from '@/pages/datasets/supplier';
 import { purchaseOrdersData } from '@/pages/datasets/purchase_order';
 
-// Import supplier suggestions
+// Import supplier suggestions - UPDATED IMPORT
 import { getSuggestedSuppliers, getBestSupplier, type SuggestedSupplier } from './utils/supplierSuggestions';
 
 // Import modular components
 import OrderInfo from './PurchaseOrderForm/OrderInfo';
 import SelectSupplier from './PurchaseOrderForm/SelectSupplier';
 import OrderItems from './PurchaseOrderForm/OrderItems';
+import OrderService from './PurchaseOrderForm/OrderService';
+import SelectApprovedRequisition from './PurchaseOrderForm/SelectApprovedRequisition';
 import AdditionalInfo from './PurchaseOrderForm/AdditionalInfo';
 import PreviewModal from './PurchaseOrderForm/PreviewModal';
 
 // Import UI components
 import { Button } from '@/components/ui/button';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import { Check, ChevronsUpDown, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface PageProps {
     purchaseId?: number;
@@ -68,7 +57,9 @@ export default function PurchaseOrderForm() {
         SUPPLIER_ID: '',
         PAYMENT_TYPE: 'cash',
         REMARKS: '',
-        ITEMS: [] as any[]
+        ORDER_TYPE: '', // Add order type to form data
+        ITEMS: [] as any[],
+        SERVICES: [] as any[] // Add services array
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [selectedRequisitions, setSelectedRequisitions] = useState<any[]>([]);
@@ -78,7 +69,6 @@ export default function PurchaseOrderForm() {
     const [bestSupplier, setBestSupplier] = useState<SuggestedSupplier | null>(null);
     const [originalQuantities, setOriginalQuantities] = useState<{[key: number]: number}>({});
     const [showPreview, setShowPreview] = useState(false);
-    const [requisitionOpen, setRequisitionOpen] = useState(false);
 
     // Load data based on mode
     useEffect(() => {
@@ -92,35 +82,60 @@ export default function PurchaseOrderForm() {
                 SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
                 PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
                 REMARKS: currentPurchase.REMARKS,
-                ITEMS: currentPurchase.ITEMS
+                ORDER_TYPE: currentPurchase.ORDER_TYPE || 'items',
+                ITEMS: currentPurchase.ITEMS || [],
+                SERVICES: currentPurchase.SERVICES || []
             });
         } else {
             generateReferenceNumber();
         }
     }, [isEditMode, currentPurchase]);
 
-    // Update supplier suggestions when items change
+    // Update supplier suggestions when items/services change - UPDATED USE EFFECT
     useEffect(() => {
         const selectedItems = formData.ITEMS.filter((item: any) => item.SELECTED);
-        if (selectedItems.length > 0) {
-            const suggestions = getSuggestedSuppliers(selectedItems);
-            const best = getBestSupplier(selectedItems);
+        const selectedServices = formData.SERVICES.filter((service: any) => service.SELECTED);
+
+        if (selectedItems.length > 0 || selectedServices.length > 0) {
+            // UPDATED: Pass both items, services, and order type to the suggestion function
+            const suggestions = getSuggestedSuppliers(
+                selectedItems,
+                selectedServices,
+                formData.ORDER_TYPE
+            );
+            const best = getBestSupplier(
+                selectedItems,
+                selectedServices,
+                formData.ORDER_TYPE
+            );
             setSuggestedSuppliers(suggestions);
             setBestSupplier(best);
+
+            // Auto-select best supplier if no supplier is selected yet
+            if (!formData.SUPPLIER_ID && best) {
+                handleSupplierChange(best.supplier.ID.toString());
+            }
         } else {
             setSuggestedSuppliers([]);
             setBestSupplier(null);
         }
-    }, [formData.ITEMS]);
+    }, [formData.ITEMS, formData.SERVICES, formData.ORDER_TYPE]); // Added ORDER_TYPE dependency
 
     // Store original quantities when requisitions are selected
     useEffect(() => {
         if (selectedRequisitions.length > 0) {
             const originalQty: {[key: number]: number} = {};
             selectedRequisitions.forEach(requisition => {
-                requisition.ITEMS.forEach((item: any) => {
-                    originalQty[item.ID] = item.QUANTITY;
-                });
+                if (requisition.ITEMS) {
+                    requisition.ITEMS.forEach((item: any) => {
+                        originalQty[item.ID] = item.QUANTITY;
+                    });
+                }
+                if (requisition.SERVICES) {
+                    requisition.SERVICES.forEach((service: any) => {
+                        originalQty[service.ID] = service.QUANTITY;
+                    });
+                }
             });
             setOriginalQuantities(originalQty);
         }
@@ -140,41 +155,93 @@ export default function PurchaseOrderForm() {
         const transformedRequisitions = requisitionsData
             .filter(req => req.STATUS === 'Approved')
             .map(requisition => {
-                const requisitionItems = requisitionItemsData.filter(item => item.REQ_ID === requisition.REQ_ID);
+                if (requisition.TYPE === 'items') {
+                    // Handle item requisitions
+                    const requisitionItems = requisitionItemsData.filter(item => item.REQ_ID === requisition.ID);
 
-                const itemsWithDetails = requisitionItems.map(reqItem => {
-                    const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
-                    const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
+                    const itemsWithDetails = requisitionItems.map(reqItem => {
+                        const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
+                        const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
+                        return {
+                            ID: reqItem.REQT_ID,
+                            ITEM_ID: reqItem.ITEM_ID,
+                            NAME: itemDetails?.NAME || 'Unknown Item',
+                            QUANTITY: reqItem.QUANTITY,
+                            CATEGORY: category?.NAME || reqItem.CATEGORY,
+                            CATEGORY_ID: category?.CAT_ID,
+                            UNIT_PRICE: itemDetails?.UNIT_PRICE || 0,
+                            SELECTED: true,
+                            REQUISITION_ID: requisition.ID
+                        };
+                    });
+
+                    const categories = [...new Set(itemsWithDetails.map(item => item.CATEGORY))];
+
                     return {
-                        ID: reqItem.REQT_ID,
-                        ITEM_ID: reqItem.ITEM_ID,
-                        NAME: itemDetails?.NAME || 'Unknown Item',
-                        QUANTITY: reqItem.QUANTITY,
-                        CATEGORY: category?.NAME || reqItem.CATEGORY,
-                        CATEGORY_ID: category?.CAT_ID,
-                        UNIT_PRICE: itemDetails?.UNIT_PRICE || 0,
-                        SELECTED: true,
-                        REQUISITION_ID: requisition.REQ_ID
+                        ID: requisition.ID,
+                        TYPE: requisition.TYPE,
+                        CREATED_AT: requisition.CREATED_AT,
+                        UPDATED_AT: requisition.UPDATED_AT,
+                        STATUS: requisition.STATUS,
+                        REMARKS: requisition.REMARKS || '',
+                        USER_ID: requisition.USER_ID,
+                        REQUESTOR: requisition.REQUESTOR,
+                        PRIORITY: requisition.PRIORITY,
+                        NOTES: requisition.NOTES,
+                        ITEMS: itemsWithDetails,
+                        SERVICES: [],
+                        CATEGORIES: categories,
                     };
-                });
+                } else if (requisition.TYPE === 'services') {
+                    // Handle service requisitions - FIXED VERSION
+                    const requisitionServices = requisitionServiceData.filter(service => service.REQ_ID === requisition.ID);
 
-                const categories = [...new Set(itemsWithDetails.map(item => item.CATEGORY))];
+                    console.log(`Processing service requisition ${requisition.ID}:`, {
+                        requisitionServices,
+                        allRequisitionServices: requisitionServiceData
+                    });
 
-                return {
-                    ID: requisition.REQ_ID,
-                    CREATED_AT: requisition.DATE_REQUESTED,
-                    UPDATED_AT: requisition.DATE_UPDATED,
-                    STATUS: requisition.STATUS,
-                    REMARKS: requisition.REASON || '',
-                    USER_ID: requisition.US_ID,
-                    REQUESTOR: requisition.REQUESTOR,
-                    PRIORITY: requisition.PRIORITY,
-                    NOTES: requisition.NOTES,
-                    ITEMS: itemsWithDetails,
-                    CATEGORIES: categories,
-                };
-            });
+                    const servicesWithDetails = requisitionServices.map(reqService => {
+                        const serviceDetails = serviceData.find(service => service.ID === reqService.SERVICE_ID);
 
+                        // UPDATED: Add CATEGORY_ID to services for supplier matching
+                        return {
+                            ID: reqService.ID, // Use the requisition_service ID
+                            SERVICE_ID: reqService.SERVICE_ID,
+                            NAME: serviceDetails?.NAME || 'Unknown Service',
+                            DESCRIPTION: serviceDetails?.DESCRIPTION || '',
+                            QUANTITY: reqService.QUANTITY,
+                            UNIT_PRICE: reqService.UNIT_PRICE || serviceDetails?.HOURLY_RATE || 0,
+                            CATEGORY_ID: serviceDetails?.CATEGORY_ID, // ADDED: This is crucial for supplier matching
+                            SELECTED: true,
+                            REQUISITION_ID: requisition.ID
+                        };
+                    });
+
+                    console.log(`Transformed services for requisition ${requisition.ID}:`, servicesWithDetails);
+
+                    return {
+                        ID: requisition.ID,
+                        TYPE: requisition.TYPE,
+                        CREATED_AT: requisition.CREATED_AT,
+                        UPDATED_AT: requisition.UPDATED_AT,
+                        STATUS: requisition.STATUS,
+                        REMARKS: requisition.REMARKS || '',
+                        USER_ID: requisition.USER_ID,
+                        REQUESTOR: requisition.REQUESTOR,
+                        PRIORITY: requisition.PRIORITY,
+                        NOTES: requisition.NOTES,
+                        ITEMS: [],
+                        SERVICES: servicesWithDetails,
+                        CATEGORIES: ['Services'],
+                    };
+                }
+
+                return null;
+            })
+            .filter(Boolean); // Remove null values
+
+        console.log('Transformed approved requisitions:', transformedRequisitions);
         setApprovedRequisitions(transformedRequisitions);
     };
 
@@ -185,8 +252,29 @@ export default function PurchaseOrderForm() {
         setFormData(prev => ({ ...prev, REFERENCE_NO: reference }));
     };
 
+    const handleOrderTypeChange = (orderType: string) => {
+        // Clear existing selections when order type changes
+        if (formData.ORDER_TYPE !== orderType) {
+            setFormData(prev => ({
+                ...prev,
+                ORDER_TYPE: orderType,
+                REQUISITION_IDS: [],
+                ITEMS: [],
+                SERVICES: []
+            }));
+            setSelectedRequisitions([]);
+            setSelectedSupplier(null);
+            setOriginalQuantities({});
+            setSuggestedSuppliers([]); // Clear suggestions when order type changes
+        }
+    };
+
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
+
+        if (!formData.ORDER_TYPE) {
+            newErrors.ORDER_TYPE = 'Please select an order type';
+        }
 
         if (formData.REQUISITION_IDS.length === 0) {
             newErrors.REQUISITION_IDS = 'Please select at least one requisition';
@@ -200,8 +288,12 @@ export default function PurchaseOrderForm() {
             newErrors.PAYMENT_TYPE = 'Please select a payment type';
         }
 
-        if (formData.ITEMS.length === 0) {
+        if (formData.ORDER_TYPE === 'items' && formData.ITEMS.length === 0) {
             newErrors.ITEMS = 'No items selected for purchase';
+        }
+
+        if (formData.ORDER_TYPE === 'services' && formData.SERVICES.length === 0) {
+            newErrors.SERVICES = 'No services selected for purchase';
         }
 
         // Validate supplier payment method compatibility
@@ -229,13 +321,21 @@ export default function PurchaseOrderForm() {
             const newRequisitionIds = [...formData.REQUISITION_IDS, requisitionId];
             const newSelectedRequisitions = [...selectedRequisitions, requisition];
 
-            // Add items from this requisition
-            const newItems = [...formData.ITEMS, ...requisition.ITEMS];
+            // Add items/services from this requisition based on type
+            let newItems = [...formData.ITEMS];
+            let newServices = [...formData.SERVICES];
+
+            if (requisition.TYPE === 'items') {
+                newItems = [...newItems, ...requisition.ITEMS];
+            } else if (requisition.TYPE === 'services') {
+                newServices = [...newServices, ...requisition.SERVICES];
+            }
 
             setFormData(prev => ({
                 ...prev,
                 REQUISITION_IDS: newRequisitionIds,
-                ITEMS: newItems
+                ITEMS: newItems,
+                SERVICES: newServices
             }));
 
             setSelectedRequisitions(newSelectedRequisitions);
@@ -244,8 +344,6 @@ export default function PurchaseOrderForm() {
                 setErrors(prev => ({ ...prev, REQUISITION_IDS: '' }));
             }
         }
-
-        setRequisitionOpen(false);
     };
 
     const handleRemoveRequisition = (requisitionId: string) => {
@@ -253,13 +351,15 @@ export default function PurchaseOrderForm() {
         const newRequisitionIds = formData.REQUISITION_IDS.filter(id => id !== requisitionId);
         const newSelectedRequisitions = selectedRequisitions.filter(req => req.ID.toString() !== requisitionId);
 
-        // Remove items from this requisition
+        // Remove items/services from this requisition
         const newItems = formData.ITEMS.filter(item => item.REQUISITION_ID !== parseInt(requisitionId));
+        const newServices = formData.SERVICES.filter(service => service.REQUISITION_ID !== parseInt(requisitionId));
 
         setFormData(prev => ({
             ...prev,
             REQUISITION_IDS: newRequisitionIds,
-            ITEMS: newItems
+            ITEMS: newItems,
+            SERVICES: newServices
         }));
 
         setSelectedRequisitions(newSelectedRequisitions);
@@ -309,6 +409,17 @@ export default function PurchaseOrderForm() {
         }));
     };
 
+    const toggleServiceSelection = (serviceId: number) => {
+        setFormData(prev => ({
+            ...prev,
+            SERVICES: prev.SERVICES.map(service =>
+                service.ID === serviceId
+                    ? { ...service, SELECTED: !service.SELECTED }
+                    : service
+            )
+        }));
+    };
+
     const updateItemQuantity = (itemId: number, quantity: number) => {
         if (quantity < 1) return;
 
@@ -330,14 +441,45 @@ export default function PurchaseOrderForm() {
         }));
     };
 
+    const updateServiceQuantity = (serviceId: number, quantity: number) => {
+        if (quantity < 1) return;
+
+        // Get the original quantity from requisition
+        const originalQty = originalQuantities[serviceId] || 1;
+
+        // Don't allow decreasing below original requisition quantity
+        if (quantity < originalQty) {
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            SERVICES: prev.SERVICES.map(service =>
+                service.ID === serviceId
+                    ? { ...service, QUANTITY: quantity }
+                    : service
+            )
+        }));
+    };
+
     const calculateTotal = () => {
-        return formData.ITEMS
+        const itemsTotal = formData.ITEMS
             .filter((item: any) => item.SELECTED)
             .reduce((total: number, item: any) => total + (item.QUANTITY * item.UNIT_PRICE), 0);
+
+        const servicesTotal = formData.SERVICES
+            .filter((service: any) => service.SELECTED)
+            .reduce((total: number, service: any) => total + (service.QUANTITY * service.UNIT_PRICE), 0);
+
+        return itemsTotal + servicesTotal;
     };
 
     const getSelectedItems = () => {
         return formData.ITEMS.filter((item: any) => item.SELECTED);
+    };
+
+    const getSelectedServices = () => {
+        return formData.SERVICES.filter((service: any) => service.SELECTED);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -351,6 +493,7 @@ export default function PurchaseOrderForm() {
 
     const handleConfirmSubmit = () => {
         const selectedItems = getSelectedItems();
+        const selectedServices = getSelectedServices();
         const totalCost = calculateTotal();
 
         const purchaseOrderData = {
@@ -358,6 +501,7 @@ export default function PurchaseOrderForm() {
             REQUISITION_IDS: formData.REQUISITION_IDS.map(id => parseInt(id)),
             SUPPLIER_ID: parseInt(formData.SUPPLIER_ID),
             PAYMENT_TYPE: formData.PAYMENT_TYPE,
+            ORDER_TYPE: formData.ORDER_TYPE,
             TOTAL_COST: totalCost,
             STATUS: isEditMode ? currentPurchase?.STATUS : 'pending_approval',
             REMARKS: formData.REMARKS,
@@ -368,6 +512,12 @@ export default function PurchaseOrderForm() {
                 QUANTITY: item.QUANTITY,
                 UNIT_PRICE: item.UNIT_PRICE,
                 REQUISITION_ID: item.REQUISITION_ID
+            })),
+            SERVICES: selectedServices.map(service => ({
+                SERVICE_ID: service.SERVICE_ID,
+                QUANTITY: service.QUANTITY,
+                UNIT_PRICE: service.UNIT_PRICE,
+                REQUISITION_ID: service.REQUISITION_ID
             }))
         };
 
@@ -404,7 +554,9 @@ export default function PurchaseOrderForm() {
                 SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
                 PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
                 REMARKS: currentPurchase.REMARKS,
-                ITEMS: currentPurchase.ITEMS
+                ORDER_TYPE: currentPurchase.ORDER_TYPE || 'items',
+                ITEMS: currentPurchase.ITEMS || [],
+                SERVICES: currentPurchase.SERVICES || []
             });
         } else {
             setFormData({
@@ -413,7 +565,9 @@ export default function PurchaseOrderForm() {
                 SUPPLIER_ID: '',
                 PAYMENT_TYPE: 'cash',
                 REMARKS: '',
-                ITEMS: []
+                ORDER_TYPE: '',
+                ITEMS: [],
+                SERVICES: []
             });
             generateReferenceNumber();
         }
@@ -421,6 +575,7 @@ export default function PurchaseOrderForm() {
         setSelectedSupplier(null);
         setSelectedRequisitions([]);
         setOriginalQuantities({});
+        setSuggestedSuppliers([]); // Clear suggestions on reset
     };
 
     const handleCancel = () => {
@@ -475,7 +630,7 @@ export default function PurchaseOrderForm() {
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
                                         {isEditMode
                                             ? `Update purchase order ${currentPurchase?.REFERENCE_NO}`
-                                            : 'Select one or more approved requisitions and supplier to create a purchase order'
+                                            : 'Select order type, approved requisitions and supplier to create a purchase order'
                                         }
                                     </p>
                                     {!isEditMode && formData.REQUISITION_IDS.length > 1 && (
@@ -502,6 +657,7 @@ export default function PurchaseOrderForm() {
                                                 errors={errors}
                                                 onInputChange={handleInputChange}
                                                 isEditMode={isEditMode}
+                                                onOrderTypeChange={handleOrderTypeChange}
                                             />
 
                                             <SelectSupplier
@@ -514,147 +670,41 @@ export default function PurchaseOrderForm() {
                                             />
                                         </div>
 
-                                        {/* Right Column - Requisition, Items, and Additional Info */}
+                                        {/* Right Column - Requisition, Items/Services, and Additional Info */}
                                         <div className="xl:col-span-2 space-y-6">
                                             {/* Approved Requisitions Selection */}
-                                            <div className="space-y-4">
-                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-2">
-                                                    Select Approved Requisitions
-                                                </h3>
-
-                                                <div className="space-y-3">
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                        Requisitions
-                                                    </label>
-
-                                                    {/* Selected Requisitions Tags */}
-                                                    {formData.REQUISITION_IDS.length > 0 && (
-                                                        <div className="flex flex-wrap gap-2 mb-3">
-                                                            {selectedRequisitions.map((requisition) => (
-                                                                <div
-                                                                    key={requisition.ID}
-                                                                    className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm"
-                                                                >
-                                                                    <span>Req #{requisition.ID}</span>
-                                                                    <span className="text-blue-600 dark:text-blue-400">•</span>
-                                                                    <span>{requisition.REQUESTOR}</span>
-                                                                    <span className="text-blue-600 dark:text-blue-400">•</span>
-                                                                    <span>{requisition.ITEMS.length} items</span>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveRequisition(requisition.ID.toString())}
-                                                                        className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
-                                                                    >
-                                                                        <X className="w-3 h-3" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Combobox for requisition selection */}
-                                                    <Popover open={requisitionOpen} onOpenChange={setRequisitionOpen}>
-                                                        <PopoverTrigger asChild>
-                                                            <Button
-                                                                variant="outline"
-                                                                role="combobox"
-                                                                aria-expanded={requisitionOpen}
-                                                                className="w-full justify-between"
-                                                            >
-                                                                {formData.REQUISITION_IDS.length > 0
-                                                                    ? `${formData.REQUISITION_IDS.length} requisition(s) selected`
-                                                                    : "Select requisitions..."}
-                                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-full p-0">
-                                                            <Command>
-                                                                <CommandInput placeholder="Search requisitions..." className="h-9" />
-                                                                <CommandList>
-                                                                    <CommandEmpty>No requisitions found.</CommandEmpty>
-                                                                    <CommandGroup>
-                                                                        {approvedRequisitions.map((requisition) => (
-                                                                            <CommandItem
-                                                                                key={requisition.ID}
-                                                                                value={requisition.ID.toString()}
-                                                                                onSelect={handleRequisitionSelect}
-                                                                                disabled={formData.REQUISITION_IDS.includes(requisition.ID.toString())}
-                                                                            >
-                                                                                <div className="flex flex-col">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <span className="font-medium">Req #{requisition.ID}</span>
-                                                                                        <span className="text-gray-500 dark:text-gray-400">•</span>
-                                                                                        <span>{requisition.REQUESTOR}</span>
-                                                                                    </div>
-                                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                                        {requisition.ITEMS.length} items • {requisition.PRIORITY} priority
-                                                                                    </div>
-                                                                                </div>
-                                                                                <Check
-                                                                                    className={cn(
-                                                                                        "ml-auto h-4 w-4",
-                                                                                        formData.REQUISITION_IDS.includes(requisition.ID.toString()) ? "opacity-100" : "opacity-0"
-                                                                                    )}
-                                                                                />
-                                                                            </CommandItem>
-                                                                        ))}
-                                                                    </CommandGroup>
-                                                                </CommandList>
-                                                            </Command>
-                                                        </PopoverContent>
-                                                    </Popover>
-
-                                                    {errors.REQUISITION_IDS && (
-                                                        <p className="text-sm text-red-600 dark:text-red-400">{errors.REQUISITION_IDS}</p>
-                                                    )}
-
-                                                    {/* Selected Requisitions Details */}
-                                                    {selectedRequisitions.length > 0 && (
-                                                        <div className="mt-4 space-y-3">
-                                                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                Selected Requisitions Details:
-                                                            </h4>
-                                                            {selectedRequisitions.map((requisition) => (
-                                                                <div key={requisition.ID} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                                                    <div className="flex justify-between items-start mb-2">
-                                                                        <div>
-                                                                            <span className="font-medium text-gray-900 dark:text-white">
-                                                                                Requisition #{requisition.ID}
-                                                                            </span>
-                                                                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                                                                                by {requisition.REQUESTOR}
-                                                                            </span>
-                                                                        </div>
-                                                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                                                            requisition.PRIORITY === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                                                requisition.PRIORITY === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                                                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                                                        }`}>
-                                                                            {requisition.PRIORITY}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                                                        <p><strong>Items:</strong> {requisition.ITEMS.length}</p>
-                                                                        <p><strong>Requested:</strong> {new Date(requisition.CREATED_AT).toLocaleDateString()}</p>
-                                                                        {requisition.NOTES && (
-                                                                            <p><strong>Notes:</strong> {requisition.NOTES}</p>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <OrderItems
+                                            <SelectApprovedRequisition
                                                 formData={formData}
-                                                selectedRequisition={selectedRequisitions}
-                                                originalQuantities={originalQuantities}
+                                                selectedRequisitions={selectedRequisitions}
+                                                approvedRequisitions={approvedRequisitions}
                                                 errors={errors}
-                                                onToggleItemSelection={toggleItemSelection}
-                                                onUpdateItemQuantity={updateItemQuantity}
+                                                onRequisitionSelect={handleRequisitionSelect}
+                                                onRequisitionRemove={handleRemoveRequisition}
+                                                isEditMode={isEditMode}
                                             />
+
+                                            {/* Conditionally render Items or Services based on order type */}
+                                            {formData.ORDER_TYPE === 'items' && (
+                                                <OrderItems
+                                                    formData={formData}
+                                                    selectedRequisition={selectedRequisitions}
+                                                    originalQuantities={originalQuantities}
+                                                    errors={errors}
+                                                    onToggleItemSelection={toggleItemSelection}
+                                                    onUpdateItemQuantity={updateItemQuantity}
+                                                />
+                                            )}
+
+                                            {formData.ORDER_TYPE === 'services' && (
+                                                <OrderService
+                                                    formData={formData}
+                                                    selectedRequisition={selectedRequisitions}
+                                                    originalQuantities={originalQuantities}
+                                                    errors={errors}
+                                                    onToggleServiceSelection={toggleServiceSelection}
+                                                    onUpdateServiceQuantity={updateServiceQuantity}
+                                                />
+                                            )}
 
                                             {/* Selected Supplier Display */}
                                             {selectedSupplier && (
@@ -719,7 +769,7 @@ export default function PurchaseOrderForm() {
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
                                         <div className="flex gap-3 justify-between">
                                             <div className="flex gap-3">
-                                                {/* Reset Button - Circle with icon and tooltip */}
+                                                {/* Reset Button */}
                                                 <div className="relative group">
                                                     <button
                                                         type="button"
@@ -736,7 +786,7 @@ export default function PurchaseOrderForm() {
                                                     </div>
                                                 </div>
 
-                                                {/* Cancel Button - Circle with X icon and tooltip */}
+                                                {/* Cancel Button */}
                                                 <div className="relative group">
                                                     <button
                                                         type="button"
@@ -784,7 +834,7 @@ export default function PurchaseOrderForm() {
                     formData={formData}
                     selectedSupplier={selectedSupplier}
                     selectedRequisition={selectedRequisitions}
-                    selectedItems={getSelectedItems()}
+                    selectedItems={formData.ORDER_TYPE === 'items' ? getSelectedItems() : getSelectedServices()}
                     totalCost={calculateTotal()}
                     onConfirm={handleConfirmSubmit}
                     onCancel={() => setShowPreview(false)}

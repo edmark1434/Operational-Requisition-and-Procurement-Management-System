@@ -13,6 +13,7 @@ const deliveries = [
         SUPPLIER_NAME: 'Electrical Supplies Co.',
         TOTAL_ITEMS: 7,
         TOTAL_VALUE: 1995.50,
+        DELIVERY_TYPE: 'Item Purchase',
         ITEMS: [
             {
                 ID: 8001,
@@ -51,6 +52,7 @@ const deliveries = [
         SUPPLIER_NAME: 'Office World Suppliers',
         TOTAL_ITEMS: 10,
         TOTAL_VALUE: 152.50,
+        DELIVERY_TYPE: 'Item Purchase',
         ITEMS: [
             {
                 ID: 8003,
@@ -78,6 +80,7 @@ const deliveries = [
         SUPPLIER_NAME: 'Tool Distributors Ltd.',
         TOTAL_ITEMS: 1,
         TOTAL_VALUE: 350.00,
+        DELIVERY_TYPE: 'Item Purchase',
         ITEMS: [
             {
                 ID: 8004,
@@ -105,6 +108,7 @@ const deliveries = [
         SUPPLIER_NAME: 'Office World Suppliers',
         TOTAL_ITEMS: 1,
         TOTAL_VALUE: 189.99,
+        DELIVERY_TYPE: 'Item Purchase',
         ITEMS: [
             {
                 ID: 8005,
@@ -132,6 +136,7 @@ const deliveries = [
         SUPPLIER_NAME: 'Electrical Supplies Co.',
         TOTAL_ITEMS: 25,
         TOTAL_VALUE: 450.00,
+        DELIVERY_TYPE: 'Service Delivery',
         ITEMS: [
             {
                 ID: 8006,
@@ -170,6 +175,7 @@ const deliveries = [
         SUPPLIER_NAME: 'Tool Distributors Ltd.',
         TOTAL_ITEMS: 8,
         TOTAL_VALUE: 875.25,
+        DELIVERY_TYPE: 'Item Return',
         ITEMS: [
             {
                 ID: 8008,
@@ -208,6 +214,7 @@ const deliveries = [
         SUPPLIER_NAME: 'Electrical Supplies Co.',
         TOTAL_ITEMS: 15,
         TOTAL_VALUE: 1200.00,
+        DELIVERY_TYPE: 'Service Rework',
         ITEMS: [
             {
                 ID: 8010,
@@ -230,6 +237,96 @@ const deliveries = [
                 BARCODE: '8806091234577',
                 CATEGORY: 'Tools',
                 TOTAL_VALUE: 140.00
+            }
+        ]
+    },
+    {
+        ID: 8,
+        DELIVERY_DATE: '2024-02-25T09:15:00Z',
+        TOTAL_COST: 920.00,
+        RECEIPT_NO: 'REC-2024-008',
+        RECEIPT_PHOTO: null,
+        STATUS: 'received',
+        REMARKS: 'IT support services completed',
+        PO_ID: 5,
+        SUPPLIER_ID: 3,
+        SUPPLIER_NAME: 'Tech Solutions Inc.',
+        TOTAL_ITEMS: 0,
+        TOTAL_VALUE: 920.00,
+        DELIVERY_TYPE: 'Service Delivery',
+        ITEMS: [],
+        SERVICES: [
+            {
+                ID: 1,
+                SERVICE_ID: 1,
+                NAME: 'IT Support',
+                DESCRIPTION: 'Technical support and IT services',
+                QUANTITY: 8,
+                UNIT_PRICE: 75.00,
+                TOTAL_VALUE: 600.00
+            },
+            {
+                ID: 2,
+                SERVICE_ID: 7,
+                NAME: 'Network Installation',
+                DESCRIPTION: 'Network cabling and setup',
+                QUANTITY: 4,
+                UNIT_PRICE: 80.00,
+                TOTAL_VALUE: 320.00
+            }
+        ]
+    },
+    {
+        ID: 9,
+        DELIVERY_DATE: '2024-03-01T14:30:00Z',
+        TOTAL_COST: 450.00,
+        RECEIPT_NO: 'REC-2024-009',
+        RECEIPT_PHOTO: null,
+        STATUS: 'received',
+        REMARKS: 'Post-renovation cleaning completed',
+        PO_ID: 6,
+        SUPPLIER_ID: 6,
+        SUPPLIER_NAME: 'CleanPro Services',
+        TOTAL_ITEMS: 0,
+        TOTAL_VALUE: 450.00,
+        DELIVERY_TYPE: 'Service Delivery',
+        ITEMS: [],
+        SERVICES: [
+            {
+                ID: 4,
+                SERVICE_ID: 4,
+                NAME: 'Cleaning Services',
+                DESCRIPTION: 'Office and facility cleaning',
+                QUANTITY: 10,
+                UNIT_PRICE: 45.00,
+                TOTAL_VALUE: 450.00
+            }
+        ]
+    },
+    {
+        ID: 10,
+        DELIVERY_DATE: '2024-03-05T11:00:00Z',
+        TOTAL_COST: 350.00,
+        RECEIPT_NO: 'REC-2024-010',
+        RECEIPT_PHOTO: null,
+        STATUS: 'with returns',
+        REMARKS: 'Plumbing repair with some parts returned',
+        PO_ID: 9,
+        SUPPLIER_ID: 5,
+        SUPPLIER_NAME: 'PipeMasters Plumbing',
+        TOTAL_ITEMS: 0,
+        TOTAL_VALUE: 350.00,
+        DELIVERY_TYPE: 'Service Rework',
+        ITEMS: [],
+        SERVICES: [
+            {
+                ID: 10,
+                SERVICE_ID: 3,
+                NAME: 'Plumbing Services',
+                DESCRIPTION: 'Pipe installation and plumbing repairs',
+                QUANTITY: 5,
+                UNIT_PRICE: 70.00,
+                TOTAL_VALUE: 350.00
             }
         ]
     }

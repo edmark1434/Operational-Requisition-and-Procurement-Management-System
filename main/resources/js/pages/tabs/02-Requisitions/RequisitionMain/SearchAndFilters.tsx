@@ -55,7 +55,7 @@ export default function SearchAndFilters({
                     </div>
                     <input
                         type="text"
-                        placeholder="Search requisitions, items, requestors, or ID..."
+                        placeholder="Search requisitions, items, services, requestors, or ID..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"

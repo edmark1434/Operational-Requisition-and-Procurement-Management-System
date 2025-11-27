@@ -2,11 +2,13 @@ interface OrderInfoProps {
     formData: {
         REFERENCE_NO: string;
         PAYMENT_TYPE: string;
+        ORDER_TYPE?: string;
     };
     selectedSupplier: any;
     errors: { [key: string]: string };
     onInputChange: (field: string, value: any) => void;
     isEditMode: boolean;
+    onOrderTypeChange?: (orderType: string) => void; // Add this prop
 }
 
 export default function OrderInfo({
@@ -14,8 +16,18 @@ export default function OrderInfo({
                                       selectedSupplier,
                                       errors,
                                       onInputChange,
-                                      isEditMode
+                                      isEditMode,
+                                      onOrderTypeChange
                                   }: OrderInfoProps) {
+
+    const handleOrderTypeChange = (value: string) => {
+        onInputChange('ORDER_TYPE', value);
+        // Notify parent about order type change to filter requisitions
+        if (onOrderTypeChange) {
+            onOrderTypeChange(value);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-2">
@@ -34,6 +46,30 @@ export default function OrderInfo({
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Auto-generated reference number
+                </p>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Order Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                    required
+                    value={formData.ORDER_TYPE || ''}
+                    onChange={(e) => handleOrderTypeChange(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
+                        errors.ORDER_TYPE ? 'border-red-500' : 'border-sidebar-border'
+                    }`}
+                >
+                    <option value="">Select order type</option>
+                    <option value="items">Items</option>
+                    <option value="services">Services</option>
+                </select>
+                {errors.ORDER_TYPE && (
+                    <p className="text-red-500 text-xs mt-1">{errors.ORDER_TYPE}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Select the type of purchase order
                 </p>
             </div>
 

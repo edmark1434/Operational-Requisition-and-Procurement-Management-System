@@ -1,27 +1,33 @@
 const makes = [
     {
         ID: 1,
-        NAME: "ToolMaster"
+        NAME: "ToolMaster",
+        IS_ACTIVE: true
     },
     {
         ID: 2,
-        NAME: "ElectroTech"
+        NAME: "ElectroTech",
+        IS_ACTIVE: true
     },
     {
         ID: 3,
-        NAME: "OfficePro"
+        NAME: "OfficePro",
+        IS_ACTIVE: true
     },
     {
         ID: 4,
-        NAME: "PowerTools Inc."
+        NAME: "PowerTools Inc.",
+        IS_ACTIVE: true
     },
     {
         ID: 5,
-        NAME: "SafetyFirst"
+        NAME: "SafetyFirst",
+        IS_ACTIVE: true
     },
     {
         ID: 6,
-        NAME: "ErgoWorks"
+        NAME: "ErgoWorks",
+        IS_ACTIVE: true
     }
 ];
 

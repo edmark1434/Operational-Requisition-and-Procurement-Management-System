@@ -1,15 +1,21 @@
 interface RequisitionDetailsProps {
     priority: string;
     setPriority: (priority: string) => void;
+    type: string;
+    setType: (type: string) => void;
     notes: string;
     setNotes: (notes: string) => void;
+    disabled?: boolean;
 }
 
 export default function RequisitionDetails({
                                                priority,
                                                setPriority,
+                                               type,
+                                               setType,
                                                notes,
-                                               setNotes
+                                               setNotes,
+                                               disabled = false
                                            }: RequisitionDetailsProps) {
     return (
         <div className="p-4 border border-gray-200 dark:border-sidebar-border rounded-lg bg-gray-50 dark:bg-sidebar">
@@ -31,6 +37,20 @@ export default function RequisitionDetails({
                         <option value="normal">Normal</option>
                         <option value="high">High</option>
                         <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Type
+                    </label>
+                    <select
+                        value={type}
+                        onChange={(e) => setType(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-sidebar-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-sidebar-accent text-gray-900 dark:text-white"
+                    >
+                        <option value="items">Items</option>
+                        <option value="services">Services</option>
                     </select>
                 </div>
 

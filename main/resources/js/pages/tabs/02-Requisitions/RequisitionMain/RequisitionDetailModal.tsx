@@ -22,6 +22,13 @@ export default function RequisitionDetailModal({
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    const isServiceRequisition = requisition?.TYPE === 'services';
+    const itemsCount = requisition?.ITEMS?.length || 0;
+    const servicesCount = requisition?.SERVICES?.length || 0;
+    const totalItems = isServiceRequisition ? servicesCount : itemsCount;
+    const isPending = requisition?.STATUS?.toLowerCase() === 'pending';
+    const isApproved = requisition?.STATUS?.toLowerCase() === 'approved';
+
     const handleStatusChange = (newStatus: string) => {
         if (requisition) {
             // If changing to rejected, show the decline reason modal
@@ -35,6 +42,13 @@ export default function RequisitionDetailModal({
         setShowStatusDropdown(false);
     };
 
+    const handleAccept = () => {
+        if (requisition) {
+            onStatusUpdate(requisition.ID, 'approved');
+            onClose(); // Close modal after accept
+        }
+    };
+
     const handleDecline = (reason: string) => {
         if (requisition) {
             onStatusUpdate(requisition.ID, 'rejected', reason);
@@ -45,6 +59,11 @@ export default function RequisitionDetailModal({
 
     const handleEdit = () => {
         router.get(`/requisitions/${requisition.ID}/edit`);
+        onClose();
+    };
+
+    const handleCreatePurchaseOrder = () => {
+        router.get('/purchases/create');
         onClose();
     };
 
@@ -75,6 +94,9 @@ export default function RequisitionDetailModal({
         { value: 'received', label: 'Received', description: 'Encoder marks it as received' }
     ];
 
+    // Calculate column span for the total row
+    const totalColSpan = isServiceRequisition ? 6 : 5; // Adjusted for the new table structure
+
     return (
         <>
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -104,6 +126,27 @@ export default function RequisitionDetailModal({
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Type
+                                        </label>
+                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                                            isServiceRequisition
+                                                ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                                                : 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                                        }`}>
+                                            {isServiceRequisition ? (
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                                </svg>
+                                            )}
+                                            {getTypeDisplayName(requisition.TYPE)}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Status
                                         </label>
                                         <div className="flex items-center gap-2">
@@ -111,73 +154,75 @@ export default function RequisitionDetailModal({
                                                 <RequisitionStatusIcon status={requisition.STATUS} />
                                                 {getStatusDisplayName(requisition.STATUS)}
                                             </div>
-                                            <div className="relative" ref={dropdownRef}>
-                                                <button
-                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                    </svg>
-                                                    Change Status
-                                                </button>
+                                            {!isPending && (
+                                                <div className="relative" ref={dropdownRef}>
+                                                    <button
+                                                        onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                        Change Status
+                                                    </button>
 
-                                                {showStatusDropdown && (
-                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
-                                                        <div className="p-3">
-                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
-                                                                Update Status
-                                                            </div>
-                                                            {/* Scrollable container with fixed height */}
-                                                            <div className="max-h-48 overflow-y-auto pr-1"> {/* Shows ~4 items at a time */}
-                                                                {statusOptions.map((status) => (
-                                                                    <button
-                                                                        key={status.value}
-                                                                        onClick={() => handleStatusChange(status.value)}
-                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
-                                                                            requisition?.STATUS === status.value
-                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                                                                                : 'border border-transparent'
-                                                                        }`}
-                                                                    >
-                                                                        {/* Status indicator with dot and check */}
-                                                                        <div className="flex items-center gap-3 flex-1">
-                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
-                                                                                requisition?.STATUS === status.value
-                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
-                                                                                    : 'bg-gray-300 dark:bg-gray-600'
-                                                                            }`}>
-                                                                                {requisition?.STATUS === status.value && (
-                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                                    </svg>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="flex-1">
-                                                                                <div className="font-medium text-gray-900 dark:text-white">
-                                                                                    {status.label}
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                                                                    {status.description}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-
-                                                            {/* Optional: Show scroll indicator when there are more items */}
-                                                            {statusOptions.length > 4 && (
-                                                                <div className="mt-2 pt-2 border-t border-sidebar-border">
-                                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-                                                                        Scroll for more options
-                                                                    </p>
+                                                    {showStatusDropdown && (
+                                                        <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                            <div className="p-3">
+                                                                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                    Update Status
                                                                 </div>
-                                                            )}
+                                                                {/* Scrollable container with fixed height */}
+                                                                <div className="max-h-48 overflow-y-auto pr-1"> {/* Shows ~4 items at a time */}
+                                                                    {statusOptions.map((status) => (
+                                                                        <button
+                                                                            key={status.value}
+                                                                            onClick={() => handleStatusChange(status.value)}
+                                                                            className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                                requisition?.STATUS === status.value
+                                                                                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                    : 'border border-transparent'
+                                                                            }`}
+                                                                        >
+                                                                            {/* Status indicator with dot and check */}
+                                                                            <div className="flex items-center gap-3 flex-1">
+                                                                                <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                                                                    requisition?.STATUS === status.value
+                                                                                        ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                        : 'bg-gray-300 dark:bg-gray-600'
+                                                                                }`}>
+                                                                                    {requisition?.STATUS === status.value && (
+                                                                                        <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                        </svg>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="flex-1">
+                                                                                    <div className="font-medium text-gray-900 dark:text-white">
+                                                                                        {status.label}
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                        {status.description}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+
+                                                                {/* Optional: Show scroll indicator when there are more items */}
+                                                                {statusOptions.length > 4 && (
+                                                                    <div className="mt-2 pt-2 border-t border-sidebar-border">
+                                                                        <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                                                                            Scroll for more options
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div>
@@ -197,6 +242,12 @@ export default function RequisitionDetailModal({
                                     </div>
                                 </div>
                                 <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Total {isServiceRequisition ? 'Services' : 'Items'}
+                                        </label>
+                                        <p className="text-sm text-gray-900 dark:text-white">{totalItems}</p>
+                                    </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Created
@@ -240,10 +291,10 @@ export default function RequisitionDetailModal({
                                 )}
                             </div>
 
-                            {/* Items List - TABLE LAYOUT */}
+                            {/* Items/Services List - TABLE LAYOUT */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    Requested Items ({requisition.ITEMS.length})
+                                    Requested {isServiceRequisition ? 'Services' : 'Items'} ({totalItems})
                                 </label>
                                 <div className="border border-sidebar-border rounded-lg overflow-hidden bg-white dark:bg-sidebar-accent">
                                     <table className="w-full">
@@ -253,38 +304,97 @@ export default function RequisitionDetailModal({
                                                 #
                                             </th>
                                             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                                Quantity
+                                                {isServiceRequisition ? 'Hours' : 'Quantity'}
                                             </th>
                                             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                Item Name
+                                                {isServiceRequisition ? 'Service Name' : 'Item Name'}
                                             </th>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                Category
+                                            {!isServiceRequisition && (
+                                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Category
+                                                </th>
+                                            )}
+                                            {isServiceRequisition && (
+                                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Description
+                                                </th>
+                                            )}
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                                Unit Price
+                                            </th>
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                                Total
                                             </th>
                                         </tr>
                                         </thead>
                                         <tbody className="divide-y divide-sidebar-border">
-                                        {requisition.ITEMS.map((item: any, index: number) => (
-                                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
-                                                <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                                    <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
-                                                        {index + 1}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                    {item.QUANTITY}
-                                                </td>
-                                                <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                                    {item.NAME}
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-sidebar border border-sidebar-border">
-                                                        {item.CATEGORY}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {isServiceRequisition ? (
+                                            // Services Table
+                                            requisition.SERVICES?.map((service: any, index: number) => (
+                                                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
+                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                        <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
+                                                            {index + 1}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                        {service.QUANTITY}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                        {service.NAME}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        {service.DESCRIPTION}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        ${service.UNIT_PRICE || '0.00'}/hr
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
+                                                        ${service.TOTAL || '0.00'}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            // Items Table
+                                            requisition.ITEMS.map((item: any, index: number) => (
+                                                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
+                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                        <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
+                                                            {index + 1}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                        {item.QUANTITY}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                        {item.NAME}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-sidebar border border-sidebar-border">
+                                                            {item.CATEGORY}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        ${item.UNIT_PRICE || '0.00'}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
+                                                        ${item.TOTAL || '0.00'}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                         </tbody>
+                                        {/* Total Row - Fixed positioning */}
+                                        <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                        <tr>
+                                            <td colSpan={totalColSpan - 1} className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white text-right">
+                                                Grand Total:
+                                            </td>
+                                            <td className="py-3 px-4 text-lg font-bold text-green-600 dark:text-green-400">
+                                                ${requisition.TOTAL_AMOUNT?.toFixed(2) || '0.00'}
+                                            </td>
+                                        </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
                             </div>
@@ -303,6 +413,45 @@ export default function RequisitionDetailModal({
                                 </svg>
                                 Edit Requisition
                             </button>
+
+                            <div className="flex gap-3">
+                                {/* Accept/Decline Buttons for Pending Requisitions */}
+                                {isPending && (
+                                    <>
+                                        <button
+                                            onClick={() => setShowDeclineModal(true)}
+                                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Decline
+                                        </button>
+                                        <button
+                                            onClick={handleAccept}
+                                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Accept
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Create Purchase Order Button for Approved Requisitions */}
+                                {isApproved && (
+                                    <button
+                                        onClick={handleCreatePurchaseOrder}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Create Purchase Order
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -391,4 +540,13 @@ function getStatusDisplayName(status: string): string {
         'received': 'Received'
     };
     return statusMap[status?.toLowerCase()] || status;
+}
+
+// Helper function to get display name for requisition type
+function getTypeDisplayName(type: string): string {
+    const typeMap: { [key: string]: string } = {
+        'items': 'Items',
+        'services': 'Services'
+    };
+    return typeMap[type?.toLowerCase()] || type;
 }

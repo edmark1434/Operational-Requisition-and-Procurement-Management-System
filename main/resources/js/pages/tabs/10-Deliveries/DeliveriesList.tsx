@@ -4,9 +4,39 @@ import { getDeliveriesStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate } from './utils/formatters';
 import { LoaderCircle, Package, Edit } from 'lucide-react';
 
+// Add proper TypeScript interfaces
+interface DeliveryItem {
+    ID: number;
+    ITEM_ID: number;
+    ITEM_NAME: string;
+    QUANTITY: number;
+    UNIT_PRICE: number;
+    BARCODE?: string;
+    CATEGORY?: string;
+}
+
+interface Delivery {
+    ID: number;
+    RECEIPT_NO: string;
+    DELIVERY_DATE: string;
+    TOTAL_COST: number;
+    STATUS: string;
+    REMARKS: string;
+    RECEIPT_PHOTO: string;
+    PO_ID: number;
+    PO_REFERENCE: string;
+    SUPPLIER_ID?: number;
+    SUPPLIER_NAME: string;
+    TOTAL_ITEMS: number;
+    TOTAL_VALUE: number;
+    DELIVERY_TYPE?: string;
+    ITEMS: DeliveryItem[];
+}
+
 interface DeliveriesListProps {
-    deliveries: any[];
-    onDeliveryClick: (delivery: any) => void;
+    deliveries: Delivery[];
+    onDeliveryClick: (delivery: Delivery) => void;
+    onStatusChange: (deliveryId: number, newStatus: string) => void;
     viewMode: 'comfortable' | 'compact' | 'condensed';
     isLoading?: boolean;
 }
@@ -23,7 +53,69 @@ function formatStatusDisplay(status: string): string {
     }
 }
 
-export default function DeliveriesList({ deliveries, onDeliveryClick, viewMode, isLoading = false }: DeliveriesListProps) {
+// Add this helper function to format delivery type display and get color
+function formatDeliveryTypeDisplay(type: string): string {
+    return type || 'Item Purchase';
+}
+
+function getDeliveryTypeColor(type: string): string {
+    switch (type?.toLowerCase()) {
+        case 'item purchase':
+            return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+        case 'service delivery':
+            return 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800';
+        case 'item return':
+            return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
+        case 'service rework':
+            return 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 border border-teal-200 dark:border-teal-800';
+        default:
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
+    }
+}
+
+// Delivery Type Icon Component
+function DeliveryTypeIcon({ type }: { type: string }) {
+    switch (type?.toLowerCase()) {
+        case 'item purchase':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+            );
+        case 'service delivery':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            );
+        case 'item return':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+            );
+        case 'service rework':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            );
+        default:
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            );
+    }
+}
+
+export default function DeliveriesList({
+                                           deliveries,
+                                           onDeliveryClick,
+                                           onStatusChange,
+                                           viewMode,
+                                           isLoading = false
+                                       }: DeliveriesListProps) {
     if (isLoading) {
         return (
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-8">
@@ -55,13 +147,14 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, viewMode, 
         return (
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
                 {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <div className="grid grid-cols-13 gap-4 px-6 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     <div className="col-span-2">Receipt No</div>
                     <div className="col-span-2">Supplier</div>
+                    <div className="col-span-2">Type</div>
                     <div className="col-span-2">Delivery Date</div>
                     <div className="col-span-1">Items</div>
                     <div className="col-span-2">Status</div>
-                    <div className="col-span-2 text-right">Total Value</div>
+                    <div className="col-span-1 text-right">Value</div>
                     <div className="col-span-1 text-right">Actions</div>
                 </div>
 
@@ -70,7 +163,7 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, viewMode, 
                     {deliveries.map((delivery) => (
                         <div
                             key={delivery.ID}
-                            className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
+                            className="grid grid-cols-13 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
                             onClick={() => onDeliveryClick(delivery)}
                         >
                             {/* Receipt No */}
@@ -86,6 +179,14 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, viewMode, 
                             <div className="col-span-2 flex items-center">
                                 <span className="text-sm text-gray-900 dark:text-white truncate">
                                     {delivery.SUPPLIER_NAME}
+                                </span>
+                            </div>
+
+                            {/* Delivery Type */}
+                            <div className="col-span-2 flex items-center">
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDeliveryTypeColor(delivery.DELIVERY_TYPE || 'Item Purchase')}`}>
+                                    <DeliveryTypeIcon type={delivery.DELIVERY_TYPE || 'Item Purchase'} />
+                                    {formatDeliveryTypeDisplay(delivery.DELIVERY_TYPE || 'Item Purchase')}
                                 </span>
                             </div>
 
@@ -112,7 +213,7 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, viewMode, 
                             </div>
 
                             {/* Total Value */}
-                            <div className="col-span-2 flex items-center justify-end">
+                            <div className="col-span-1 flex items-center justify-end">
                                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                                     {formatCurrency(delivery.TOTAL_VALUE)}
                                 </span>
@@ -158,11 +259,13 @@ export default function DeliveriesList({ deliveries, onDeliveryClick, viewMode, 
 }
 
 // Delivery Card Component - READ ONLY status
-function DeliveryCard({ delivery, onClick, viewMode }: {
-    delivery: any;
+interface DeliveryCardProps {
+    delivery: Delivery;
     onClick: () => void;
     viewMode: 'comfortable' | 'compact';
-}) {
+}
+
+function DeliveryCard({ delivery, onClick, viewMode }: DeliveryCardProps) {
     if (viewMode === 'compact') {
         return (
             <div
@@ -171,9 +274,15 @@ function DeliveryCard({ delivery, onClick, viewMode }: {
             >
                 {/* Compact Header */}
                 <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        {delivery.RECEIPT_NO}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                            {delivery.RECEIPT_NO}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium ${getDeliveryTypeColor(delivery.DELIVERY_TYPE || 'Item Purchase')}`}>
+                            <DeliveryTypeIcon type={delivery.DELIVERY_TYPE || 'Item Purchase'} />
+                            {formatDeliveryTypeDisplay(delivery.DELIVERY_TYPE || 'Item Purchase').split(' ')[0]}
+                        </span>
+                    </div>
                     <Link
                         href={`/deliveries/${delivery.ID}/edit`}
                         onClick={(e) => e.stopPropagation()}
@@ -232,10 +341,16 @@ function DeliveryCard({ delivery, onClick, viewMode }: {
             {/* Header with Receipt No and Actions */}
             <div className="flex justify-between items-start mb-3">
                 <div>
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
-                        {delivery.RECEIPT_NO}
-                    </span>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
+                            {delivery.RECEIPT_NO}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDeliveryTypeColor(delivery.DELIVERY_TYPE || 'Item Purchase')}`}>
+                            <DeliveryTypeIcon type={delivery.DELIVERY_TYPE || 'Item Purchase'} />
+                            {formatDeliveryTypeDisplay(delivery.DELIVERY_TYPE || 'Item Purchase')}
+                        </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                         Delivered: {formatDate(delivery.DELIVERY_DATE)}
                     </div>
                 </div>
@@ -303,7 +418,11 @@ function DeliveryCard({ delivery, onClick, viewMode }: {
 }
 
 // Delivery Status Icon Component
-function DeliveryStatusIcon({ status }: { status: string }) {
+interface DeliveryStatusIconProps {
+    status: string;
+}
+
+function DeliveryStatusIcon({ status }: DeliveryStatusIconProps) {
     switch (status?.toLowerCase()) {
         case 'received':
             return (

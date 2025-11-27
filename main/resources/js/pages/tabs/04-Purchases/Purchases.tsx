@@ -24,6 +24,7 @@ export default function Purchases() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [supplierFilter, setSupplierFilter] = useState('All');
+    const [orderTypeFilter, setOrderTypeFilter] = useState('All');
     const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [purchases, setPurchases] = useState(purchaseOrdersData);
@@ -32,8 +33,9 @@ export default function Purchases() {
     const {
         filteredPurchases,
         statuses,
-        suppliers
-    } = usePurchaseFilters(purchases, searchTerm, statusFilter, supplierFilter);
+        suppliers,
+        orderTypes
+    } = usePurchaseFilters(purchases, searchTerm, statusFilter, supplierFilter, orderTypeFilter);
 
     const handleDeletePurchase = (id: number) => {
         setPurchases(prev => prev.filter(purchase => purchase.ID !== id));
@@ -88,8 +90,11 @@ export default function Purchases() {
                     setStatusFilter={setStatusFilter}
                     supplierFilter={supplierFilter}
                     setSupplierFilter={setSupplierFilter}
+                    orderTypeFilter={orderTypeFilter}
+                    setOrderTypeFilter={setOrderTypeFilter}
                     statuses={statuses}
                     suppliers={suppliers}
+                    orderTypes={orderTypes}
                     resultsCount={filteredPurchases.length}
                     viewMode={viewMode}
                     setViewMode={setViewMode}
