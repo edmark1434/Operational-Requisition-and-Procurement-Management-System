@@ -6,7 +6,7 @@ export const useRolesPermissionsFilters = (
     rolesSearchTerm: string,
     permissionsSearchTerm: string,
     roleStatusFilter: 'all' | 'active' | 'inactive' = 'all',
-    permissionCategoryFilter: 'all' | 'user' | 'data' | 'system' = 'all'
+    permissionCategoryFilter: 'all' | string = 'all'
 ) => {
     const filteredRoles = useMemo(() => {
         return roles.filter(role => {

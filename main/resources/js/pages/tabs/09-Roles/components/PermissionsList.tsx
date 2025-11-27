@@ -1,13 +1,9 @@
-import { Link } from '@inertiajs/react';
-import { getPermissionCategoryColor } from '../utils/styleutils';
-import { Edit } from 'lucide-react';
-
 interface PermissionsListProps {
     permissions: any[];
-    onPermissionClick: (permission: any) => void;
+    getPermissionsByCategory: { [key: string]: any[] };
 }
 
-export default function PermissionsList({ permissions, onPermissionClick }: PermissionsListProps) {
+export default function PermissionsList({ permissions, getPermissionsByCategory }: PermissionsListProps) {
     if (permissions.length === 0) {
         return (
             <div className="p-8 text-center">
@@ -23,56 +19,34 @@ export default function PermissionsList({ permissions, onPermissionClick }: Perm
     }
 
     return (
-        <div className="divide-y divide-sidebar-border">
-            {permissions.map((permission) => {
-                const categoryText = permission.CATEGORY.charAt(0).toUpperCase() + permission.CATEGORY.slice(1);
-
-                return (
-                    <div
-                        key={permission.ID}
-                        className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
-                        onClick={() => onPermissionClick(permission)}
-                    >
-                        {/* Permission Info */}
-                        <div className="col-span-4 flex items-center space-x-3">
-                            <div className="min-w-0">
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {permission.NAME.replace(/_/g, ' ')}
+        <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto">
+            {Object.entries(getPermissionsByCategory).map(([category, categoryPermissions]) => (
+                <div key={category}>
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-medium text-gray-900 dark:text-white">{category}</h3>
+                        <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                            {categoryPermissions.length} permissions
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                        {categoryPermissions.map(permission => (
+                            <div key={permission.PERMISSION_ID} className="flex items-center justify-between p-3 border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors">
+                                <div className="flex-1">
+                                    <div className="font-medium text-sm text-gray-900 dark:text-white">
+                                        {permission.NAME.replace(/_/g, ' ')}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {permission.DESCRIPTION}
+                                    </div>
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    #{permission.ID}
+                                <div className="text-xs text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
+                                    #{permission.PERMISSION_ID}
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Description */}
-                        <div className="col-span-3 flex items-center">
-                            <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                {permission.DESCRIPTION}
-                            </span>
-                        </div>
-
-                        {/* Category */}
-                        <div className="col-span-2 flex items-center">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPermissionCategoryColor(permission.CATEGORY)}`}>
-                                {categoryText}
-                            </span>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="col-span-3 flex items-center justify-end space-x-2">
-                            <Link
-                                href={`/roles-permissions/permission/${permission.ID}/edit`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded"
-                                title="Edit Permission"
-                            >
-                                <Edit className="w-4 h-4" />
-                            </Link>
-                        </div>
+                        ))}
                     </div>
-                );
-            })}
+                </div>
+            ))}
         </div>
     );
 }

@@ -1,12 +1,33 @@
 import { useState } from 'react';
-import { getStatusColor } from '../utils/styleutils';
+import { getStatusColor, getPermissionCategoryColor } from '../utils/styleutils';
+
+interface Permission {
+    PERMISSION_ID: string;
+    NAME: string;
+    DESCRIPTION: string;
+    CATEGORY: string;
+}
+
+interface Role {
+    RO_ID: number;
+    NAME: string;
+    DESCRIPTION: string;
+    IS_ACTIVE: boolean;
+    permissions: string[];
+    permissionCount: number;
+}
+
+interface PermissionsByCategory {
+    [key: string]: Permission[];
+}
 
 interface RoleDetailModalProps {
-    role: any;
+    role: Role | null;
     isOpen: boolean;
     onClose: () => void;
     onEdit: () => void;
     onDelete: (id: number) => void;
+    permissions: Permission[];
 }
 
 export default function RoleDetailModal({
@@ -14,7 +35,8 @@ export default function RoleDetailModal({
                                             isOpen,
                                             onClose,
                                             onEdit,
-                                            onDelete
+                                            onDelete,
+                                            permissions
                                         }: RoleDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -23,22 +45,33 @@ export default function RoleDetailModal({
 
     const handleDelete = () => {
         if (role) {
-            onDelete(role.ID);
+            onDelete(role.RO_ID);
         }
         setShowDeleteConfirm(false);
     };
+
+    // Group permissions by category for display
+    const permissionsByCategory: PermissionsByCategory = permissions.reduce((acc, permission) => {
+        if (role?.permissions.includes(permission.NAME)) {
+            if (!acc[permission.CATEGORY]) {
+                acc[permission.CATEGORY] = [];
+            }
+            acc[permission.CATEGORY].push(permission);
+        }
+        return acc;
+    }, {} as PermissionsByCategory);
 
     if (!isOpen) return null;
 
     return (
         <>
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full max-h-[90vh] flex flex-col border border-sidebar-border">
+                <div className="bg-white dark:bg-sidebar rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-sidebar-border">
                     {/* Header */}
                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Role #{role?.ID} Details
+                                {role?.NAME} Role Details
                             </h2>
                             <button
                                 onClick={onClose}
@@ -82,11 +115,29 @@ export default function RoleDetailModal({
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Permissions Count
+                                        Permissions ({role?.permissionCount})
                                     </label>
-                                    <p className="text-sm text-gray-900 dark:text-white">
-                                        {role?.PERMISSION_COUNT} permissions assigned
-                                    </p>
+                                    <div className="space-y-3 mt-2">
+                                        {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
+                                            <div key={category}>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPermissionCategoryColor(category)}`}>
+                                                        {category}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {categoryPermissions.length} permissions
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-1 ml-4">
+                                                    {categoryPermissions.map(permission => (
+                                                        <div key={permission.PERMISSION_ID} className="text-sm text-gray-700 dark:text-gray-300">
+                                                            • {permission.NAME.replace(/_/g, ' ')}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -95,18 +146,20 @@ export default function RoleDetailModal({
                     {/* Footer */}
                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                         <div className="flex justify-between items-center">
-                            <button
-                                onClick={() => setShowDeleteConfirm(true)}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Delete Role
-                            </button>
+                            {role?.RO_ID !== 8001 && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete Role
+                                </button>
+                            )}
                             <button
                                 onClick={onEdit}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 ml-auto"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

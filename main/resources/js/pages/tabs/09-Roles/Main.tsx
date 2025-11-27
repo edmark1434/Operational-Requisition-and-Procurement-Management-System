@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -8,10 +8,13 @@ import RolesPermissionsStats from './components/RolesPermissionsStats';
 import RolesList from './components/RolesList';
 import PermissionsList from './components/PermissionsList';
 import RoleDetailModal from './components/RoleDetailModal';
-import PermissionDetailModal from './components/PermissionDetailModal';
+
+// Import datasets
+import rolesData from '@/pages/datasets/role';
+import rolePermissionsData from '@/pages/datasets/role_permission';
+import permissionsData from '@/pages/datasets/permissions';
 
 // Import utilities
-import { transformRolesData, transformPermissionsData } from './utils';
 import { useRolesPermissionsFilters } from './utils/hooks/useRolesPermissionsFilters';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -21,18 +24,70 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface Role {
+    RO_ID: number;
+    NAME: string;
+    DESCRIPTION: string;
+    IS_ACTIVE: boolean;
+    permissions: string[];
+    permissionCount: number;
+}
+
+interface Permission {
+    PERMISSION_ID: string;
+    NAME: string;
+    DESCRIPTION: string;
+    CATEGORY: string;
+}
+
 export default function RolesAndPermissions() {
     const [rolesSearchTerm, setRolesSearchTerm] = useState('');
     const [permissionsSearchTerm, setPermissionsSearchTerm] = useState('');
     const [roleStatusFilter, setRoleStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-    const [permissionCategoryFilter, setPermissionCategoryFilter] = useState<'all' | 'user' | 'data' | 'system'>('all');
-    const [selectedRole, setSelectedRole] = useState<any>(null);
-    const [selectedPermission, setSelectedPermission] = useState<any>(null);
+    const [permissionCategoryFilter, setPermissionCategoryFilter] = useState<'all' | string>('all');
+    const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-    const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
 
-    const [roles, setRoles] = useState<any[]>([]);
-    const [permissions, setPermissions] = useState<any[]>([]);
+    const [roles, setRoles] = useState<Role[]>([]);
+    const [permissions, setPermissions] = useState<Permission[]>([]);
+
+    // Load data from datasets
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = () => {
+        // Transform permissions data
+        const transformedPermissions: Permission[] = permissionsData.map(perm => ({
+            PERMISSION_ID: perm.PERMISSION_ID,
+            NAME: perm.NAME,
+            DESCRIPTION: perm.DESCRIPTION,
+            CATEGORY: perm.CATEGORY
+        }));
+
+        // Transform roles data with their permissions
+        const transformedRoles: Role[] = rolesData.map(role => {
+            const rolePerms = rolePermissionsData
+                .filter(rp => rp.ROLE_ID === role.RO_ID)
+                .map(rp => {
+                    const perm = permissionsData.find(p => p.PERMISSION_ID === rp.PERM_ID);
+                    return perm ? perm.NAME : '';
+                })
+                .filter(name => name !== '');
+
+            return {
+                RO_ID: role.RO_ID,
+                NAME: role.NAME,
+                DESCRIPTION: role.DESCRIPTION,
+                IS_ACTIVE: true, // All roles are active by default
+                permissions: rolePerms,
+                permissionCount: rolePerms.length
+            };
+        });
+
+        setPermissions(transformedPermissions);
+        setRoles(transformedRoles);
+    };
 
     const {
         filteredRoles,
@@ -46,129 +101,31 @@ export default function RolesAndPermissions() {
         permissionCategoryFilter
     );
 
-    // Load initial data
-    useEffect(() => {
-        const initialRoles = [
-            {
-                ID: 1,
-                NAME: 'Administrator',
-                DESCRIPTION: 'Full system access with all permissions',
-                IS_ACTIVE: true,
-                PERMISSION_COUNT: 12,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 2,
-                NAME: 'Manager',
-                DESCRIPTION: 'Management level access with limited administrative functions',
-                IS_ACTIVE: true,
-                PERMISSION_COUNT: 8,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 3,
-                NAME: 'User',
-                DESCRIPTION: 'Standard user with basic access rights',
-                IS_ACTIVE: true,
-                PERMISSION_COUNT: 4,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 4,
-                NAME: 'Viewer',
-                DESCRIPTION: 'Read-only access to view data',
-                IS_ACTIVE: false,
-                PERMISSION_COUNT: 2,
-                CREATED_AT: new Date().toISOString()
-            }
-        ];
-
-        const initialPermissions = [
-            {
-                ID: 1,
-                NAME: 'user_create',
-                DESCRIPTION: 'Create new users in the system',
-                CATEGORY: 'user',
-                IS_ACTIVE: true,
-                ROLE_COUNT: 2,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 2,
-                NAME: 'user_edit',
-                DESCRIPTION: 'Edit existing user information',
-                CATEGORY: 'user',
-                IS_ACTIVE: true,
-                ROLE_COUNT: 2,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 3,
-                NAME: 'user_delete',
-                DESCRIPTION: 'Remove users from the system',
-                CATEGORY: 'user',
-                IS_ACTIVE: true,
-                ROLE_COUNT: 1,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 4,
-                NAME: 'data_view',
-                DESCRIPTION: 'View all system data',
-                CATEGORY: 'data',
-                IS_ACTIVE: true,
-                ROLE_COUNT: 4,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 5,
-                NAME: 'data_edit',
-                DESCRIPTION: 'Modify system data',
-                CATEGORY: 'data',
-                IS_ACTIVE: true,
-                ROLE_COUNT: 2,
-                CREATED_AT: new Date().toISOString()
-            },
-            {
-                ID: 6,
-                NAME: 'system_settings',
-                DESCRIPTION: 'Access and modify system settings',
-                CATEGORY: 'system',
-                IS_ACTIVE: true,
-                ROLE_COUNT: 1,
-                CREATED_AT: new Date().toISOString()
-            }
-        ];
-
-        setRoles(initialRoles);
-        setPermissions(initialPermissions);
-    }, []);
+    const categories = useMemo(() => {
+        const uniqueCategories = [...new Set(permissions.map(p => p.CATEGORY))];
+        return ['All', ...uniqueCategories];
+    }, [permissions]);
 
     const handleDeleteRole = (id: number) => {
-        setRoles(prev => prev.filter(role => role.ID !== id));
-        setIsRoleModalOpen(false);
+        if (id === 8001) {
+            alert('Cannot delete the Admin role!');
+            return;
+        }
+
+        if (window.confirm('Are you sure you want to delete this role?')) {
+            setRoles(prev => prev.filter(role => role.RO_ID !== id));
+            setIsRoleModalOpen(false);
+        }
     };
 
-    const handleDeletePermission = (id: number) => {
-        setPermissions(prev => prev.filter(permission => permission.ID !== id));
-        setIsPermissionModalOpen(false);
-    };
-
-    const openRoleModal = (role: any) => {
+    const openRoleModal = (role: Role) => {
         setSelectedRole(role);
         setIsRoleModalOpen(true);
     };
 
-    const openPermissionModal = (permission: any) => {
-        setSelectedPermission(permission);
-        setIsPermissionModalOpen(true);
-    };
-
     const closeAllModals = () => {
         setIsRoleModalOpen(false);
-        setIsPermissionModalOpen(false);
         setSelectedRole(null);
-        setSelectedPermission(null);
     };
 
     const clearRolesFilters = () => {
@@ -181,6 +138,17 @@ export default function RolesAndPermissions() {
         setPermissionCategoryFilter('all');
     };
 
+    const getPermissionsByCategory = useMemo(() => {
+        const categories: { [key: string]: Permission[] } = {};
+        permissions.forEach(permission => {
+            if (!categories[permission.CATEGORY]) {
+                categories[permission.CATEGORY] = [];
+            }
+            categories[permission.CATEGORY].push(permission);
+        });
+        return categories;
+    }, [permissions]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Roles & Permissions" />
@@ -189,15 +157,6 @@ export default function RolesAndPermissions() {
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Roles & Permissions</h1>
                     <div className="flex gap-3">
-                        <Link
-                            href="/roles-permissions/permission/add"
-                            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Add Permission
-                        </Link>
                         <Link
                             href="/roles-permissions/role/add"
                             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -219,7 +178,7 @@ export default function RolesAndPermissions() {
                     <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden flex flex-col">
                         <div className="border-b border-sidebar-border p-6 flex-shrink-0">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Roles</h2>
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">System Roles</h2>
                                 <div className="flex items-center gap-2">
                                     {(rolesSearchTerm || roleStatusFilter !== 'all') && (
                                         <button
@@ -279,7 +238,7 @@ export default function RolesAndPermissions() {
                     <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden flex flex-col">
                         <div className="border-b border-sidebar-border p-6 flex-shrink-0">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Permissions</h2>
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">System Permissions</h2>
                                 <div className="flex items-center gap-2">
                                     {(permissionsSearchTerm || permissionCategoryFilter !== 'all') && (
                                         <button
@@ -317,13 +276,14 @@ export default function RolesAndPermissions() {
                                 <div>
                                     <select
                                         value={permissionCategoryFilter}
-                                        onChange={(e) => setPermissionCategoryFilter(e.target.value as 'all' | 'user' | 'data' | 'system')}
+                                        onChange={(e) => setPermissionCategoryFilter(e.target.value)}
                                         className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                     >
-                                        <option value="all">All Categories</option>
-                                        <option value="user">User Permissions</option>
-                                        <option value="data">Data Permissions</option>
-                                        <option value="system">System Permissions</option>
+                                        {categories.map(category => (
+                                            <option key={category} value={category}>
+                                                {category}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -331,34 +291,23 @@ export default function RolesAndPermissions() {
                         <div className="flex-1">
                             <PermissionsList
                                 permissions={filteredPermissions}
-                                onPermissionClick={openPermissionModal}
+                                getPermissionsByCategory={getPermissionsByCategory}
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* Modals */}
+                {/* Role Modal */}
                 {isRoleModalOpen && (
                     <RoleDetailModal
                         role={selectedRole}
                         isOpen={isRoleModalOpen}
                         onClose={closeAllModals}
                         onEdit={() => {
-                            window.location.href = `/roles-permissions/role/${selectedRole.ID}/edit`;
+                            window.location.href = `/roles-permissions/role/${selectedRole?.RO_ID}/edit`;
                         }}
                         onDelete={handleDeleteRole}
-                    />
-                )}
-
-                {isPermissionModalOpen && (
-                    <PermissionDetailModal
-                        permission={selectedPermission}
-                        isOpen={isPermissionModalOpen}
-                        onClose={closeAllModals}
-                        onEdit={() => {
-                            window.location.href = `/roles-permissions/permission/${selectedPermission.ID}/edit`;
-                        }}
-                        onDelete={handleDeletePermission}
+                        permissions={permissions}
                     />
                 )}
             </div>
