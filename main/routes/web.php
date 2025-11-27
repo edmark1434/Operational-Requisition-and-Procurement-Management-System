@@ -76,6 +76,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('services/{id}/edit',[Services::class,"edit"])->name('servicesedit');
 
     Route::get('reworks',[Reworks::class,'index'])->name('reworks');
+    Route::get('reworks/add',[Reworks::class,"store"])->name('reworksadd');
+    Route::get('reworks/{id}/edit',[Reworks::class,"edit"])->name('reworksedit');
 
     Route::get('contacts',[Contact::class,'index'])->name('contacts');
     Route::get('contacts/add',[Contact::class,"store"])->name('contactsadd');
