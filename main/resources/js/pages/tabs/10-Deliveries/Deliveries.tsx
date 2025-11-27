@@ -13,6 +13,35 @@ import DeliveriesDetailModal from './DeliveriesDetailModal';
 import { transformDeliveriesData } from './utils';
 import { useDeliveriesFilters } from './hooks';
 
+// Add proper TypeScript interfaces
+interface DeliveryItem {
+    ID: number;
+    ITEM_ID: number;
+    ITEM_NAME: string;
+    QUANTITY: number;
+    UNIT_PRICE: number;
+    BARCODE?: string;
+    CATEGORY?: string;
+}
+
+interface Delivery {
+    ID: number;
+    RECEIPT_NO: string;
+    DELIVERY_DATE: string;
+    TOTAL_COST: number;
+    STATUS: string;
+    REMARKS: string;
+    RECEIPT_PHOTO: string;
+    PO_ID: number;
+    PO_REFERENCE: string;
+    SUPPLIER_ID?: number;
+    SUPPLIER_NAME: string;
+    TOTAL_ITEMS: number;
+    TOTAL_VALUE: number;
+    DELIVERY_TYPE?: string;
+    ITEMS: DeliveryItem[];
+}
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Deliveries',
@@ -23,17 +52,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Deliveries() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [typeFilter, setTypeFilter] = useState('All');
     const [dateFilter, setDateFilter] = useState('All');
-    const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
+    const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [deliveries, setDeliveries] = useState(transformDeliveriesData());
+    const [deliveries, setDeliveries] = useState<Delivery[]>(transformDeliveriesData());
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
     const {
         filteredDeliveries,
         statuses,
+        deliveryTypes,
         dateRanges
-    } = useDeliveriesFilters(deliveries, searchTerm, statusFilter, dateFilter);
+    } = useDeliveriesFilters(deliveries, searchTerm, statusFilter, dateFilter, typeFilter);
 
     const handleDeleteDelivery = (id: number) => {
         setDeliveries(prev => prev.filter(delivery => delivery.ID !== id));
@@ -61,7 +92,7 @@ export default function Deliveries() {
         // updateDeliveryStatus(deliveryId, newStatus);
     };
 
-    const openDetailModal = (delivery: any) => {
+    const openDetailModal = (delivery: Delivery) => {
         setSelectedDelivery(delivery);
         setIsDetailModalOpen(true);
     };
@@ -98,9 +129,12 @@ export default function Deliveries() {
                     setSearchTerm={setSearchTerm}
                     statusFilter={statusFilter}
                     setStatusFilter={setStatusFilter}
+                    typeFilter={typeFilter}
+                    setTypeFilter={setTypeFilter}
                     dateFilter={dateFilter}
                     setDateFilter={setDateFilter}
                     statuses={statuses}
+                    deliveryTypes={deliveryTypes}
                     dateRanges={dateRanges}
                     resultsCount={filteredDeliveries.length}
                     viewMode={viewMode}
@@ -116,7 +150,7 @@ export default function Deliveries() {
                 />
 
                 {/* View Detail Modal */}
-                {isDetailModalOpen && (
+                {isDetailModalOpen && selectedDelivery && (
                     <DeliveriesDetailModal
                         delivery={selectedDelivery}
                         isOpen={isDetailModalOpen}
