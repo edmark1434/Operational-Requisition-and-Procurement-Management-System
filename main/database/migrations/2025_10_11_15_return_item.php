@@ -18,64 +18,6 @@ return new class extends Migration
             $table->foreignId('item_id')->constrained('item')->cascadeOnDelete();
             $table->integer('quantity');
         });
-        DB::unprepared("
-            CREATE OR REPLACE FUNCTION get_return_item(p_id INT DEFAULT NULL)
-            RETURNS SETOF return_item
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                RETURN QUERY
-                SELECT * FROM return_item
-                WHERE id = COALESCE(p_id, id)
-                ORDER BY id;
-            END;
-            $$;
-        ");
-
-        DB::unprepared("
-            CREATE OR REPLACE PROCEDURE create_return_item(
-                p_return_id INT,
-                p_item_id INT,
-                p_quantity INT
-            )
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                INSERT INTO return_item (return_id, item_id, quantity)
-                VALUES (p_return_id, p_item_id, p_quantity);
-            END;
-            $$;
-        ");
-
-        DB::unprepared("
-            CREATE OR REPLACE PROCEDURE update_return_item(
-                p_id INT,
-                p_return_id INT DEFAULT NULL,
-                p_item_id INT DEFAULT NULL,
-                p_quantity INT DEFAULT NULL
-            )
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                UPDATE return_item
-                SET
-                    return_id = COALESCE(p_return_id, return_id),
-                    item_id   = COALESCE(p_item_id, item_id),
-                    quantity  = COALESCE(p_quantity, quantity)
-                WHERE id = p_id;
-            END;
-            $$;
-        ");
-
-        DB::unprepared("
-            CREATE OR REPLACE PROCEDURE delete_return_item(p_id INT)
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                DELETE FROM return_item WHERE id = p_id;
-            END;
-            $$;
-        ");
     }
 
     /**
@@ -84,9 +26,5 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('return_item');
-        DB::unprepared('DROP FUNCTION IF EXISTS get_return_item(INT);');
-        DB::unprepared('DROP PROCEDURE IF EXISTS create_return_item(INT, INT, INT);');
-        DB::unprepared('DROP PROCEDURE IF EXISTS update_return_item(INT, INT, INT, INT);');
-        DB::unprepared('DROP PROCEDURE IF EXISTS delete_return_item(INT);');
     }
 };

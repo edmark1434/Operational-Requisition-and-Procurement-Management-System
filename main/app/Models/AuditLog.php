@@ -20,15 +20,15 @@ class AuditLog extends Model
     {
         return $this->belongsTo(User::class,'user_id');
     }
-   public const TYPES = ['REQUISITION APPROVAL',
-               'REQUISITION REJECTION',
-               'REQUISITION CHANGE',
-               'SETTING CHANGE',
-               'SUPPLIER UPDATE',
-               'PERMISSION UPDATE',
-               'REQUISITION DELIVERY',
-               'RETURN REJECTION',
-               'RETURN DELIVERY',
-               'ITEM INFO CHANGE'
+   public const TYPES = ['Requisition Approval',
+               'Requisition Rejection',
+               'Requisition Change',
+               'Setting Change',
+               'Supplier Update',
+               'Permission Update',
+               'Requisition Delivery',
+               'Return Rejection',
+               'Return Delivery',
+               'Item Infor Change'
             ];
 }
