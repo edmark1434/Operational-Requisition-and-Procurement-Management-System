@@ -15,21 +15,8 @@ return new class extends Migration
         Schema::create('permission', function (Blueprint $table) {
             $table->id();
             $table->string('name', 50)->unique();
-            $table->string('category');
+            $table->string('category', 100);
         });
-
-        DB::unprepared("
-            CREATE OR REPLACE FUNCTION get_permission(p_id INT DEFAULT NULL)
-            RETURNS SETOF permission AS $$
-            BEGIN
-                RETURN QUERY
-                SELECT * FROM permission
-                WHERE id = COALESCE(p_id, id)
-                ORDER BY id;
-            END;
-            $$ LANGUAGE plpgsql;
-        ");
-
         DB::unprepared("
             CREATE OR REPLACE PROCEDURE seed_permission()
             LANGUAGE plpgsql
@@ -37,13 +24,11 @@ return new class extends Migration
             BEGIN
                 INSERT INTO permission (name, category)
                 VALUES
-
                 ('View Requisitions', 'Requisitions'),
                 ('Create Requisition', 'Requisitions'),
                 ('Approve / Reject Requisition', 'Requisitions'),
                 ('Mark Requisition for Pickup', 'Requisitions'),
                 ('Receive Requisition', 'Requisitions'),
-
                 ('View Purchase Orders', 'Purchase Orders'),
                 ('Merge Purchase Orders', 'Purchase Orders'),
                 ('Update Purchase Order', 'Purchase Orders'),
@@ -88,13 +73,13 @@ return new class extends Migration
         DB::unprepared("CALL seed_permission();");
     }
 
+
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
         Schema::dropIfExists('permission');
-        DB::unprepared("DROP FUNCTION IF EXISTS get_permission(INT);");
         DB::unprepared("DROP PROCEDURE IF EXISTS seed_permission();");
     }
 };

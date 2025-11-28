@@ -38,14 +38,24 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function DeliveriesStats({ deliveries }: DeliveriesStatsProps) {
+    // Calculate all statistics
     const totalDeliveries = deliveries.length;
-    const receivedDeliveries = deliveries.filter(d => d.STATUS === 'received').length;
-    const withReturnsDeliveries = deliveries.filter(d => d.STATUS === 'with returns').length;
     const totalValue = deliveries.reduce((sum, delivery) => sum + delivery.TOTAL_VALUE, 0);
+    const serviceDeliveries = deliveries.filter(d => d.STATUS === 'service' || d.STATUS === 'serviced').length;
+    const returnsDeliveries = deliveries.filter(d => d.STATUS === 'returned' || d.STATUS === 'returns').length;
+    const reworksDeliveries = deliveries.filter(d => d.STATUS === 'rework' || d.STATUS === 'reworks').length;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Combined first column */}
+            {/*/!* Total Value *!/*/}
+            {/*<div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">*/}
+            {/*    <div className="text-2xl font-bold text-blue-600 dark:text-green-400 whitespace-nowrap">*/}
+            {/*        {formatCurrency(totalValue)}*/}
+            {/*    </div>*/}
+            {/*    <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Estimated Total Value</div>*/}
+            {/*</div>*/}
+
+            {/* Total Deliveries */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {totalDeliveries}
@@ -53,28 +63,28 @@ export default function DeliveriesStats({ deliveries }: DeliveriesStatsProps) {
                 <div className="text-sm text-gray-600 dark:text-gray-400">Total Deliveries</div>
             </div>
 
-            {/* Total Value */}
-            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
-                    {formatCurrency(totalValue)}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Total Value</div>
-            </div>
-
-            {/* Received */}
+            {/* Service Deliveries */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {receivedDeliveries}
+                    {serviceDeliveries}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Received</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Service Deliveries</div>
             </div>
 
-            {/* With Returns */}
+            {/* Returns */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {withReturnsDeliveries}
+                    {returnsDeliveries}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">With Returns</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Returns</div>
+            </div>
+
+            {/* Reworks */}
+            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {reworksDeliveries}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Reworks</div>
             </div>
         </div>
     );

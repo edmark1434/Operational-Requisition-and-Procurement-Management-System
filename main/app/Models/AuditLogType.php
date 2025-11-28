@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\AuditLog;
 class AuditLogType extends Model
 {
-    protected $table = 'audit_log_type';
+    /** @use HasFactory<\Database\Factories\AuditLogTypeFactory> */
+    use HasFactory;
+    protected $table = 'audit_log_types';
     protected $fillable = ['name'];
-    public $timestamps = false;
-    public function auditLogs(){
-        return $this->hasMany(AuditLog::class,'type_id');
+
+    public function audit_log(){
+        $this->hasMany(AuditLog::class, 'type_id');
     }
+    public $timestamps = false;
 }

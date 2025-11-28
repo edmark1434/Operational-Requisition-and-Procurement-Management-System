@@ -51,6 +51,14 @@ class UserFactory extends Factory
                 'remember_token' => Str::random(10),
             ];
         }
+        if ($userCount === 4) {
+            return [
+                'fullname' => 'Requestor',
+                'username' => 'requestor',
+                'password' => Hash::make('req123'),
+                'remember_token' => Str::random(10),
+            ];
+        }
         return [
             'fullname' => $this->faker->firstName(),
             'username' => $this->faker->unique()->userName(),

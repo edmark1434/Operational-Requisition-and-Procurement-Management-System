@@ -53,48 +53,48 @@ export default function UserSearchAndFilters({
 
                 {/* Filters Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Role Filter */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Role
-                        </label>
-                        <select
-                            value={roleFilter}
-                            onChange={(e) => setRoleFilter(e.target.value)}
-                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                        >
-                            {availableRoles.map(role => (
-                                <option key={role} value={role}>
-                                    {role === 'All' ? 'All Roles' : role}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {/*/!* Role Filter *!/*/}
+                    {/*<div>*/}
+                    {/*    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">*/}
+                    {/*        Role*/}
+                    {/*    </label>*/}
+                    {/*    <select*/}
+                    {/*        value={roleFilter}*/}
+                    {/*        onChange={(e) => setRoleFilter(e.target.value)}*/}
+                    {/*        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"*/}
+                    {/*    >*/}
+                    {/*        {availableRoles.map(role => (*/}
+                    {/*            <option key={role} value={role}>*/}
+                    {/*                {role === 'All' ? 'All Roles' : role}*/}
+                    {/*            </option>*/}
+                    {/*        ))}*/}
+                    {/*    </select>*/}
+                    {/*</div>*/}
 
-                    {/* Status Filter */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Status
-                        </label>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                        >
-                            {statuses.map(status => (
-                                <option key={status} value={status}>
-                                    {status === 'active' ? 'Active' : status === 'inactive' ? 'Inactive' : 'All Status'}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {/*/!* Status Filter *!/*/}
+                    {/*<div>*/}
+                    {/*    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">*/}
+                    {/*        Status*/}
+                    {/*    </label>*/}
+                    {/*    <select*/}
+                    {/*        value={statusFilter}*/}
+                    {/*        onChange={(e) => setStatusFilter(e.target.value)}*/}
+                    {/*        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"*/}
+                    {/*    >*/}
+                    {/*        {statuses.map(status => (*/}
+                    {/*            <option key={status} value={status}>*/}
+                    {/*                {status === 'active' ? 'Active' : status === 'inactive' ? 'Inactive' : 'All Status'}*/}
+                    {/*            </option>*/}
+                    {/*        ))}*/}
+                    {/*    </select>*/}
+                    {/*</div>*/}
 
-                    {/* Results Count */}
-                    <div className="flex items-end">
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-900 dark:text-white">{resultsCount}</span> users found
-                        </div>
-                    </div>
+                    {/*/!* Results Count *!/*/}
+                    {/*<div className="flex items-end">*/}
+                    {/*    <div className="text-sm text-gray-600 dark:text-gray-400">*/}
+                    {/*        <span className="font-medium text-gray-900 dark:text-white">{resultsCount}</span> users found*/}
+                    {/*    </div>*/}
+                    {/*</div>*/}
                 </div>
             </div>
         </div>

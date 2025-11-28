@@ -3,9 +3,10 @@ const reworks = [
     {
         ID: 1,
         CREATED_AT: '2024-01-25',
-        STATUS: 'pending',
+        STATUS: 'Pending',
         REMARKS: 'Repair needed for faulty installation',
         PO_ID: 5,
+        DELIVERY_ID: 1,
         SUPPLIER_NAME: 'Tech Solutions Inc.',
         SERVICES: [
             {
@@ -21,9 +22,10 @@ const reworks = [
     {
         ID: 2,
         CREATED_AT: '2024-02-01',
-        STATUS: 'pending',
+        STATUS: 'Pending',
         REMARKS: 'HVAC system not cooling properly',
         PO_ID: 7,
+        DELIVERY_ID: 1,
         SUPPLIER_NAME: 'Climate Control Experts',
         SERVICES: [
             {
@@ -39,9 +41,10 @@ const reworks = [
     {
         ID: 3,
         CREATED_AT: '2024-02-05',
-        STATUS: 'pending',
+        STATUS: 'Pending',
         REMARKS: 'Plumbing leak needs rework',
         PO_ID: 9,
+        DELIVERY_ID: 1,
         SUPPLIER_NAME: 'PipeMasters Plumbing',
         SERVICES: [
             {

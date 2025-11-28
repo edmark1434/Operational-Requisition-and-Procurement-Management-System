@@ -834,7 +834,8 @@ export default function PurchaseOrderForm() {
                     formData={formData}
                     selectedSupplier={selectedSupplier}
                     selectedRequisition={selectedRequisitions}
-                    selectedItems={formData.ORDER_TYPE === 'items' ? getSelectedItems() : getSelectedServices()}
+                    selectedItems={formData.ORDER_TYPE === 'items' ? getSelectedItems() : []}
+                    selectedServices={formData.ORDER_TYPE === 'services' ? getSelectedServices() : []}
                     totalCost={calculateTotal()}
                     onConfirm={handleConfirmSubmit}
                     onCancel={() => setShowPreview(false)}

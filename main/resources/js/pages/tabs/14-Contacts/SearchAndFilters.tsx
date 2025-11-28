@@ -77,22 +77,22 @@ export default function SearchAndFilters({
                             </select>
                         </div>
 
-                        {/* Status Filter */}
-                        <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Status
-                            </label>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                            >
-                                <option value="All">All Status</option>
-                                {statuses.map(status => (
-                                    <option key={status} value={status}>{status}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {/*/!* Status Filter *!/*/}
+                        {/*<div className="w-full">*/}
+                        {/*    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">*/}
+                        {/*        Status*/}
+                        {/*    </label>*/}
+                        {/*    <select*/}
+                        {/*        value={statusFilter}*/}
+                        {/*        onChange={(e) => setStatusFilter(e.target.value)}*/}
+                        {/*        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"*/}
+                        {/*    >*/}
+                        {/*        <option value="All">All Status</option>*/}
+                        {/*        {statuses.map(status => (*/}
+                        {/*            <option key={status} value={status}>{status}</option>*/}
+                        {/*        ))}*/}
+                        {/*    </select>*/}
+                        {/*</div>*/}
 
                         {/* Results Count */}
                         <div className="flex items-end sm:col-span-2 lg:col-span-1">

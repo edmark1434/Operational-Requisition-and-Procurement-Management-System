@@ -296,106 +296,108 @@ export default function RequisitionDetailModal({
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                     Requested {isServiceRequisition ? 'Services' : 'Items'} ({totalItems})
                                 </label>
-                                <div className="border border-sidebar-border rounded-lg overflow-hidden bg-white dark:bg-sidebar-accent">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50 dark:bg-sidebar border-b border-sidebar-border">
-                                        <tr>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
-                                                #
-                                            </th>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                                {isServiceRequisition ? 'Hours' : 'Quantity'}
-                                            </th>
+                                <div className="border border-sidebar-border rounded-lg overflow-hidden bg-white dark:bg-sidebar-accent"><table className="w-full">
+                                    <thead className="bg-gray-50 dark:bg-sidebar border-b border-sidebar-border">
+                                    <tr>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                                            #
+                                        </th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                            {isServiceRequisition ? 'Hours' : 'Quantity'}
+                                        </th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {isServiceRequisition ? 'Service Name' : 'Item Name'}
+                                        </th>
+                                        {!isServiceRequisition && (
                                             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {isServiceRequisition ? 'Service Name' : 'Item Name'}
+                                                Category
                                             </th>
-                                            {!isServiceRequisition && (
-                                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                    Category
-                                                </th>
-                                            )}
-                                            {isServiceRequisition && (
-                                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                    Description
-                                                </th>
-                                            )}
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                                Unit Price
-                                            </th>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                                Total
-                                            </th>
-                                        </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-sidebar-border">
-                                        {isServiceRequisition ? (
-                                            // Services Table
-                                            requisition.SERVICES?.map((service: any, index: number) => (
-                                                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
-                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                                        <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
-                                                            {index + 1}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                        {service.QUANTITY}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                                        {service.NAME}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                        {service.DESCRIPTION}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                        ${service.UNIT_PRICE || '0.00'}/hr
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
-                                                        ${service.TOTAL || '0.00'}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            // Items Table
-                                            requisition.ITEMS.map((item: any, index: number) => (
-                                                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
-                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                                        <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
-                                                            {index + 1}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                        {item.QUANTITY}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                                        {item.NAME}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-sidebar border border-sidebar-border">
-                                                            {item.CATEGORY}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                        ${item.UNIT_PRICE || '0.00'}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
-                                                        ${item.TOTAL || '0.00'}
-                                                    </td>
-                                                </tr>
-                                            ))
                                         )}
-                                        </tbody>
-                                        {/* Total Row - Fixed positioning */}
-                                        <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
-                                        <tr>
-                                            <td colSpan={totalColSpan - 1} className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white text-right">
-                                                Grand Total:
-                                            </td>
-                                            <td className="py-3 px-4 text-lg font-bold text-green-600 dark:text-green-400">
-                                                ${requisition.TOTAL_AMOUNT?.toFixed(2) || '0.00'}
-                                            </td>
-                                        </tr>
-                                        </tfoot>
-                                    </table>
+                                        {isServiceRequisition && (
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                Description
+                                            </th>
+                                        )}
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                            Unit Price
+                                        </th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                            Total
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-sidebar-border">
+                                    {isServiceRequisition ? (
+                                        // Services Table
+                                        requisition.SERVICES?.map((service: any, index: number) => (
+                                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
+                                                <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
+                            {index + 1}
+                        </span>
+                                                </td>
+                                                <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                    {service.QUANTITY}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                    {service.NAME}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                    {service.DESCRIPTION}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                    ${service.UNIT_PRICE || '0.00'}/hr
+                                                </td>
+                                                <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
+                                                    ${service.TOTAL || '0.00'}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        // Items Table
+                                        requisition.ITEMS.map((item: any, index: number) => (
+                                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
+                                                <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
+                            {index + 1}
+                        </span>
+                                                </td>
+                                                <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                    {item.QUANTITY}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                    {item.NAME}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-sidebar border border-sidebar-border">
+                            {item.CATEGORY}
+                        </span>
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                                    ${item.UNIT_PRICE || '0.00'}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
+                                                    ${item.TOTAL || '0.00'}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                    </tbody>
+                                    {/* Total Row - Fixed positioning */}
+                                    <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                    <tr>
+                                        <td colSpan={isServiceRequisition ? 5 : 4} className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white text-left">
+                                            Grand Total:
+                                        </td>
+                                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                                            {/* Empty cell for Unit Price column */}
+                                        </td>
+                                        <td className="py-3 px-4 text-lg font-bold text-green-600 dark:text-green-400">
+                                            ${requisition.TOTAL_AMOUNT?.toFixed(2) || '0.00'}
+                                        </td>
+                                    </tr>
+                                    </tfoot>
+                                </table>
                                 </div>
                             </div>
                         </div>

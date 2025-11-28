@@ -57,15 +57,6 @@ export default function MakeDetailModal({
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Status
-                                    </label>
-                                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
-                                        <span className="w-2 h-2 rounded-full bg-current"></span>
-                                        {statusText}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Make Name
                                     </label>
                                     <p className="text-lg text-gray-900 dark:text-white font-semibold">

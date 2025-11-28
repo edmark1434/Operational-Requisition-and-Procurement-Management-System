@@ -5,27 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use App\Models\RequisitionItem;
+use App\Models\PurchaseOrder;
+use App\Models\RequisitionService;
 class Requisition extends Model
 {
     use HasFactory;
     protected $table = 'requisition';
     protected $fillable = ['status', 'remarks', 'user_id','requestor','notes', 'priority'];
     public $timestamps = true;
-    public const STATUSES = [
-        'Pending',            // requisition is created
-        'Rejected',           // after rejection
-        'Approved',           // after approval
-        'Partially Approved', // approved but PO is edited e.g. 5 instead of 6 items
-        'Ordered',            // when PO is issued, skipped when inventory has the items
-        'Delivered',          // delivery is created, skipped when inventory has the items
-        'Awaiting Pickup',    // items are ready, requestor has to claim
-        'Received',           // encoder marks it received
-    ];
-
+    public const TYPES = ['Items','Services'];
+    public const STATUS = ['Pending', 'Rejected', 'Approved', 'Partially Approved', 'Ordered','Delivered','Awaiting Pickup', 'Çompleted'];
     public function user(){
         return $this->belongsTo(User::class,'user_id');
     }
-    public function requisitionItems(){
+    public function requisition_item(){
         return $this->hasMany(RequisitionItem::class,'req_id');
+    }
+    public function purchase_order(){
+        return $this->hasMany(PurchaseOrder::class,'req_id');
+    }
+    public function requisition_service(){
+        $this->hasMany(RequisitionService::class, 'req_id');
     }
 }

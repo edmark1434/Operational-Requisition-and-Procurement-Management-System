@@ -88,15 +88,15 @@ export default function RoleDetailModal({
                     <div className="flex-1 overflow-y-auto">
                         <div className="p-6 space-y-6">
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Status
-                                    </label>
-                                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
-                                        <span className="w-2 h-2 rounded-full bg-current"></span>
-                                        {statusText}
-                                    </div>
-                                </div>
+                                {/*<div>*/}
+                                {/*    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">*/}
+                                {/*        Status*/}
+                                {/*    </label>*/}
+                                {/*    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(status)}`}>*/}
+                                {/*        <span className="w-2 h-2 rounded-full bg-current"></span>*/}
+                                {/*        {statusText}*/}
+                                {/*    </div>*/}
+                                {/*</div>*/}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Role Name

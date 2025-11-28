@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import reworksData from '@/pages/datasets/reworks';
 import serviceData from '@/pages/datasets/service';
 import reworkServiceData from '@/pages/datasets/rework_service';
+import deliveryData from '@/pages/datasets/delivery';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -23,26 +24,29 @@ export default function ReworkAdd({ auth }: { auth: any }) {
         CREATED_AT: new Date().toISOString().split('T')[0],
         STATUS: 'pending',
         REMARKS: '',
-        PO_ID: '',
+        DELIVERY_ID: '',
         SUPPLIER_NAME: '',
         SERVICES: [] as any[]
     });
 
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [availableServices, setAvailableServices] = useState<any[]>([]);
+    const [availableDeliveries, setAvailableDeliveries] = useState<any[]>([]);
     const [selectedServiceId, setSelectedServiceId] = useState('');
-    const [serviceQuantity, setServiceQuantity] = useState(1);
 
     useEffect(() => {
         // Load available services
         setAvailableServices(serviceData.filter(service => service.IS_ACTIVE));
+
+        // Load available deliveries
+        setAvailableDeliveries(deliveryData);
     }, []);
 
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
 
-        if (!formData.PO_ID.trim()) {
-            newErrors.PO_ID = 'PO ID is required';
+        if (!formData.DELIVERY_ID.trim()) {
+            newErrors.DELIVERY_ID = 'Please select a delivery';
         }
 
         if (!formData.SUPPLIER_NAME.trim()) {
@@ -61,6 +65,20 @@ export default function ReworkAdd({ auth }: { auth: any }) {
         return Object.keys(newErrors).length === 0;
     };
 
+    const handleDeliveryChange = (deliveryId: string) => {
+        const selectedDelivery = availableDeliveries.find(d => d.ID.toString() === deliveryId);
+
+        setFormData(prev => ({
+            ...prev,
+            DELIVERY_ID: deliveryId,
+            SUPPLIER_NAME: selectedDelivery?.SUPPLIER_NAME || ''
+        }));
+
+        if (errors.DELIVERY_ID) {
+            setErrors(prev => ({ ...prev, DELIVERY_ID: '' }));
+        }
+    };
+
     const handleAddService = () => {
         if (!selectedServiceId) return;
 
@@ -70,7 +88,7 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                 SERVICE_ID: parseInt(selectedServiceId),
                 NAME: service.NAME,
                 DESCRIPTION: service.DESCRIPTION,
-                QUANTITY: serviceQuantity,
+                QUANTITY: 1,
                 UNIT_PRICE: service.HOURLY_RATE
             };
 
@@ -80,7 +98,6 @@ export default function ReworkAdd({ auth }: { auth: any }) {
             }));
 
             setSelectedServiceId('');
-            setServiceQuantity(1);
 
             if (errors.SERVICES) {
                 setErrors(prev => ({ ...prev, SERVICES: '' }));
@@ -106,7 +123,7 @@ export default function ReworkAdd({ auth }: { auth: any }) {
             const reworkDataToAdd = {
                 ID: newReworkId,
                 ...formData,
-                PO_ID: parseInt(formData.PO_ID),
+                DELIVERY_ID: parseInt(formData.DELIVERY_ID),
                 CREATED_AT: formData.CREATED_AT
             };
 
@@ -136,13 +153,12 @@ export default function ReworkAdd({ auth }: { auth: any }) {
             CREATED_AT: new Date().toISOString().split('T')[0],
             STATUS: 'pending',
             REMARKS: '',
-            PO_ID: '',
+            DELIVERY_ID: '',
             SUPPLIER_NAME: '',
             SERVICES: []
         });
         setErrors({});
         setSelectedServiceId('');
-        setServiceQuantity(1);
     };
 
     const handleCancel = () => {
@@ -203,20 +219,26 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        PO ID <span className="text-red-500">*</span>
+                                                        Delivery <span className="text-red-500">*</span>
                                                     </label>
-                                                    <input
-                                                        type="number"
+                                                    <select
                                                         required
-                                                        value={formData.PO_ID}
-                                                        onChange={(e) => handleInputChange('PO_ID', e.target.value)}
+                                                        value={formData.DELIVERY_ID}
+                                                        onChange={(e) => handleDeliveryChange(e.target.value)}
                                                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                                            errors.PO_ID ? 'border-red-500' : 'border-sidebar-border'
+                                                            errors.DELIVERY_ID ? 'border-red-500' : 'border-sidebar-border'
                                                         }`}
-                                                        placeholder="Enter PO ID"
-                                                    />
-                                                    {errors.PO_ID && (
-                                                        <p className="text-red-500 text-xs mt-1">{errors.PO_ID}</p>
+                                                    >
+                                                        <option value="">Select a delivery</option>
+                                                        {availableDeliveries.map(delivery => (
+                                                            <option key={delivery.ID} value={delivery.ID}>
+                                                                Delivery #{delivery.ID} - {delivery.SUPPLIER_NAME}
+                                                                {delivery.PO_ID && ` (PO: ${delivery.PO_ID})`}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {errors.DELIVERY_ID && (
+                                                        <p className="text-red-500 text-xs mt-1">{errors.DELIVERY_ID}</p>
                                                     )}
                                                 </div>
 
@@ -246,7 +268,8 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                     className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
                                                         errors.SUPPLIER_NAME ? 'border-red-500' : 'border-sidebar-border'
                                                     }`}
-                                                    placeholder="Enter supplier name"
+                                                    placeholder="Supplier name will auto-populate when delivery is selected"
+                                                    readOnly
                                                 />
                                                 {errors.SUPPLIER_NAME && (
                                                     <p className="text-red-500 text-xs mt-1">{errors.SUPPLIER_NAME}</p>
@@ -297,7 +320,7 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                             </h3>
 
                                             {/* Add Service Form */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         Service
@@ -314,19 +337,6 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Quantity
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        value={serviceQuantity}
-                                                        onChange={(e) => setServiceQuantity(parseInt(e.target.value) || 1)}
-                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                    />
                                                 </div>
 
                                                 <div className="flex items-end">

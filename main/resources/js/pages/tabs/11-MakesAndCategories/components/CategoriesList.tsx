@@ -39,16 +39,13 @@ export default function CategoriesList({ categories, onCategoryClick }: Categori
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                                     {category.NAME}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    #{category.CAT_ID}
-                                </div>
                             </div>
                         </div>
 
                         {/* Description */}
                         <div className="col-span-3 flex items-center">
                             <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                {category.DESCRIPTION}
+                                Click to View
                             </span>
                         </div>
 

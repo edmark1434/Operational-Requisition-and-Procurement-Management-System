@@ -7,6 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Setting extends Model
 {
     protected $table = 'setting';
-    protected $fillable = ['category','key', 'value','description'];
+    protected $fillable = ['key', 'value','description'];
     public $timestamps = false;
 }

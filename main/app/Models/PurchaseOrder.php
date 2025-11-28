@@ -4,7 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\Vendor;
+use App\Models\OrderLink;
+use App\Models\Requisition;
+use App\Models\Delivery;
+use App\Models\DeliveryItem;
+use App\Models\OrderService;
 class PurchaseOrder extends Model
 {
     use HasFactory;
@@ -12,32 +17,24 @@ class PurchaseOrder extends Model
     protected $table = 'purchase_order';
     protected $primaryKey = 'id';
     public $timestamps = false; // since you DO NOT have updated_at
-
+    public const TYPES = ['Items','Services'];
     /**
      * Available payment types (Your migration uses this)
      */
-    public const PAYMENT_TYPE = ['CASH', 'STORE CREDIT', 'DISBURSEMENT'];
-    public const STATUSES = [
-        'Pending',            // automatically when req is approved
-        'Merged',             // when merged with other POs
-        'Issued',             // when manager sends PO to supplier
-        'Rejected',           // when PO is rejected by supplier
-        'Delivered',          // when delivery is created
-        'Partially Delivered',// when delivery is created, but return is also created
-        'Received',           // when encoder marks it received via requisition
-    ];
-
+    public const PAYMENT_TYPE = ['Cash', 'Store Credit', 'Disbursement'];
+    public const STATUS = ['Pending','Merged','Issued','Rejected','Cancelled','Delivered','Received'];
     /**
      * Mass assignable fields
      */
     protected $fillable = [
+        'type',
         'references_no',
         'total_cost',
         'payment_type',
         'status',
         'remarks',
         'req_id',
-        'supplier_id',
+        'vendor_id',
         'created_at'
     ];
 
@@ -46,35 +43,38 @@ class PurchaseOrder extends Model
      */
     public function requisition()
     {
-        return $this->belongsTo(\App\Models\Requisition::class, 'req_id');
+        return $this->belongsTo(Requisition::class, 'req_id');
     }
 
     public function supplier()
     {
-        return $this->belongsTo(\App\Models\Supplier::class, 'supplier_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
     public function items()
     {
-        return $this->hasMany(\App\Models\OrderItem::class, 'po_id');
+        return $this->hasMany(OrderItem::class, 'po_id');
     }
 
-    public function fromLinks()
+    public function linksFrom()
     {
-        return $this->hasMany(\App\Models\OrderLink::class, 'po_from_id');
+        return $this->hasMany(OrderLink::class, 'po_from_id');
     }
 
-    public function toLinks()
+    public function linksTo()
     {
-        return $this->hasMany(\App\Models\OrderLink::class, 'po_to_id');
+        return $this->hasMany(OrderLink::class, 'po_to_id');
     }
 
-    public function deliveries()
+    public function delivery()
     {
-        return $this->hasMany(\App\Models\Delivery::class, 'po_id');
+        return $this->hasMany(Delivery::class, 'po_id');
     }
-    public function deliveryItems()
+    public function deliveryItem()
     {
-        return $this->hasMany(\App\Models\DeliveryItem::class, 'po_id');
+        return $this->hasMany(DeliveryItem::class, 'po_id');
+    }
+    public function order_service(){
+        $this->hasMany(OrderService::class, 'po_id');
     }
 }

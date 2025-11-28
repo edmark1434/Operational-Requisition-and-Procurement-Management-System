@@ -458,13 +458,13 @@ export default function AuditLogs() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={exportLogs}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
-                        >
-                            <Download className="w-4 h-4" />
-                            Export
-                        </button>
+                        {/*<button*/}
+                        {/*    onClick={exportLogs}*/}
+                        {/*    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"*/}
+                        {/*>*/}
+                        {/*    <Download className="w-4 h-4" />*/}
+                        {/*    Export*/}
+                        {/*</button>*/}
                         <button
                             onClick={refreshLogs}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
