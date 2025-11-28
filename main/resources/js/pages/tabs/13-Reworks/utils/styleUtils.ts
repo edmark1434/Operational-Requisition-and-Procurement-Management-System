@@ -19,8 +19,8 @@ export const getPriceLevelColor = (rate: number) => {
     if (rate < 100) {
         return 'text-green-600 dark:text-green-400';
     } else if (rate < 500) {
-        return 'text-orange-600 dark:text-orange-400';
+        return 'text-green-600 dark:text-green-400';
     } else {
-        return 'text-red-600 dark:text-red-400';
+        return 'text-green-600 dark:text-green-400';
     }
 };

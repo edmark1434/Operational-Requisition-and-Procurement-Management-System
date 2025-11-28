@@ -37,7 +37,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [availableServices, setAvailableServices] = useState<any[]>([]);
     const [selectedServiceId, setSelectedServiceId] = useState('');
-    const [serviceQuantity, setServiceQuantity] = useState(1);
+    // const [serviceQuantity, setServiceQuantity] = useState(1);
 
     // Load rework data on component mount
     useEffect(() => {
@@ -85,7 +85,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                 SERVICE_ID: parseInt(selectedServiceId),
                 NAME: service.NAME,
                 DESCRIPTION: service.DESCRIPTION,
-                QUANTITY: serviceQuantity,
+                // QUANTITY: serviceQuantity,
                 UNIT_PRICE: service.HOURLY_RATE
             };
 
@@ -95,7 +95,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
             }));
 
             setSelectedServiceId('');
-            setServiceQuantity(1);
+            // setServiceQuantity(1);
         }
     };
 
@@ -300,7 +300,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                                 </h3>
 
                                                 {/* Add Service Form */}
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                             Service
@@ -319,18 +319,18 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                                         </select>
                                                     </div>
 
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            Quantity
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={serviceQuantity}
-                                                            onChange={(e) => setServiceQuantity(parseInt(e.target.value) || 1)}
-                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                        />
-                                                    </div>
+                                                    {/*<div>*/}
+                                                    {/*    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">*/}
+                                                    {/*        Quantity*/}
+                                                    {/*    </label>*/}
+                                                    {/*    <input*/}
+                                                    {/*        type="number"*/}
+                                                    {/*        min="1"*/}
+                                                    {/*        value={serviceQuantity}*/}
+                                                    {/*        onChange={(e) => setServiceQuantity(parseInt(e.target.value) || 1)}*/}
+                                                    {/*        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"*/}
+                                                    {/*    />*/}
+                                                    {/*</div>*/}
 
                                                     <div className="flex items-end">
                                                         <button
