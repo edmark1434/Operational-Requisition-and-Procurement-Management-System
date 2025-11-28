@@ -40,31 +40,31 @@ export default function RolesList({ roles, onRoleClick }: RolesListProps) {
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                                     {role.NAME}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    #{role.ID}
-                                </div>
+                                {/*<div className="text-xs text-gray-500 dark:text-gray-400">*/}
+                                {/*    #{role.ID}*/}
+                                {/*</div>*/}
                             </div>
                         </div>
 
-                        {/* Status */}
-                        <div className="col-span-3 flex items-center">
-                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                {statusText}
-                            </div>
-                        </div>
+                        {/*/!* Status *!/*/}
+                        {/*<div className="col-span-3 flex items-center">*/}
+                        {/*    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>*/}
+                        {/*        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>*/}
+                        {/*        {statusText}*/}
+                        {/*    </div>*/}
+                        {/*</div>*/}
 
                         {/* Permissions Count */}
-                        <div className="col-span-3 flex items-center">
+                        <div className="col-span-4 flex items-center">
                             <span className="text-sm text-gray-500 dark:text-gray-400">
-                                {role.PERMISSION_COUNT} permissions
+                                {role.PERMISSION_COUNT} Click to View Permissions
                             </span>
                         </div>
 
                         {/* Actions */}
-                        <div className="col-span-2 flex items-center justify-end space-x-2">
+                        <div className="col-span-4 flex items-center justify-end space-x-2">
                             <Link
-                                href={`/roles-permissions/role/${role.ID}/edit`}
+                                href={`/roles/${role.ID}/edit`}
                                 onClick={(e) => e.stopPropagation()}
                                 className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded"
                                 title="Edit Role"

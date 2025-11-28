@@ -12,4 +12,12 @@ class Roles extends Controller
     {
         return Inertia::render($this->base_path .'/Main');
     }
+    public function store(){
+        return Inertia::render($this->base_path .'/components/RoleAdd');
+    }
+    public function edit($id){
+        return Inertia::render($this->base_path .'/components/RoleEdit', [
+            'roleId' => (int)$id
+        ]);
+    }
 }
