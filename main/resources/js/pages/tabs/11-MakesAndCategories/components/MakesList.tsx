@@ -40,24 +40,24 @@ export default function MakesList({ makes, onMakeClick }: MakesListProps) {
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                                     {make.NAME}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    #{make.ID}
-                                </div>
+                                {/*<div className="text-xs text-gray-500 dark:text-gray-400">*/}
+                                {/*    #{make.ID}*/}
+                                {/*</div>*/}
                             </div>
                         </div>
 
-                        {/* Status */}
-                        <div className="col-span-3 flex items-center">
-                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                {statusText}
-                            </div>
-                        </div>
+                        {/*/!* Status *!/*/}
+                        {/*<div className="col-span-3 flex items-center">*/}
+                        {/*    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>*/}
+                        {/*        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>*/}
+                        {/*        {statusText}*/}
+                        {/*    </div>*/}
+                        {/*</div>*/}
 
                         {/* Last Updated */}
-                        <div className="col-span-3 flex items-center">
+                        <div className="col-span-6 flex items-center">
                             <span className="text-sm text-gray-500 dark:text-gray-400">
-                                Updated recently
+                                Click to View
                             </span>
                         </div>
 
