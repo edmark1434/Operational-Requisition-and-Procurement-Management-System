@@ -6,10 +6,7 @@ interface User {
     id: number;
     fullname: string;
     username: string;
-    role: string;
-    role_description: string;
     created_at: string;
-    updated_at: string;
     status: 'active' | 'inactive';
 }
 
@@ -46,11 +43,9 @@ export default function UsersList({ users, isLoading, onUserClick }: UsersListPr
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <div className="col-span-3">User</div>
-                <div className="col-span-2">Role</div>
-                <div className="col-span-2">Username</div>
-                <div className="col-span-2">Date Created</div>
-                <div className="col-span-2">Date Updated</div>
-                <div className="col-span-1">Actions</div>
+                <div className="col-span-3">Username</div>
+                <div className="col-span-3">Date Created</div>
+                <div className="col-span-3">Actions</div>
             </div>
 
             {/* Table Body */}
@@ -81,22 +76,10 @@ export default function UsersList({ users, isLoading, onUserClick }: UsersListPr
                                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                     {user.fullname}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    {user.role_description}
-                                </div>
                             </div>
                         </div>
 
-                        {/* Role */}
-                        <div className="col-span-2 flex items-center">
-                            <div className="flex items-center space-x-2">
-                                <Shield className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-900 dark:text-white capitalize">
-                                    {user.role.toLowerCase()}
-                                </span>
-                            </div>
-                        </div>
-
+                     
                         {/* Username */}
                         <div className="col-span-2 flex items-center">
                             <span className="text-sm text-gray-600 dark:text-gray-300 font-mono">
@@ -114,15 +97,7 @@ export default function UsersList({ users, isLoading, onUserClick }: UsersListPr
                             </div>
                         </div>
 
-                        {/* Date Updated */}
-                        <div className="col-span-2 flex items-center">
-                            <div className="flex items-center space-x-2">
-                                <Calendar className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">
-                                    {new Date(user.updated_at).toLocaleDateString()}
-                                </span>
-                            </div>
-                        </div>
+                        
 
                         {/* Actions */}
                         <div className="col-span-1 flex items-center justify-end">

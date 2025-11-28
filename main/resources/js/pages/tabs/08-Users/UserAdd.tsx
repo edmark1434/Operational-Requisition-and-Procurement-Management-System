@@ -1,9 +1,10 @@
 // UserAdd.tsx
 import AppLayout from '@/layouts/app-layout';
-import { users } from '@/routes';
+import { userCreate, users } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { Toaster, toast } from 'sonner';
 
 // Import datasets
 import roles from '@/pages/datasets/role';
@@ -11,6 +12,11 @@ import userRoles from '@/pages/datasets/user_role';
 import mockUsers from '@/pages/datasets/user';
 import permissions from '@/pages/datasets/permissions';
 
+interface Prop{
+    roles: any[],
+    permissions: any[],
+    role_perm: any[]
+}
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Users',
@@ -22,7 +28,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function UserAdd() {
+export default function UserAdd({roles,permissions,role_perm}:Prop) {
     const [formData, setFormData] = useState({
         FIRST_NAME: '',
         MIDDLE_NAME: '',
@@ -37,6 +43,12 @@ export default function UserAdd() {
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [showPreview, setShowPreview] = useState(false);
 
+    const getPermissionsByRole = (roleId: string) => {
+    if (!roleId) return [];
+    return role_perm
+        .filter(rp => String(rp.ROLE_ID) === String(roleId))
+        .map(rp => String(rp.PERM_ID));
+};
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
 
@@ -88,15 +100,24 @@ export default function UserAdd() {
     };
 
     const handleInputChange = (field: string, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+    setFormData(prev => {
+        if (field === "ROLE_ID") {
+            const autoPerms = getPermissionsByRole(value);
+            console.log(autoPerms);
+            return {
+                ...prev,
+                ROLE_ID: value,
+                PERMISSIONS: autoPerms
+            };
 
-        if (errors[field]) {
-            setErrors(prev => ({ ...prev, [field]: '' }));
         }
-    };
+        return { ...prev, [field]: value };
+    });
+
+    if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+};
 
     const handlePermissionChange = (permissionId: string, isChecked: boolean) => {
         setFormData(prev => {
@@ -126,38 +147,35 @@ export default function UserAdd() {
         }
     };
 
-    const handleConfirmSubmit = () => {
-        const newUserId = Math.max(...mockUsers.map(user => user.US_ID), 0) + 1;
-        const newUserRoleId = Math.max(...userRoles.map(ur => ur.UR_ID), 0) + 1;
+    const handleConfirmSubmit = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault(); // prevent default if called from a button
 
-        const userData = {
-            US_ID: newUserId,
-            FULLNAME: getFullName(),
-            NAME: formData.USERNAME,
-            PASSWORD: formData.PASSWORD,
-            DATE_CREATED: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            DATE_UPDATED: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            STATUS: 'active'
-        };
-
-        const userRoleData = {
-            UR_ID: newUserRoleId,
-            US_ID: newUserId,
-            RO_ID: parseInt(formData.ROLE_ID)
-        };
-
-        const userPermissionsData = formData.PERMISSIONS.map(permissionId => ({
-            US_ID: newUserId,
-            PERMISSION_ID: permissionId
-        }));
-
-        console.log('New User Data:', userData);
-        console.log('New User Role Data:', userRoleData);
-        console.log('New User Permissions Data:', userPermissionsData);
-
-        alert('User added successfully!');
-        router.visit(users().url);
+    // Build the payload
+    const payload = {
+        fullname: getFullName(),
+        username: formData.USERNAME,
+        password: formData.PASSWORD,
+        role_id: formData.ROLE_ID,
+        permissions: formData.PERMISSIONS, // array of permission IDs as strings
     };
+
+    router.post(userCreate(), payload, {
+        onSuccess: () => {
+            toast('User added successfully!');
+            setTimeout(() => {
+                router.visit(users().url); // redirect to users list
+            }, 2000);
+        },
+        onError: (errors) => {
+            const normalizedErrors: { [key: string]: string } = {};
+            Object.keys(errors).forEach(key => {
+                normalizedErrors[key.toUpperCase()] = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+            });
+            setErrors(normalizedErrors);
+        },
+    });
+    setShowPreview(false);
+};
 
     const handleReset = () => {
         setFormData({
@@ -429,7 +447,7 @@ export default function UserAdd() {
                                                                 <input
                                                                     type="checkbox"
                                                                     id={`permission-${permission.PERMISSION_ID}`}
-                                                                    checked={formData.PERMISSIONS.includes(permission.PERMISSION_ID)}
+                                                                    checked={formData.PERMISSIONS.includes(String(permission.PERMISSION_ID))}
                                                                     onChange={(e) => handlePermissionChange(permission.PERMISSION_ID, e.target.checked)}
                                                                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                                                 />
@@ -488,7 +506,7 @@ export default function UserAdd() {
                         </div>
                     </div>
                 </div>
-
+                <Toaster/>
                 {/* Preview Modal */}
                 {showPreview && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -610,7 +628,7 @@ export default function UserAdd() {
                                         {formData.PERMISSIONS.length > 0 ? (
                                             <ul className="text-sm text-gray-900 dark:text-white space-y-1">
                                                 {formData.PERMISSIONS.map(permissionId => {
-                                                    const permission = permissions.find(p => p.PERMISSION_ID === permissionId);
+                                                    const permission = permissions.find(p => p.PERMISSION_ID === parseInt(permissionId));
                                                     return permission ? (
                                                         <li key={permissionId} className="flex items-center">
                                                             <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">

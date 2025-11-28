@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('password', 255);
             $table->rememberToken();
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
+            $table->boolean('is_active')->default(true);
         });
         DB::unprepared("
             CREATE OR REPLACE FUNCTION get_users(p_id INT DEFAULT NULL,p_username VARCHAR DEFAULT NULL)

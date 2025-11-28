@@ -1,33 +1,38 @@
 // Users.tsx
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 
 // Import components
 import UserStats from './UserStats';
 import UserSearchAndFilters from './UserSearchAndFilters';
 import UsersList from './UsersList';
 import UserDetailModal from './UserDetailModal';
-
 // Import all datasets
 import mockUsers from '../../datasets/user';
 import userRoles from '../../datasets/user_role';
 import roles from '../../datasets/role';
 import rolePermissions from '../../datasets/role_permission';
+import { usereditStatus } from '@/routes';
 
 interface User {
     id: number;
     fullname: string;
     username: string;
-    role: string;
-    role_description: string;
     created_at: string;
-    updated_at: string;
     status: 'active' | 'inactive';
 }
-
+interface Prop{
+    usersList: any[],
+    permissions: any[],
+    rolesList: any[],
+    role_perm: any[],
+    success: boolean,
+    message: string
+}
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Users',
@@ -35,7 +40,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Users() {
+export default function Users({usersList,permissions,rolesList,role_perm,success,message}:Prop) {
     const [users, setUsers] = useState<User[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -48,8 +53,10 @@ export default function Users() {
     // Load users on component mount
     useEffect(() => {
         loadUsers();
-    }, []);
-
+        if (success) {
+            toast(message);
+        }
+    }, []); 
     // Filter users based on search and filters
     useEffect(() => {
         const filtered = users.filter(user => {
@@ -57,10 +64,9 @@ export default function Users() {
                 user.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 user.username.toLowerCase().includes(searchTerm.toLowerCase());
 
-            const matchesRole = roleFilter === 'All' || user.role === roleFilter;
             const matchesStatus = statusFilter === 'All' || user.status === statusFilter;
 
-            return matchesSearch && matchesRole && matchesStatus;
+            return matchesSearch && matchesStatus;
         });
         setFilteredUsers(filtered);
     }, [users, searchTerm, roleFilter, statusFilter]);
@@ -76,31 +82,24 @@ export default function Users() {
     };
 
     const transformUserData = (): User[] => {
-        return mockUsers.map(user => {
+        return usersList.map(user => {
             // Find user roles
-            const userRoleRelations = userRoles.filter(ur => ur.US_ID === user.US_ID);
 
             // Get primary role (first role found, or default to 'User')
-            const primaryRole = userRoleRelations.length > 0
-                ? roles.find(role => role.RO_ID === userRoleRelations[0].RO_ID)
-                : null;
-
+           
             return {
-                id: user.US_ID,
-                fullname: user.FULLNAME,
-                username: user.NAME,
-                role: primaryRole ? primaryRole.NAME : 'User',
-                role_description: primaryRole ? primaryRole.DESCRIPTION : 'Basic user access',
-                created_at: user.DATE_CREATED,
-                updated_at: user.DATE_UPDATED, // Use DATE_UPDATED from dataset
-                status: Math.random() > 0.3 ? 'active' : 'inactive' as 'active' | 'inactive'
+                id: user.id,
+                fullname: user.fullname,
+                username: user.username,
+                created_at: user.created_at,
+                status: user.status
             };
         });
     };
 
     // Get available roles for filter dropdown
     const getAvailableRoles = () => {
-        const uniqueRoles = [...new Set(users.map(user => user.role))];
+        const uniqueRoles = [...new Set(rolesList.map(role => role.NAME))];
         return ['All', ...uniqueRoles];
     };
 
@@ -120,11 +119,14 @@ export default function Users() {
                 user.id === id ? {
                     ...user,
                     status: newStatus,
-                    updated_at: new Date().toISOString().split('T')[0] + ' ' +
-                        new Date().toTimeString().split(' ')[0]
                 } : user
             )
         );
+        router.put(usereditStatus(id),{newStatus}, {
+            onSuccess: () => {
+                toast('Status updated successfully!');
+            }
+        })
     };
 
     return (
@@ -147,7 +149,7 @@ export default function Users() {
 
                 {/* Stats */}
                 <UserStats users={users} />
-
+                <Toaster/>
                 {/* Search and Filters */}
                 <UserSearchAndFilters
                     searchTerm={searchTerm}

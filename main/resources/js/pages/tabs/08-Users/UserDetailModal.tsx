@@ -18,7 +18,6 @@ export default function UserDetailModal({
                                         }: UserDetailModalProps) {
     const [showStatusConfirm, setShowStatusConfirm] = useState(false);
     const [pendingStatus, setPendingStatus] = useState<'active' | 'inactive' | null>(null);
-
     const handleEdit = () => {
         router.get(`/users/${user.id}/edit`);
         onClose();
@@ -49,18 +48,7 @@ export default function UserDetailModal({
             : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
     };
 
-    const getRoleColor = (role: string) => {
-        switch (role) {
-            case 'Admin':
-                return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-            case 'Manager':
-                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-            case 'Staff':
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
-            default:
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
-        }
-    };
+    
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -111,18 +99,7 @@ export default function UserDetailModal({
                         {/* Basic Info */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Role
-                                    </label>
-                                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getRoleColor(user.role)}`}>
-                                        <Shield className="w-4 h-4" />
-                                        {user.role}
-                                    </div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        {user.role_description}
-                                    </p>
-                                </div>
+                                
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Status
@@ -141,15 +118,6 @@ export default function UserDetailModal({
                                     <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
                                         <Calendar className="w-4 h-4 text-gray-400" />
                                         {formatDate(user.created_at)}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Last Updated
-                                    </label>
-                                    <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
-                                        <Calendar className="w-4 h-4 text-gray-400" />
-                                        {formatDate(user.updated_at)}
                                     </div>
                                 </div>
                             </div>
