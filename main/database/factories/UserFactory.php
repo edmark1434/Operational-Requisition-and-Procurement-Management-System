@@ -33,6 +33,7 @@ class UserFactory extends Factory
                 'username' => 'encoder',
                 'password' => Hash::make('encoder123'),
                 'remember_token' => Str::random(10),
+                'is_active' => true
             ];
         }
         if ($userCount === 2) {
@@ -41,6 +42,7 @@ class UserFactory extends Factory
                 'username' => 'manager',
                 'password' => Hash::make('manager123'),
                 'remember_token' => Str::random(10),
+                'is_active' => true
             ];
         }
         if ($userCount === 3) {
@@ -49,6 +51,7 @@ class UserFactory extends Factory
                 'username' => 'admin',
                 'password' => Hash::make('admin123'),
                 'remember_token' => Str::random(10),
+                'is_active' => true
             ];
         }
         if ($userCount === 4) {
@@ -57,6 +60,7 @@ class UserFactory extends Factory
                 'username' => 'requestor',
                 'password' => Hash::make('req123'),
                 'remember_token' => Str::random(10),
+                'is_active' => true
             ];
         }
         return [
@@ -64,6 +68,7 @@ class UserFactory extends Factory
             'username' => $this->faker->unique()->userName(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'is_active' => $this->faker->boolean(50)
         ];
     }
 
