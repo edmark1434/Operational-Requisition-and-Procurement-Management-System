@@ -36,7 +36,7 @@ export default function RolesPermissionsStats({ roles, permissions }: RolesPermi
     const settingsPermissions = permissions.filter(perm => perm.CATEGORY === 'Settings').length;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3  gap-4">
             {/* Total Roles */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -45,14 +45,14 @@ export default function RolesPermissionsStats({ roles, permissions }: RolesPermi
                 <div className="text-sm text-gray-600 dark:text-gray-400">Total Roles</div>
             </div>
 
-            {/* Active Roles */}
+            {/* Active Roles 
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {activeRoles}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Active Roles</div>
             </div>
-
+            */}
             {/* Total Permissions */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">

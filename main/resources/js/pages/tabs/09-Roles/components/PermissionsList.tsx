@@ -35,9 +35,9 @@ export default function PermissionsList({ permissions, getPermissionsByCategory 
                                     <div className="font-medium text-sm text-gray-900 dark:text-white">
                                         {permission.NAME.replace(/_/g, ' ')}
                                     </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {/* <div className="text-xs text-gray-500 dark:text-gray-400">
                                         {permission.DESCRIPTION}
-                                    </div>
+                                    </div> */}
                                 </div>
                                 <div className="text-xs text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
                                     #{permission.PERMISSION_ID}
