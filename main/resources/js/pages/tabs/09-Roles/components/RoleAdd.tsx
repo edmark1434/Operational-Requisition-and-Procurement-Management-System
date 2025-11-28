@@ -4,10 +4,11 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
-// Import your permissions data (you'll need to adjust the import path)
-import permissions from '../../../datasets/permissions';
-import rolePermissions from '../../../datasets/role_permission';
 
+interface Props{
+    auth: any,
+    permissions:any[]
+}
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Roles & Permissions',
@@ -19,7 +20,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function RoleAdd({ auth }: { auth: any }) {
+export default function RoleAdd({ auth,permissions }: Props ) {
     const [formData, setFormData] = useState({
         NAME: '',
         DESCRIPTION: '',
@@ -62,26 +63,17 @@ export default function RoleAdd({ auth }: { auth: any }) {
         e.preventDefault();
 
         if (validateForm()) {
-            // Generate new role ID
-            const newRoleId = Math.floor(Math.random() * 1000) + 8000;
 
             // Prepare role data
             const roleDataToAdd = {
-                ID: newRoleId,
                 ...formData,
-                PERMISSION_COUNT: selectedPermissions.size,
-                CREATED_AT: new Date().toISOString(),
-                UPDATED_AT: new Date().toISOString(),
                 PERMISSIONS: Array.from(selectedPermissions)
             };
-
-            console.log('New Role Data:', roleDataToAdd);
-
-            // In real application, you would send POST request to backend
-            alert('Role added successfully!');
-
-            // Redirect back to roles & permissions
-            router.visit(roles().url);
+            router.put(`/roles/added`, roleDataToAdd, {
+            onError: () => {
+                alert('Error in updating the forms');
+            }
+        })  
         }
     };
 

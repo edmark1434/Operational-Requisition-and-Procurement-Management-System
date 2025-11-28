@@ -5,13 +5,12 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 // Import your permissions data
-import permissions from '../../../datasets/permissions';
-import rolePermissions from '../../../datasets/role_permission';
 
 interface RoleEditProps {
     auth: any;
     roleId: number;
     role: any;
+    permissions: any[];
 }
 
 const breadcrumbs = (roleId: number): BreadcrumbItem[] => [
@@ -25,18 +24,16 @@ const breadcrumbs = (roleId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function RoleEdit({ auth, roleId, role }: RoleEditProps) {
-    const [isLoading, setIsLoading] = useState(true);
+export default function RoleEdit({ auth, roleId, role,permissions }: RoleEditProps) {
     const [formData, setFormData] = useState({
         NAME: role.NAME || null,
         DESCRIPTION: role.DESCRIPTION || null,
         IS_ACTIVE: role.IS_ACTIVE || null
     });
-    const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
+    const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set(role.PERMISSIONS));
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [permissionCategories, setPermissionCategories] = useState<{[key: string]: any[]}>({});
-
     // Group permissions by category
     useEffect(() => {
         const grouped = permissions.reduce((acc, permission) => {
@@ -53,86 +50,11 @@ export default function RoleEdit({ auth, roleId, role }: RoleEditProps) {
 
     // Load role data on component mount
     useEffect(() => {
-        loadRoleData();
-    }, [roleId]);
-
-    const loadRoleData = () => {
-        setIsLoading(true);
-
-        try {
-            // Mock data - in real app, fetch from API
-            const mockRoles = [
-                {
-                    ID: 1,
-                    NAME: 'Administrator',
-                    DESCRIPTION: 'Full system access with all permissions',
-                    IS_ACTIVE: true,
-                    PERMISSION_COUNT: 12,
-                    CREATED_AT: new Date().toISOString(),
-                    PERMISSIONS: ['4001', '4002', '4003', '4004', '4005', '4006', '4007', '4008', '4009', '4010'] // Example permission IDs
-                },
-                {
-                    ID: 2,
-                    NAME: 'Manager',
-                    DESCRIPTION: 'Management level access with limited administrative functions',
-                    IS_ACTIVE: true,
-                    PERMISSION_COUNT: 8,
-                    CREATED_AT: new Date().toISOString(),
-                    PERMISSIONS: ['4001', '4003', '4006', '4008', '4009', '4010', '4013', '4016']
-                },
-                {
-                    ID: 3,
-                    NAME: 'User',
-                    DESCRIPTION: 'Standard user with basic access rights',
-                    IS_ACTIVE: true,
-                    PERMISSION_COUNT: 4,
-                    CREATED_AT: new Date().toISOString(),
-                    PERMISSIONS: ['4001', '4002', '4010', '4013']
-                },
-                {
-                    ID: 4,
-                    NAME: 'Viewer',
-                    DESCRIPTION: 'Read-only access to view data',
-                    IS_ACTIVE: false,
-                    PERMISSION_COUNT: 2,
-                    CREATED_AT: new Date().toISOString(),
-                    PERMISSIONS: ['4001', '4006']
-                }
-            ];
-
-            const role = mockRoles.find(r => r.ID === roleId);
-
-            if (!role) {
-                console.error(`Role #${roleId} not found`);
-                alert('Role not found!');
-                router.visit(roles().url);
-                return;
-            }
-
-            setFormData({
-                NAME: role.NAME || '',
-                DESCRIPTION: role.DESCRIPTION || '',
-                IS_ACTIVE: role.IS_ACTIVE || true
-            });
-
-            // Load role's permissions
-            if (role.PERMISSIONS) {
-                setSelectedPermissions(new Set(role.PERMISSIONS));
-            } else {
-                // If no permissions in mock data, try to get from rolePermissions
-                const rolePerms = rolePermissions
-                    .filter(rp => rp.ROLE_ID === roleId)
-                    .map(rp => rp.PERM_ID);
-                setSelectedPermissions(new Set(rolePerms));
-            }
-        } catch (error) {
-            console.error('Error loading role data:', error);
-            alert('Error loading role data!');
-            router.visit(roles().url);
-        } finally {
+        if (formData.NAME) {
             setIsLoading(false);
         }
-    };
+    }, [formData.NAME]);
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -141,19 +63,10 @@ export default function RoleEdit({ auth, roleId, role }: RoleEditProps) {
         const updatedRoleData = {
             ...formData,
             PERMISSIONS: Array.from(selectedPermissions),
-            PERMISSION_COUNT: selectedPermissions.size,
-            UPDATED_AT: new Date().toISOString()
         };
-
-        console.log('Updated Role Data:', updatedRoleData);
-
-        // In real application, you would send PATCH request to backend
-        alert('Role updated successfully!');
-
-        // Redirect back to roles & permissions
-        router.visit(roles().url);
+        // Redirect back to roles & permissions 
         
-        router.put(`/roles/${roleId}/update`, formData, {
+        router.put(`/roles/${roleId}/update`, updatedRoleData, {
             onError: () => {
                 alert('Error in updating the forms');
             }
@@ -207,14 +120,11 @@ export default function RoleEdit({ auth, roleId, role }: RoleEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting role:', roleId);
-
-        // In real application, you would send DELETE request to backend
-        alert('Role deleted successfully!');
-        setShowDeleteConfirm(false);
-
-        // Redirect back to roles & permissions
-        router.visit(roles().url);
+        try {
+            router.delete(`/roles/${roleId}/delete`);
+        } catch (err) {
+            console.log(err);
+        }  
     };
 
     const handleCancel = () => {

@@ -39,10 +39,11 @@ interface Prop{
     rolesList: any[],
     role_perm: any[],
     permission: any[],
-    success: boolean
+    success: boolean,
+    message: string,
 }
 
-export default function RolesAndPermissions({rolesList,role_perm,permission,success}:Prop) {
+export default function RolesAndPermissions({rolesList,role_perm,permission,success,message}:Prop) {
     const [rolesSearchTerm, setRolesSearchTerm] = useState('');
     const [permissionsSearchTerm, setPermissionsSearchTerm] = useState('');
     const [roleStatusFilter, setRoleStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -56,7 +57,7 @@ export default function RolesAndPermissions({rolesList,role_perm,permission,succ
     useEffect(() => {
         loadData();
         if (success) {
-            toast('Role updated successfully!');
+            toast(message);
         }
     }, []);
 
