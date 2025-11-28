@@ -48,8 +48,8 @@ export default function ContactList({ contacts, onContactClick, viewMode, isLoad
                     <div className="col-span-2">Position</div>
                     <div className="col-span-2">Vendor</div>
                     <div className="col-span-2">Contact Info</div>
-                    <div className="col-span-1 text-center">Status</div>
-                    <div className="col-span-2 text-right">Actions</div>
+                    {/*<div className="col-span-1 text-center">Status</div>*/}
+                    <div className="col-span-3 text-right">Actions</div>
                 </div>
 
                 {/* Table Body */}
@@ -102,16 +102,16 @@ export default function ContactList({ contacts, onContactClick, viewMode, isLoad
                                     </div>
                                 </div>
 
-                                {/* Status */}
-                                <div className="col-span-1 flex items-center justify-center">
-                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getContactStatusColor(status)}`}>
-                                        {ContactStatusIcons[status as keyof typeof ContactStatusIcons]}
-                                        {statusText}
-                                    </div>
-                                </div>
+                                {/*/!* Status *!/*/}
+                                {/*<div className="col-span-1 flex items-center justify-center">*/}
+                                {/*    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getContactStatusColor(status)}`}>*/}
+                                {/*        {ContactStatusIcons[status as keyof typeof ContactStatusIcons]}*/}
+                                {/*        {statusText}*/}
+                                {/*    </div>*/}
+                                {/*</div>*/}
 
                                 {/* Actions */}
-                                <div className="col-span-2 flex items-center justify-end space-x-2">
+                                <div className="col-span-3 flex items-center justify-end space-x-2">
                                     <Link
                                         href={`/contacts/${contact.ID}/edit`}
                                         onClick={(e) => e.stopPropagation()}
@@ -193,10 +193,10 @@ function ContactCard({ contact, onClick, viewMode }: {
 
                 {/* Vendor and Status - Compact */}
                 <div className="space-y-1">
-                    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getContactStatusColor(status)}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                        {statusText}
-                    </div>
+                    {/*<div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getContactStatusColor(status)}`}>*/}
+                    {/*    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>*/}
+                    {/*    {statusText}*/}
+                    {/*</div>*/}
 
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400">Vendor:</span>
@@ -252,10 +252,10 @@ function ContactCard({ contact, onClick, viewMode }: {
             {/* Contact Info */}
             <div className="space-y-2">
                 {/* Status */}
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getContactStatusColor(status)}`}>
-                    {ContactStatusIcons[status as keyof typeof ContactStatusIcons]}
-                    {statusText}
-                </div>
+                {/*<div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getContactStatusColor(status)}`}>*/}
+                {/*    {ContactStatusIcons[status as keyof typeof ContactStatusIcons]}*/}
+                {/*    {statusText}*/}
+                {/*</div>*/}
 
                 {/* Vendor */}
                 <div className="flex justify-between items-center">
