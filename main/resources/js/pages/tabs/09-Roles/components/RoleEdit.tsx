@@ -4,6 +4,10 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
+// Import your permissions data
+import permissions from '../../../datasets/permissions';
+import rolePermissions from '../../../datasets/role_permission';
+
 interface RoleEditProps {
     auth: any;
     roleId: number;
@@ -26,8 +30,24 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
         DESCRIPTION: '',
         IS_ACTIVE: true
     });
+    const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [permissionCategories, setPermissionCategories] = useState<{[key: string]: any[]}>({});
+
+    // Group permissions by category
+    useEffect(() => {
+        const grouped = permissions.reduce((acc, permission) => {
+            const category = permission.CATEGORY;
+            if (!acc[category]) {
+                acc[category] = [];
+            }
+            acc[category].push(permission);
+            return acc;
+        }, {} as {[key: string]: any[]});
+
+        setPermissionCategories(grouped);
+    }, []);
 
     // Load role data on component mount
     useEffect(() => {
@@ -46,7 +66,8 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                     DESCRIPTION: 'Full system access with all permissions',
                     IS_ACTIVE: true,
                     PERMISSION_COUNT: 12,
-                    CREATED_AT: new Date().toISOString()
+                    CREATED_AT: new Date().toISOString(),
+                    PERMISSIONS: ['4001', '4002', '4003', '4004', '4005', '4006', '4007', '4008', '4009', '4010'] // Example permission IDs
                 },
                 {
                     ID: 2,
@@ -54,7 +75,8 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                     DESCRIPTION: 'Management level access with limited administrative functions',
                     IS_ACTIVE: true,
                     PERMISSION_COUNT: 8,
-                    CREATED_AT: new Date().toISOString()
+                    CREATED_AT: new Date().toISOString(),
+                    PERMISSIONS: ['4001', '4003', '4006', '4008', '4009', '4010', '4013', '4016']
                 },
                 {
                     ID: 3,
@@ -62,7 +84,8 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                     DESCRIPTION: 'Standard user with basic access rights',
                     IS_ACTIVE: true,
                     PERMISSION_COUNT: 4,
-                    CREATED_AT: new Date().toISOString()
+                    CREATED_AT: new Date().toISOString(),
+                    PERMISSIONS: ['4001', '4002', '4010', '4013']
                 },
                 {
                     ID: 4,
@@ -70,7 +93,8 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                     DESCRIPTION: 'Read-only access to view data',
                     IS_ACTIVE: false,
                     PERMISSION_COUNT: 2,
-                    CREATED_AT: new Date().toISOString()
+                    CREATED_AT: new Date().toISOString(),
+                    PERMISSIONS: ['4001', '4006']
                 }
             ];
 
@@ -88,6 +112,17 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                 DESCRIPTION: role.DESCRIPTION || '',
                 IS_ACTIVE: role.IS_ACTIVE || true
             });
+
+            // Load role's permissions
+            if (role.PERMISSIONS) {
+                setSelectedPermissions(new Set(role.PERMISSIONS));
+            } else {
+                // If no permissions in mock data, try to get from rolePermissions
+                const rolePerms = rolePermissions
+                    .filter(rp => rp.ROLE_ID === roleId)
+                    .map(rp => rp.PERM_ID);
+                setSelectedPermissions(new Set(rolePerms));
+            }
         } catch (error) {
             console.error('Error loading role data:', error);
             alert('Error loading role data!');
@@ -103,6 +138,8 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
         // Prepare updated role data
         const updatedRoleData = {
             ...formData,
+            PERMISSIONS: Array.from(selectedPermissions),
+            PERMISSION_COUNT: selectedPermissions.size,
             UPDATED_AT: new Date().toISOString()
         };
 
@@ -122,6 +159,44 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
         }));
     };
 
+    const handlePermissionToggle = (permissionId: string) => {
+        setSelectedPermissions(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(permissionId)) {
+                newSet.delete(permissionId);
+            } else {
+                newSet.add(permissionId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAllInCategory = (category: string) => {
+        const categoryPermissions = permissionCategories[category] || [];
+        const allSelected = categoryPermissions.every(perm =>
+            selectedPermissions.has(perm.PERMISSION_ID)
+        );
+
+        setSelectedPermissions(prev => {
+            const newSet = new Set(prev);
+            categoryPermissions.forEach(perm => {
+                if (allSelected) {
+                    newSet.delete(perm.PERMISSION_ID);
+                } else {
+                    newSet.add(perm.PERMISSION_ID);
+                }
+            });
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        const allPermissionIds = permissions.map(perm => perm.PERMISSION_ID);
+        const allSelected = allPermissionIds.every(id => selectedPermissions.has(id));
+
+        setSelectedPermissions(allSelected ? new Set() : new Set(allPermissionIds));
+    };
+
     const handleDelete = () => {
         console.log('Deleting role:', roleId);
 
@@ -137,6 +212,20 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
         if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
             router.visit(roles().url);
         }
+    };
+
+    const isCategoryAllSelected = (category: string) => {
+        const categoryPermissions = permissionCategories[category] || [];
+        return categoryPermissions.length > 0 && categoryPermissions.every(perm =>
+            selectedPermissions.has(perm.PERMISSION_ID)
+        );
+    };
+
+    const isCategorySomeSelected = (category: string) => {
+        const categoryPermissions = permissionCategories[category] || [];
+        return categoryPermissions.some(perm =>
+            selectedPermissions.has(perm.PERMISSION_ID)
+        ) && !isCategoryAllSelected(category);
     };
 
     if (isLoading) {
@@ -168,7 +257,7 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                         <div>
                             <h1 className="text-2xl font-bold">Edit Role</h1>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Editing Role #{roleId}
+                                Editing Role #{roleId} - {formData.NAME}
                             </p>
                         </div>
                         <Link
@@ -183,22 +272,22 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                     <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:bg-sidebar">
                         <div className="h-full overflow-y-auto">
                             <div className="min-h-full flex items-start justify-center p-6">
-                                <div className="w-full max-w-2xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
+                                <div className="w-full max-w-4xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
                                     {/* Header Section */}
                                     <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
                                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                             Edit Role #{roleId}
                                         </h2>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Update the role details below
+                                            Update the role details and permissions below
                                         </p>
                                     </div>
 
                                     <form onSubmit={handleSubmit} className="p-6">
-                                        <div className="space-y-6">
+                                        <div className="space-y-8">
                                             {/* Basic Information */}
                                             <div className="space-y-4">
-                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
                                                     Role Information
                                                 </h3>
 
@@ -243,6 +332,69 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                                                     </label>
                                                 </div>
                                             </div>
+
+                                            {/* Permissions Section */}
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
+                                                        Role Permissions
+                                                    </h3>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleSelectAll}
+                                                        className="text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                                    >
+                                                        {selectedPermissions.size === permissions.length ? 'Deselect All' : 'Select All'}
+                                                    </button>
+                                                </div>
+
+                                                <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                                    Selected {selectedPermissions.size} of {permissions.length} permissions
+                                                </div>
+
+                                                <div className="space-y-6">
+                                                    {Object.entries(permissionCategories).map(([category, categoryPermissions]) => (
+                                                        <div key={category} className="border border-sidebar-border/70 rounded-lg overflow-hidden">
+                                                            <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-sidebar-border/70">
+                                                                <div className="flex items-center justify-between">
+                                                                    <h4 className="font-semibold text-gray-900 dark:text-white">
+                                                                        {category}
+                                                                    </h4>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleSelectAllInCategory(category)}
+                                                                        className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                                                    >
+                                                                        {isCategoryAllSelected(category) ? 'Deselect All' : 'Select All'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                {categoryPermissions.map((permission) => (
+                                                                    <div key={permission.PERMISSION_ID} className="flex items-start space-x-3">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            id={`perm-${permission.PERMISSION_ID}`}
+                                                                            checked={selectedPermissions.has(permission.PERMISSION_ID)}
+                                                                            onChange={() => handlePermissionToggle(permission.PERMISSION_ID)}
+                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mt-1"
+                                                                        />
+                                                                        <label
+                                                                            htmlFor={`perm-${permission.PERMISSION_ID}`}
+                                                                            className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                                                                        >
+                                                                            <div className="font-medium">{permission.NAME}</div>
+                                                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                                {permission.DESCRIPTION}
+                                                                            </div>
+                                                                        </label>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Action Buttons */}
@@ -270,7 +422,7 @@ export default function RoleEdit({ auth, roleId }: RoleEditProps) {
                                                         type="submit"
                                                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                                                     >
-                                                        Save Changes
+                                                        Save Changes ({selectedPermissions.size} permissions)
                                                     </button>
                                                 </div>
                                             </div>
