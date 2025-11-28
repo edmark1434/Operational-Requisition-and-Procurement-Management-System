@@ -4,15 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\Item;
 class Make extends Model
 {
     use HasFactory;
     protected $table = 'make';
-    protected $fillable = ['name'];
+    protected $fillable = ['name','is_active'];
     public $timestamps = false;
     public function item()
     {
-        return $this->hasMany(\App\Models\Item::class, 'make_id');
+        return $this->hasMany(Item::class, 'make_id');
     }
 }

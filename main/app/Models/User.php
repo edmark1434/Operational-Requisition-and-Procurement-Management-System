@@ -9,6 +9,8 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use App\Models\AuditLog;
 use App\Models\notification;
+use App\Models\UserPermission;
+use App\Models\Requisition;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -54,11 +56,11 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class,'user_id');
     }
     public function user_permission(){
-        return $this->hasMany(\App\Models\UserPermission::class,'user_id');
+        return $this->hasMany(UserPermission::class,'user_id');
     }
     public function requisition()
     {
-        return $this->hasMany(\App\Models\Requisition::class, 'user_id');
+        return $this->hasMany(Requisition::class, 'user_id');
     }
     public $timestamps = false;
 }

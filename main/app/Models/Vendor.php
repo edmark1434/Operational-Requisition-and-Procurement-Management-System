@@ -4,23 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PurchaseOrder;
+use App\Models\CategoryVendor;
 
-class Supplier extends Model
+class Vendor extends Model
 {
     use HasFactory;
-    protected $table = 'supplier';
+    protected $table = 'vendor';
     protected $fillable = [
         'name',
-        'contact_info',
+        'contact_number',
         'allows_cash',
         'allows_disbursement',
         'allows_store_credit',
+        'email',
+        'is_active'
     ];
     public $timestamps = false;
     public function purchase_order(){
-        return $this->hasMany(\App\Models\PurchaseOrder::class,'supplier_id');
+        return $this->hasMany(PurchaseOrder::class,'vendor_id');
     }
-    public function category_supplier(){
-        return $this->hasMany(\App\Models\CategorySupplier::class, 'supplier_id');
+    public function category_vendor(){
+        return $this->hasMany(CategoryVendor::class, 'vendor_id');
     }
 }

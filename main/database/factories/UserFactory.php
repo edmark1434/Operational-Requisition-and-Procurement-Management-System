@@ -29,9 +29,33 @@ class UserFactory extends Factory
         $userCount++;
         if ($userCount === 1) {
             return [
-                'fullname' => 'Admin User',
+                'fullname' => 'Encoder',
+                'username' => 'encoder',
+                'password' => Hash::make('encoder123'),
+                'remember_token' => Str::random(10),
+            ];
+        }
+        if ($userCount === 2) {
+            return [
+                'fullname' => 'Manager',
+                'username' => 'manager',
+                'password' => Hash::make('manager123'),
+                'remember_token' => Str::random(10),
+            ];
+        }
+        if ($userCount === 3) {
+            return [
+                'fullname' => 'Admin',
                 'username' => 'admin',
                 'password' => Hash::make('admin123'),
+                'remember_token' => Str::random(10),
+            ];
+        }
+        if ($userCount === 4) {
+            return [
+                'fullname' => 'Requestor',
+                'username' => 'requestor',
+                'password' => Hash::make('req123'),
                 'remember_token' => Str::random(10),
             ];
         }

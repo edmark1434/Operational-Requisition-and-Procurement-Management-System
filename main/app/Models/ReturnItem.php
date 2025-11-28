@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Returns;
-use App\Models\Items;
+use App\Models\Item;
 class ReturnItem extends Model
 {
     use HasFactory;

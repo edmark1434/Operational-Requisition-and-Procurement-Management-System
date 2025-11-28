@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\PurchaseOrder;
 use App\Models\DeliveryItem;
 use App\Models\Returns;
+use App\Models\DeliveryService;
 class Delivery extends Model
 {
     /** @use HasFactory<\Database\Factories\DeliveryFactory> */
     use HasFactory;
     protected $table = 'delivery';
     protected $fillable = [
+        'type',
         'delivery_date',
         'total_cost',
         'receipt_no',
@@ -21,6 +23,7 @@ class Delivery extends Model
         'remarks',
         'po_id',
     ];
+    public const TYPES = ["Item Purchase", "Service Delivery", "Item Return", "Service Rework"];
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class,'po_id');
@@ -31,6 +34,9 @@ class Delivery extends Model
     }
     public function returns(){
         return $this->hasMany(Returns::class,'delivery_id');
+    }
+    public function delivery_service(){
+        $this->hasMany(DeliveryService::class, 'delivery_id');
     }
     public $timestamps = false;
 }

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Delivery;
+use App\Models\ReturnItem;
 
 class Returns extends Model
 {
@@ -12,7 +14,7 @@ class Returns extends Model
     protected $table = 'returns';
     protected $primaryKey = 'id';
     public $timestamps = false; // you only have created_at
-
+    public const STATUS = ['Pending','Issued','Rejected','Delivered'];
     protected $fillable = [
         'created_at',
         'return_date',
@@ -31,10 +33,10 @@ class Returns extends Model
      */
     public function delivery()
     {
-        return $this->belongsTo(\App\Models\Delivery::class, 'delivery_id');
+        return $this->belongsTo(Delivery::class, 'delivery_id');
     }
     public function return_item()
     {
-        return $this->belongsTo(\App\Models\ReturnItem::class, 'return_id');
+        return $this->belongsTo(ReturnItem::class, 'return_id');
     }
 }
