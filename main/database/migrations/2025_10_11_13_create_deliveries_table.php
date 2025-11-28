@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('total_cost', 15, 2);
             $table->string('receipt_no')->unique();
             $table->string('receipt_photo')->nullable();
-            $table->string('status')->default('PENDING');
+            $table->enum('status',Delivery::STATUS)->default('Pending');
             $table->text('remarks')->nullable();
             $table->unsignedBigInteger('po_id')->nullable();
             $table->foreign('po_id')->references('id')->on('purchase_order')->onDelete('set null');

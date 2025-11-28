@@ -24,6 +24,7 @@ class Delivery extends Model
         'po_id',
     ];
     public const TYPES = ["Item Purchase", "Service Delivery", "Item Return", "Service Rework"];
+    public const STATUS = ["Pending","Received"];
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class,'po_id');
