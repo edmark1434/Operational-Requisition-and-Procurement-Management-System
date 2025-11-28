@@ -16,7 +16,7 @@ const breadcrumbs = (roleId: number): BreadcrumbItem[] => [
     },
     {
         title: `Edit Role #${roleId}`,
-        href: `/roles-permissions/role/${roleId}/edit`,
+        href: `/roles/${roleId}/edit`,
     },
 ];
 

@@ -11,7 +11,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Add New Role',
-        href: '/roles-permissions/role/add',
+        href: '/roles/add',
     },
 ];
 
