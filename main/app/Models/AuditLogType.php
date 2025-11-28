@@ -7,9 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\AuditLog;
 class AuditLogType extends Model
 {
-    /** @use HasFactory<\Database\Factories\AuditLogTypeFactory> */
     use HasFactory;
-    protected $table = 'audit_log_types';
+    protected $table = 'audit_log_type';
     protected $fillable = ['name'];
 
     public function audit_log(){

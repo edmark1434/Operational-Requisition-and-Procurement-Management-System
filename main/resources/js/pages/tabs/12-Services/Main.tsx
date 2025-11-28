@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import {Head, Link, router, usePage} from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -10,8 +10,8 @@ import ServiceList from './ServiceList';
 import ServiceDetailModal from './ServiceDetailModal';
 
 // Import utilities
-import { transformServicesData } from './utils';
 import { useServiceFilters } from './utils/hooks';
+import {servicedelete} from "@/routes";
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -20,24 +20,48 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+type Service = {
+    id: number;
+    name: string;
+    description: string;
+    hourly_rate: number;
+    is_active: boolean;
+    category_id: number;
+    vendor_id: number | null;
+    category: string;
+    vendor: string | null;
+    vendor_contact_num: string | null;
+    vendor_email: string | null;
+};
+
+type Category = {
+    id: number;
+    name: string;
+    description: string;
+    type: 'Items' | 'Services';
+    is_active: boolean;
+};
+
 export default function Services() {
+    const { services: backendServices, categories } = usePage<{
+        services: Service[];
+        categories: Category[];
+    }>().props;
+    const [services, setServices] = useState<Service[]>(backendServices);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
-    const [statusFilter, setStatusFilter] = useState('All');
     const [selectedService, setSelectedService] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [services, setServices] = useState(transformServicesData());
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
-    const {
-        filteredServices,
-        categories,
-        statuses
-    } = useServiceFilters(services, searchTerm, categoryFilter, statusFilter);
+    const {filteredServices} = useServiceFilters(services, searchTerm, categoryFilter);
 
     const handleDeleteService = (id: number) => {
-        setServices(prev => prev.filter(service => service.ID !== id));
+        router.delete(servicedelete(id).url);
+        alert('Service deleted successfully!');
         setIsDetailModalOpen(false);
+        setServices(prev => prev.filter(s => s.id !== id));
     };
 
     const openDetailModal = (service: any) => {
@@ -77,10 +101,7 @@ export default function Services() {
                     setSearchTerm={setSearchTerm}
                     categoryFilter={categoryFilter}
                     setCategoryFilter={setCategoryFilter}
-                    statusFilter={statusFilter}
-                    setStatusFilter={setStatusFilter}
-                    categories={categories}
-                    statuses={statuses}
+                    categories={categories.map(c => c.name)}
                     resultsCount={filteredServices.length}
                     viewMode={viewMode}
                     setViewMode={setViewMode}
@@ -101,7 +122,7 @@ export default function Services() {
                         onClose={closeAllModals}
                         onEdit={() => {
                             // Redirect to edit page
-                            window.location.href = `/services/${selectedService.ID}/edit`;
+                            window.location.href = `/services/${selectedService.id}/edit`;
                         }}
                         onDelete={handleDeleteService}
                     />

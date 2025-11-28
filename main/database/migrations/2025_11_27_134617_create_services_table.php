@@ -17,8 +17,8 @@ return new class extends Migration
             $table->text('description');
             $table->decimal('hourly_rate');
             $table->boolean('is_active')->default(true);
-            $table->string('category');
-            $table->foreignId('vendor_id')->constrained('vendor')->cascadeOnUpdate();
+            $table->foreignId('category_id')->constrained('category')->cascadeOnUpdate();
+            $table->foreignId('vendor_id')->nullable()->constrained('vendor')->cascadeOnUpdate();
         });
     }
 

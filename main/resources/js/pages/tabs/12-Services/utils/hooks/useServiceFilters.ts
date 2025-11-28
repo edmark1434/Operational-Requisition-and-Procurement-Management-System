@@ -4,38 +4,37 @@ export const useServiceFilters = (
     services: any[],
     searchTerm: string,
     categoryFilter: string,
-    statusFilter: string
 ) => {
     const filteredServices = useMemo(() => {
+        const lowerSearch = searchTerm.toLowerCase();
+
         return services.filter(service => {
-            const matchesSearch = searchTerm === '' ||
-                service.NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                service.DESCRIPTION.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                service.CATEGORY.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                service.VENDOR_NAME.toLowerCase().includes(searchTerm.toLowerCase());
+            const name = service.name ?? '';
+            const description = service.description ?? '';
+            const category = service.category ?? '';
+            const vendor = service.vendor ?? '';
 
-            const matchesCategory = categoryFilter === 'All' || service.CATEGORY === categoryFilter;
+            const matchesSearch =
+                searchTerm === '' ||
+                name.toLowerCase().includes(lowerSearch) ||
+                description.toLowerCase().includes(lowerSearch) ||
+                category.toLowerCase().includes(lowerSearch) ||
+                vendor.toLowerCase().includes(lowerSearch);
 
-            const matchesStatus = statusFilter === 'All' ||
-                (statusFilter === 'Active' && service.IS_ACTIVE) ||
-                (statusFilter === 'Inactive' && !service.IS_ACTIVE);
+            const matchesCategory = categoryFilter === 'All' || category === categoryFilter;
 
-            return matchesSearch && matchesCategory && matchesStatus;
+            return matchesSearch && matchesCategory;
         });
-    }, [services, searchTerm, categoryFilter, statusFilter]);
+    }, [services, searchTerm, categoryFilter]);
 
     const categories = useMemo(() => {
-        const uniqueCategories = [...new Set(services.map(service => service.CATEGORY))];
-        return ['All', ...uniqueCategories.sort()];
+        const uniqueCategories = [...new Set(services.map(service => service.category ?? ''))];
+        const nonEmptyCategories = uniqueCategories.filter(c => c !== '');
+        return ['All', ...nonEmptyCategories.sort()];
     }, [services]);
-
-    const statuses = useMemo(() => {
-        return ['All', 'Active', 'Inactive'];
-    }, []);
 
     return {
         filteredServices,
         categories,
-        statuses
     };
 };

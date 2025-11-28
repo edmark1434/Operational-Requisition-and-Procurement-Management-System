@@ -1,6 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ServiceStatusIcons } from './utils/icons';
-import { getServiceStatusColor, getServiceCategoryColor, getPriceLevelColor } from './utils/styleUtils';
+import { getServiceCategoryColor, getPriceLevelColor } from './utils/styleUtils';
 import { formatCurrency, formatHourlyRate } from './utils/formatters';
 import { LoaderCircle, Settings, Edit, Clock } from 'lucide-react';
 
@@ -54,12 +53,10 @@ export default function ServiceList({ services, onServiceClick, viewMode, isLoad
                 {/* Table Body */}
                 <div className="divide-y divide-sidebar-border">
                     {services.map((service) => {
-                        const status = service.IS_ACTIVE ? 'active' : 'inactive';
-                        const statusText = service.IS_ACTIVE ? 'Active' : 'Inactive';
 
                         return (
                             <div
-                                key={service.ID}
+                                key={service.id}
                                 className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
                                 onClick={() => onServiceClick(service)}
                             >
@@ -67,25 +64,25 @@ export default function ServiceList({ services, onServiceClick, viewMode, isLoad
                                 <div className="col-span-3 flex items-center space-x-3">
                                     <div className="min-w-0">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                            {service.NAME}
+                                            {service.name}
                                         </div>
                                         <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                            #{service.ID}
+                                            #{service.id}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Category */}
                                 <div className="col-span-2 flex items-center">
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getServiceCategoryColor(service.CATEGORY)}`}>
-                                        {service.CATEGORY}
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getServiceCategoryColor(service.category)}`}>
+                                        {service.category}
                                     </span>
                                 </div>
 
                                 {/* Vendor */}
                                 <div className="col-span-2 flex items-center">
                                     <span className="text-sm text-gray-900 dark:text-white truncate">
-                                        {service.VENDOR_NAME}
+                                        {service.vendor ?? 'None assigned'}
                                     </span>
                                 </div>
 
@@ -99,15 +96,15 @@ export default function ServiceList({ services, onServiceClick, viewMode, isLoad
 
                                 {/* Hourly Rate */}
                                 <div className="col-span-2 flex items-center justify-end">
-                                    <span className={`text-sm font-bold ${getPriceLevelColor(service.HOURLY_RATE)}`}>
-                                        {formatHourlyRate(service.HOURLY_RATE)}
+                                    <span className={`text-sm font-bold ${getPriceLevelColor(service.hourly_rate)}`}>
+                                        {formatHourlyRate(service.hourly_rate)}
                                     </span>
                                 </div>
 
                                 {/* Actions */}
                                 <div className="col-span-3 flex items-center justify-end space-x-2">
                                     <Link
-                                        href={`/services/${service.ID}/edit`}
+                                        href={`/services/${service.id}/edit`}
                                         onClick={(e) => e.stopPropagation()}
                                         className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded"
                                         title="Edit Service"
@@ -133,7 +130,7 @@ export default function ServiceList({ services, onServiceClick, viewMode, isLoad
                 }`}>
                     {services.map((service) => (
                         <ServiceCard
-                            key={service.ID}
+                            key={service.id}
                             service={service}
                             onClick={() => onServiceClick(service)}
                             viewMode={viewMode}
@@ -151,19 +148,16 @@ function ServiceCard({ service, onClick, viewMode }: {
     onClick: () => void;
     viewMode: 'comfortable' | 'compact';
 }) {
-    const status = service.IS_ACTIVE ? 'active' : 'inactive';
-    const statusText = service.IS_ACTIVE ? 'Active' : 'Inactive';
-
     if (viewMode === 'compact') {
         return (
             <div className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-3 hover:shadow-md transition-all duration-200 cursor-pointer group">
                 {/* Compact Header */}
                 <div className="flex justify-between items-start mb-2">
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        #{service.ID}
+                        #{service.id}
                     </span>
                     <Link
-                        href={`/services/${service.ID}/edit`}
+                        href={`/services/${service.id}/edit`}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
                     >
                         <Edit className="w-3 h-3" />
@@ -175,13 +169,13 @@ function ServiceCard({ service, onClick, viewMode }: {
                     className="font-medium text-sm text-gray-900 dark:text-white mb-1 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400"
                     onClick={onClick}
                 >
-                    {service.NAME}
+                    {service.name}
                 </h3>
 
                 {/* Category - Compact */}
                 <div className="mb-2">
                     <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-sidebar text-gray-600 dark:text-gray-400">
-                        {service.CATEGORY}
+                        {service.category}
                     </span>
                 </div>
 
@@ -190,14 +184,14 @@ function ServiceCard({ service, onClick, viewMode }: {
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400">Vendor:</span>
                         <span className="font-semibold text-gray-900 dark:text-white truncate ml-1">
-                            {service.VENDOR_NAME}
+                            {service.vendor ?? 'None assigned'}
                         </span>
                     </div>
 
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400">Rate:</span>
-                        <span className={`font-semibold ${getPriceLevelColor(service.HOURLY_RATE)}`}>
-                            {formatCurrency(service.HOURLY_RATE)}/hr
+                        <span className={`font-semibold ${getPriceLevelColor(service.hourly_rate)}`}>
+                            {formatCurrency(service.hourly_rate)}/hr
                         </span>
                     </div>
                 </div>
@@ -211,11 +205,11 @@ function ServiceCard({ service, onClick, viewMode }: {
             {/* Header with ID and Actions */}
             <div className="flex justify-between items-start">
                 <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
-                    #{service.ID}
+                    #{service.id}
                 </span>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <Link
-                        href={`/services/${service.ID}/edit`}
+                        href={`/services/${service.id}/edit`}
                         className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1 rounded"
                     >
                         <Edit className="w-4 h-4" />
@@ -228,18 +222,18 @@ function ServiceCard({ service, onClick, viewMode }: {
                 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={onClick}
             >
-                {service.NAME}
+                {service.name}
             </h3>
 
             {/* Description */}
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">
-                {service.DESCRIPTION}
+                {service.description}
             </div>
 
             {/* Category Badge */}
             <div className="mb-3">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getServiceCategoryColor(service.CATEGORY)}`}>
-                    {service.CATEGORY}
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getServiceCategoryColor(service.category)}`}>
+                    {service.category}
                 </span>
             </div>
 
@@ -249,15 +243,15 @@ function ServiceCard({ service, onClick, viewMode }: {
                 <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Vendor:</span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                        {service.VENDOR_NAME}
+                        {service.vendor ?? 'None assigned'}
                     </span>
                 </div>
 
                 {/* Hourly Rate */}
                 <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Hourly Rate:</span>
-                    <span className={`text-sm font-bold ${getPriceLevelColor(service.HOURLY_RATE)}`}>
-                        {formatHourlyRate(service.HOURLY_RATE)}
+                    <span className={`text-sm font-bold ${getPriceLevelColor(service.hourly_rate)}`}>
+                        {formatHourlyRate(service.hourly_rate)}
                     </span>
                 </div>
 
@@ -265,7 +259,7 @@ function ServiceCard({ service, onClick, viewMode }: {
                 <div className="flex justify-between items-center pt-2 border-t border-sidebar-border">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Contact:</span>
                     <span className="text-sm text-blue-600 dark:text-blue-400 truncate">
-                        {service.VENDOR_EMAIL}
+                        {service.vendor_contact_num ?? service.vendor_email ?? 'No contact info'}
                     </span>
                 </div>
             </div>

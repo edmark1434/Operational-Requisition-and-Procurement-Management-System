@@ -5,10 +5,7 @@ interface SearchAndFiltersProps {
     setSearchTerm: (term: string) => void;
     categoryFilter: string;
     setCategoryFilter: (filter: string) => void;
-    statusFilter: string;
-    setStatusFilter: (filter: string) => void;
     categories: string[];
-    statuses: string[];
     resultsCount: number;
     viewMode: 'comfortable' | 'compact' | 'condensed';
     setViewMode: (mode: 'comfortable' | 'compact' | 'condensed') => void;
@@ -19,10 +16,7 @@ export default function SearchAndFilters({
                                              setSearchTerm,
                                              categoryFilter,
                                              setCategoryFilter,
-                                             statusFilter,
-                                             setStatusFilter,
                                              categories,
-                                             statuses,
                                              resultsCount,
                                              viewMode,
                                              setViewMode

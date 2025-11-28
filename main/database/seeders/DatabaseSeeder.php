@@ -7,7 +7,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\Category;
-use App\Models\CategorySupplier;
+use App\Models\CategoryVendor;
 use App\Models\Notification;
 use App\Models\Make;
 use App\Models\Item;
@@ -15,8 +15,7 @@ use App\Models\Requisition;
 use App\Models\ReturnItem;
 use App\Models\RequisitionItem;
 use App\Models\UserPermission;
-use App\Models\Setting;
-use App\Models\Supplier;
+use App\Models\Vendor;
 use App\Models\AuditLog;
 use App\Models\PurchaseOrder;
 use App\Models\OrderLink;
@@ -35,7 +34,13 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            UserPermissionSeeder::class
+            MakeSeeder::class,
+            CategorySeeder::class,
+            VendorSeeder::class,
+            ItemSeeder::class,
+            ServiceSeeder::class,
+            VendorContactSeeder::class,
+            UserPermissionSeeder::class,
         ]);
         User::factory(5)->create();
         // Category::factory(5)->create();
@@ -46,7 +51,6 @@ class DatabaseSeeder extends Seeder
         // Requisition::factory(5)->create();
         // ReturnItem::factory(5)->create();
         // RequisitionItem::factory(5)->create();
-        // Setting::factory(5)->create();
         // Supplier::factory(5)->create();
         // AuditLog::factory(5)->create();
         // OrderLink::factory(5)->create();

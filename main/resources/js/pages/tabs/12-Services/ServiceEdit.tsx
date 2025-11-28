@@ -1,11 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
-import { services } from '@/routes';
+import {servicedelete, serviceput, services} from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import {Head, Link, router, usePage} from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import CATEGORY_OPTIONS from '@/pages/datasets/category';
-import SUPPLIER_OPTIONS from '@/pages/datasets/supplier';
-import serviceData from "@/pages/datasets/service";
 
 interface ServiceEditProps {
     auth: any;
@@ -23,17 +20,51 @@ const breadcrumbs = (serviceId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
+type Service = {
+    id: number;
+    name: string;
+    description: string;
+    hourly_rate: number;
+    is_active: boolean;
+    category_id: number;
+    vendor_id: number | null;
+    category: string;
+    vendor: string | null;
+    vendor_contact_num: string | null;
+    vendor_email: string | null;
+};
+
+type Category = {
+    id: number;
+    name: string;
+    description: string;
+    type: 'Items' | 'Services';
+    is_active: boolean;
+};
+
+type Vendor = {
+    id: number;
+    name: string;
+    email: string | null;
+    contact_number: string | null;
+    allows_cash: boolean;
+    allows_disbursement: boolean;
+    allows_store_credit: boolean;
+    is_active: boolean;
+};
+
+export default function ServiceEdit({ serviceId }: ServiceEditProps) {
+    const { service, categories, vendors } = usePage<{
+        service: Service;
+        categories: Category[];
+        vendors: Vendor[];
+    }>().props;
     const [formData, setFormData] = useState({
         NAME: '',
         DESCRIPTION: '',
         HOURLY_RATE: 0,
         CATEGORY: '',
-        VENDOR_ID: '',
-        VENDOR_NAME: '',
-        VENDOR_EMAIL: '',
-        VENDOR_CONTACT_NUMBER: '',
-        IS_ACTIVE: true
+        VENDOR_ID: ''
     });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -47,9 +78,6 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
         setIsLoading(true);
 
         try {
-            // Find the service to edit
-            const service = serviceData.find(service => service.ID === serviceId);
-
             if (!service) {
                 console.error(`Service #${serviceId} not found`);
                 alert('Service not found!');
@@ -57,20 +85,12 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
                 return;
             }
 
-            // Transform service data to match form structure
-            const category = CATEGORY_OPTIONS.find(cat => cat.CAT_ID === service.CATEGORY_ID);
-            const vendor = SUPPLIER_OPTIONS.find(sup => sup.ID === service.VENDOR_ID);
-
             setFormData({
-                NAME: service.NAME || '',
-                DESCRIPTION: service.DESCRIPTION || '',
-                HOURLY_RATE: service.HOURLY_RATE || 0,
-                CATEGORY: category?.NAME || '',
-                VENDOR_ID: service.VENDOR_ID?.toString() || '',
-                VENDOR_NAME: vendor?.NAME || '',
-                VENDOR_EMAIL: vendor?.EMAIL || '',
-                VENDOR_CONTACT_NUMBER: vendor?.CONTACT_NUMBER || '',
-                IS_ACTIVE: service.IS_ACTIVE || true
+                NAME: service.name || '',
+                DESCRIPTION: service.description || '',
+                HOURLY_RATE: service.hourly_rate || 0,
+                CATEGORY: service.category_id.toString() || '',
+                VENDOR_ID: service.vendor_id?.toString() || '',
             });
         } catch (error) {
             console.error('Error loading service data:', error);
@@ -81,33 +101,18 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
         }
     };
 
-    const handleVendorChange = (vendorId: string) => {
-        const selectedVendor = SUPPLIER_OPTIONS.find(s => s.ID.toString() === vendorId);
-        if (selectedVendor) {
-            setFormData(prev => ({
-                ...prev,
-                VENDOR_ID: vendorId,
-                VENDOR_NAME: selectedVendor.NAME,
-                VENDOR_EMAIL: selectedVendor.EMAIL,
-                VENDOR_CONTACT_NUMBER: selectedVendor.CONTACT_NUMBER
-            }));
-        }
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         // Prepare updated service data
         const updatedServiceData = {
             ...formData,
-            CATEGORY_ID: CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY)?.CAT_ID || 7,
-            VENDOR_ID: parseInt(formData.VENDOR_ID),
-            UPDATED_AT: new Date().toISOString()
+            HOURLY_RATE: formData.HOURLY_RATE,
+            CATEGORY_ID: parseInt(formData.CATEGORY),
+            VENDOR_ID: formData.VENDOR_ID ? parseInt(formData.VENDOR_ID) : null,
         };
 
-        console.log('Updated Service Data:', updatedServiceData);
-
-        // In real application, you would send PATCH request to backend
+        router.put(serviceput(serviceId).url, updatedServiceData);
         alert('Service updated successfully!');
 
         // Redirect back to services list
@@ -122,13 +127,8 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting service:', serviceId);
-
-        // In real application, you would send DELETE request to backend
+        router.delete(servicedelete(serviceId).url);
         alert('Service deleted successfully!');
-        setShowDeleteConfirm(false);
-
-        // Redirect back to services list
         router.visit(services().url);
     };
 
@@ -156,9 +156,6 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
             </AppLayout>
         );
     }
-
-    // Filter categories to only show service categories
-    const serviceCategories = CATEGORY_OPTIONS.filter(cat => cat.TYPE === 'service');
 
     return (
         <>
@@ -246,9 +243,9 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
                                                             className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                                         >
                                                             <option value="">Select a category</option>
-                                                            {serviceCategories.map(category => (
-                                                                <option key={category.CAT_ID} value={category.NAME}>
-                                                                    {category.NAME}
+                                                            {categories.map(category => (
+                                                                <option key={category.id} value={category.id}>
+                                                                    {category.name}
                                                                 </option>
                                                             ))}
                                                         </select>
@@ -269,19 +266,6 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
                                                         />
                                                     </div>
                                                 </div>
-
-                                                <div className="flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        id="is_active"
-                                                        checked={formData.IS_ACTIVE}
-                                                        onChange={(e) => handleInputChange('IS_ACTIVE', e.target.checked)}
-                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                    />
-                                                    <label htmlFor="is_active" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                                        Active Service
-                                                    </label>
-                                                </div>
                                             </div>
 
                                             {/* Vendor Information */}
@@ -295,15 +279,14 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
                                                             Vendor *
                                                         </label>
                                                         <select
-                                                            required
                                                             value={formData.VENDOR_ID}
-                                                            onChange={(e) => handleVendorChange(e.target.value)}
+                                                            onChange={(e) => handleInputChange('VENDOR_ID', e.target.value)}
                                                             className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                                         >
                                                             <option value="">Select a vendor</option>
-                                                            {SUPPLIER_OPTIONS.map(vendor => (
-                                                                <option key={vendor.ID} value={vendor.ID}>
-                                                                    {vendor.NAME}
+                                                            {vendors.map(vendor => (
+                                                                <option key={vendor.id} value={vendor.id}>
+                                                                    {vendor.name}
                                                                 </option>
                                                             ))}
                                                         </select>
@@ -317,7 +300,7 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
                                                                     Email
                                                                 </label>
                                                                 <p className="text-sm text-gray-900 dark:text-white">
-                                                                    {formData.VENDOR_EMAIL}
+                                                                    {vendors.find(v => v.id.toString() === formData.VENDOR_ID)?.email || 'N/A'}
                                                                 </p>
                                                             </div>
                                                             <div>
@@ -325,7 +308,7 @@ export default function ServiceEdit({ auth, serviceId }: ServiceEditProps) {
                                                                     Contact Number
                                                                 </label>
                                                                 <p className="text-sm text-gray-900 dark:text-white">
-                                                                    {formData.VENDOR_CONTACT_NUMBER}
+                                                                    {vendors.find(v => v.id.toString() === formData.VENDOR_ID)?.contact_number || 'N/A'}
                                                                 </p>
                                                             </div>
                                                         </div>

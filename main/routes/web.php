@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Requisition\RequisitionController;
+use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\Supplier\SupplierController;
 use App\Http\Controllers\WebPages\Audit;
 use App\Http\Controllers\WebPages\Dashboard;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('welcome');
+    return Inertia::render('welcome', []);
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -79,6 +80,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('services',[Services::class,'index'])->name('services');
     Route::get('services/add',[Services::class,"store"])->name('servicesadd');
     Route::get('services/{id}/edit',[Services::class,"edit"])->name('servicesedit');
+
+    Route::post('services/add',[ServiceController::class,"post"])->name('servicepost');
+    Route::put('services/{id}/edit',[ServiceController::class,"put"])->name('serviceput');
+    Route::delete('services/{id}/delete',[ServiceController::class,"delete"])->name('servicedelete');
 
     Route::get('reworks',[Reworks::class,'index'])->name('reworks');
     Route::get('reworks/add',[Reworks::class,"store"])->name('reworksadd');
