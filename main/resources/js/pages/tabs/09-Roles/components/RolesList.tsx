@@ -64,7 +64,7 @@ export default function RolesList({ roles, onRoleClick }: RolesListProps) {
                         {/* Actions */}
                         <div className="col-span-4 flex items-center justify-end space-x-2">
                             <Link
-                                href={`/roles/${role.ID}/edit`}
+                                href={`/roles/${role.RO_ID}/edit`}
                                 onClick={(e) => e.stopPropagation()}
                                 className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded"
                                 title="Edit Role"

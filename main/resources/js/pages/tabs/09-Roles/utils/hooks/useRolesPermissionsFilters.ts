@@ -25,11 +25,10 @@ export const useRolesPermissionsFilters = (
     const filteredPermissions = useMemo(() => {
         return permissions.filter(permission => {
             const matchesSearch = permissionsSearchTerm === '' ||
-                permission.NAME.toLowerCase().includes(permissionsSearchTerm.toLowerCase()) ||
-                permission.DESCRIPTION.toLowerCase().includes(permissionsSearchTerm.toLowerCase());
+                permission.NAME.toLowerCase().includes(permissionsSearchTerm.toLowerCase());
 
-            const matchesCategory = permissionCategoryFilter === 'all' ||
-                permission.CATEGORY === permissionCategoryFilter;
+            const matchesCategory = permissionCategoryFilter.toLowerCase() === 'all' ||
+                permission.CATEGORY.toLowerCase() === permissionCategoryFilter.toLowerCase();
 
             return matchesSearch && matchesCategory;
         });

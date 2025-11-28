@@ -2,17 +2,13 @@ import { Head, Link } from '@inertiajs/react';
 import { useState, useEffect, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-
+import { Toaster, toast } from 'sonner';
 // Import components
 import RolesPermissionsStats from './components/RolesPermissionsStats';
 import RolesList from './components/RolesList';
 import PermissionsList from './components/PermissionsList';
 import RoleDetailModal from './components/RoleDetailModal';
 
-// Import datasets
-import rolesData from '@/pages/datasets/role';
-import rolePermissionsData from '@/pages/datasets/role_permission';
-import permissionsData from '@/pages/datasets/permissions';
 
 // Import utilities
 import { useRolesPermissionsFilters } from './utils/hooks/useRolesPermissionsFilters';
@@ -39,8 +35,14 @@ interface Permission {
     DESCRIPTION: string;
     CATEGORY: string;
 }
+interface Prop{
+    rolesList: any[],
+    role_perm: any[],
+    permission: any[],
+    success: boolean
+}
 
-export default function RolesAndPermissions() {
+export default function RolesAndPermissions({rolesList,role_perm,permission,success}:Prop) {
     const [rolesSearchTerm, setRolesSearchTerm] = useState('');
     const [permissionsSearchTerm, setPermissionsSearchTerm] = useState('');
     const [roleStatusFilter, setRoleStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -50,15 +52,17 @@ export default function RolesAndPermissions() {
 
     const [roles, setRoles] = useState<Role[]>([]);
     const [permissions, setPermissions] = useState<Permission[]>([]);
-
     // Load data from datasets
     useEffect(() => {
         loadData();
+        if (success) {
+            toast('Role updated successfully!');
+        }
     }, []);
 
     const loadData = () => {
         // Transform permissions data
-        const transformedPermissions: Permission[] = permissionsData.map(perm => ({
+        const transformedPermissions: Permission[] = permission.map(perm => ({
             PERMISSION_ID: perm.PERMISSION_ID,
             NAME: perm.NAME,
             DESCRIPTION: perm.DESCRIPTION,
@@ -66,11 +70,11 @@ export default function RolesAndPermissions() {
         }));
 
         // Transform roles data with their permissions
-        const transformedRoles: Role[] = rolesData.map(role => {
-            const rolePerms = rolePermissionsData
+        const transformedRoles: Role[] = rolesList.map(role => {
+            const rolePerms = role_perm
                 .filter(rp => rp.ROLE_ID === role.RO_ID)
                 .map(rp => {
-                    const perm = permissionsData.find(p => p.PERMISSION_ID === rp.PERM_ID);
+                    const perm = permission.find(p => p.PERMISSION_ID === rp.PERM_ID);
                     return perm ? perm.NAME : '';
                 })
                 .filter(name => name !== '');
@@ -99,8 +103,19 @@ export default function RolesAndPermissions() {
         permissionsSearchTerm,
         roleStatusFilter,
         permissionCategoryFilter
-    );
-
+        );
+    
+const filteredPermissionsByCategory = useMemo(() => {
+    const categories: { [key: string]: Permission[] } = {};
+    filteredPermissions.forEach(permission => {
+        if (!categories[permission.CATEGORY]) {
+            categories[permission.CATEGORY] = [];
+        }
+        categories[permission.CATEGORY].push(permission);
+    });
+    return categories;
+}, [filteredPermissions]);
+    
     const categories = useMemo(() => {
         const uniqueCategories = [...new Set(permissions.map(p => p.CATEGORY))];
         return ['All', ...uniqueCategories];
@@ -271,7 +286,7 @@ export default function RolesAndPermissions() {
                                         className="w-full pl-10 pr-4 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                     />
                                 </div>
-
+                                <Toaster/>
                                 {/* Category Filter */}
                                 <div>
                                     <select
@@ -291,7 +306,7 @@ export default function RolesAndPermissions() {
                         <div className="flex-1">
                             <PermissionsList
                                 permissions={filteredPermissions}
-                                getPermissionsByCategory={getPermissionsByCategory}
+                                getPermissionsByCategory={filteredPermissionsByCategory}
                             />
                         </div>
                     </div>

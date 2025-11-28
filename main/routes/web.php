@@ -66,6 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('roles',[Roles::class,'index'])->name('roles');
     Route::get('roles/add',[Roles::class,"store"])->name('roleadd');
     Route::get('roles/{id}/edit',[Roles::class,"edit"])->name('roleedit');
+    Route::put('roles/{id}/update',[Roles::class,"update"])->name('roleUpdate');
 
     Route::get('makes-categories',[MakesAndCategories::class,'index'])->name('makesandcategories');
     Route::get('makes-categories/category/add',[MakesAndCategories::class,"store_category"])->name('categoryadd');

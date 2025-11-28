@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 interface RoleEditProps {
     auth: any;
     roleId: number;
+    role: any;
 }
 
 const breadcrumbs = (roleId: number): BreadcrumbItem[] => [
@@ -20,99 +21,35 @@ const breadcrumbs = (roleId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function RoleEdit({ auth, roleId }: RoleEditProps) {
+export default function RoleEdit({ auth, roleId, role }: RoleEditProps) {
+    const [isLoading, setIsLoading] = useState(true);
     const [formData, setFormData] = useState({
-        NAME: '',
-        DESCRIPTION: '',
-        IS_ACTIVE: true
+        NAME: role.NAME || null,
+        DESCRIPTION: role.DESCRIPTION || null,
+        IS_ACTIVE: role.IS_ACTIVE || null
     });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-
-    // Load role data on component mount
     useEffect(() => {
-        loadRoleData();
-    }, [roleId]);
+    if (formData.NAME) {
+        setIsLoading(false);
+    }
+}, [formData.NAME]);
+    // Load role data on component mount
 
-    const loadRoleData = () => {
-        setIsLoading(true);
 
-        try {
-            // Mock data - in real app, fetch from API
-            const mockRoles = [
-                {
-                    ID: 1,
-                    NAME: 'Administrator',
-                    DESCRIPTION: 'Full system access with all permissions',
-                    IS_ACTIVE: true,
-                    PERMISSION_COUNT: 12,
-                    CREATED_AT: new Date().toISOString()
-                },
-                {
-                    ID: 2,
-                    NAME: 'Manager',
-                    DESCRIPTION: 'Management level access with limited administrative functions',
-                    IS_ACTIVE: true,
-                    PERMISSION_COUNT: 8,
-                    CREATED_AT: new Date().toISOString()
-                },
-                {
-                    ID: 3,
-                    NAME: 'User',
-                    DESCRIPTION: 'Standard user with basic access rights',
-                    IS_ACTIVE: true,
-                    PERMISSION_COUNT: 4,
-                    CREATED_AT: new Date().toISOString()
-                },
-                {
-                    ID: 4,
-                    NAME: 'Viewer',
-                    DESCRIPTION: 'Read-only access to view data',
-                    IS_ACTIVE: false,
-                    PERMISSION_COUNT: 2,
-                    CREATED_AT: new Date().toISOString()
-                }
-            ];
-
-            const role = mockRoles.find(r => r.ID === roleId);
-
-            if (!role) {
-                console.error(`Role #${roleId} not found`);
-                alert('Role not found!');
-                router.visit(roles().url);
-                return;
-            }
-
-            setFormData({
-                NAME: role.NAME || '',
-                DESCRIPTION: role.DESCRIPTION || '',
-                IS_ACTIVE: role.IS_ACTIVE || true
-            });
-        } catch (error) {
-            console.error('Error loading role data:', error);
-            alert('Error loading role data!');
-            router.visit(roles().url);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         // Prepare updated role data
-        const updatedRoleData = {
-            ...formData,
-            UPDATED_AT: new Date().toISOString()
-        };
+        
+        router.put(`/roles/${roleId}/update`, formData, {
+            onError: () => {
+                alert('Error in updating the forms');
+            }
+        })    
 
-        console.log('Updated Role Data:', updatedRoleData);
-
-        // In real application, you would send PATCH request to backend
-        alert('Role updated successfully!');
-
-        // Redirect back to roles & permissions
-        router.visit(roles().url);
     };
 
     const handleInputChange = (field: string, value: any) => {
