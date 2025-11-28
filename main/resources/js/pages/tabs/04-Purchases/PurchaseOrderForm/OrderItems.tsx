@@ -205,17 +205,17 @@ export default function OrderItems({
                             </div>
                         </div>
 
-                        {/* Tax Row (if applicable) */}
-                        <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
-                            <div className="col-span-8 text-right">
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tax (0%):</p>
-                            </div>
-                            <div className="col-span-4 text-right">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    {formatCurrency(0)}
-                                </p>
-                            </div>
-                        </div>
+                        {/*/!* Tax Row (if applicable) *!/*/}
+                        {/*<div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">*/}
+                        {/*    <div className="col-span-8 text-right">*/}
+                        {/*        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tax (0%):</p>*/}
+                        {/*    </div>*/}
+                        {/*    <div className="col-span-4 text-right">*/}
+                        {/*        <p className="text-sm text-gray-600 dark:text-gray-400">*/}
+                        {/*            {formatCurrency(0)}*/}
+                        {/*        </p>*/}
+                        {/*    </div>*/}
+                        {/*</div>*/}
 
                         {/* Grand Total Row */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-green-50 dark:bg-green-900/20 border-t border-sidebar-border">
