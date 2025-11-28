@@ -6,6 +6,7 @@ const reworks = [
         STATUS: 'Pending',
         REMARKS: 'Repair needed for faulty installation',
         PO_ID: 5,
+        DELIVERY_ID: 1,
         SUPPLIER_NAME: 'Tech Solutions Inc.',
         SERVICES: [
             {
@@ -24,6 +25,7 @@ const reworks = [
         STATUS: 'Pending',
         REMARKS: 'HVAC system not cooling properly',
         PO_ID: 7,
+        DELIVERY_ID: 1,
         SUPPLIER_NAME: 'Climate Control Experts',
         SERVICES: [
             {
@@ -42,6 +44,7 @@ const reworks = [
         STATUS: 'Pending',
         REMARKS: 'Plumbing leak needs rework',
         PO_ID: 9,
+        DELIVERY_ID: 1,
         SUPPLIER_NAME: 'PipeMasters Plumbing',
         SERVICES: [
             {
