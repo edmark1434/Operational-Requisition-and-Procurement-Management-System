@@ -47,9 +47,8 @@ export default function ServiceList({ services, onServiceClick, viewMode, isLoad
                     <div className="col-span-3">Service</div>
                     <div className="col-span-2">Category</div>
                     <div className="col-span-2">Vendor</div>
-                    <div className="col-span-1 text-center">Status</div>
                     <div className="col-span-2 text-right">Hourly Rate</div>
-                    <div className="col-span-2 text-right">Actions</div>
+                    <div className="col-span-3 text-right">Actions</div>
                 </div>
 
                 {/* Table Body */}
@@ -90,13 +89,13 @@ export default function ServiceList({ services, onServiceClick, viewMode, isLoad
                                     </span>
                                 </div>
 
-                                {/* Status */}
-                                <div className="col-span-1 flex items-center justify-center">
-                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getServiceStatusColor(status)}`}>
-                                        {ServiceStatusIcons[status as keyof typeof ServiceStatusIcons]}
-                                        {statusText}
-                                    </div>
-                                </div>
+                                {/*/!* Status *!/*/}
+                                {/*<div className="col-span-1 flex items-center justify-center">*/}
+                                {/*    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getServiceStatusColor(status)}`}>*/}
+                                {/*        {ServiceStatusIcons[status as keyof typeof ServiceStatusIcons]}*/}
+                                {/*        {statusText}*/}
+                                {/*    </div>*/}
+                                {/*</div>*/}
 
                                 {/* Hourly Rate */}
                                 <div className="col-span-2 flex items-center justify-end">
@@ -106,7 +105,7 @@ export default function ServiceList({ services, onServiceClick, viewMode, isLoad
                                 </div>
 
                                 {/* Actions */}
-                                <div className="col-span-2 flex items-center justify-end space-x-2">
+                                <div className="col-span-3 flex items-center justify-end space-x-2">
                                     <Link
                                         href={`/services/${service.ID}/edit`}
                                         onClick={(e) => e.stopPropagation()}
@@ -188,11 +187,6 @@ function ServiceCard({ service, onClick, viewMode }: {
 
                 {/* Vendor and Rate - Compact */}
                 <div className="space-y-1">
-                    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getServiceStatusColor(status)}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                        {statusText}
-                    </div>
-
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400">Vendor:</span>
                         <span className="font-semibold text-gray-900 dark:text-white truncate ml-1">
@@ -215,7 +209,7 @@ function ServiceCard({ service, onClick, viewMode }: {
     return (
         <div className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-4 hover:shadow-md transition-all duration-200 cursor-pointer group">
             {/* Header with ID and Actions */}
-            <div className="flex justify-between items-start mb-3">
+            <div className="flex justify-between items-start">
                 <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
                     #{service.ID}
                 </span>
@@ -251,12 +245,6 @@ function ServiceCard({ service, onClick, viewMode }: {
 
             {/* Service Info */}
             <div className="space-y-2">
-                {/* Status */}
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getServiceStatusColor(status)}`}>
-                    {ServiceStatusIcons[status as keyof typeof ServiceStatusIcons]}
-                    {statusText}
-                </div>
-
                 {/* Vendor */}
                 <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Vendor:</span>
