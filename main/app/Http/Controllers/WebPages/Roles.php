@@ -139,7 +139,11 @@ class Roles extends Controller
             'IS_ACTIVE' => 'required|boolean'
         ]);
         $newPermission = $request->input('PERMISSIONS');
-        $role = Role::create($validated);
+        $role = Role::create([
+            'name' => $validated['NAME'],
+            'description' => $validated['DESCRIPTION'],
+            'is_active' => $validated['IS_ACTIVE']
+        ]);
         $insertData = [];
         foreach($newPermission as $permId){
             $insertData[] = [
