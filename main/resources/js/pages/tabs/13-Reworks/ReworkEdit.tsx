@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import reworksData from '@/pages/datasets/reworks';
 import serviceData from '@/pages/datasets/service';
 import reworkServiceData from '@/pages/datasets/rework_service';
+import deliveryData from '@/pages/datasets/delivery';
 
 interface ReworkEditProps {
     auth: any;
@@ -28,21 +29,23 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
         CREATED_AT: '',
         STATUS: '',
         REMARKS: '',
-        PO_ID: '',
+        DELIVERY_ID: '',
         SUPPLIER_NAME: '',
         SERVICES: [] as any[]
     });
 
+    const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [availableServices, setAvailableServices] = useState<any[]>([]);
+    const [availableDeliveries, setAvailableDeliveries] = useState<any[]>([]);
     const [selectedServiceId, setSelectedServiceId] = useState('');
-    const [serviceQuantity, setServiceQuantity] = useState(1);
 
     // Load rework data on component mount
     useEffect(() => {
         loadReworkData();
         setAvailableServices(serviceData.filter(service => service.IS_ACTIVE));
+        setAvailableDeliveries(deliveryData);
     }, [reworkId]);
 
     const loadReworkData = () => {
@@ -63,7 +66,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                 CREATED_AT: rework.CREATED_AT,
                 STATUS: rework.STATUS,
                 REMARKS: rework.REMARKS || '',
-                PO_ID: rework.PO_ID?.toString() || '',
+                DELIVERY_ID: rework.DELIVERY_ID?.toString() || '',
                 SUPPLIER_NAME: rework.SUPPLIER_NAME || '',
                 SERVICES: rework.SERVICES || []
             });
@@ -76,6 +79,43 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
         }
     };
 
+    const validateForm = () => {
+        const newErrors: {[key: string]: string} = {};
+
+        if (!formData.DELIVERY_ID.trim()) {
+            newErrors.DELIVERY_ID = 'Please select a delivery';
+        }
+
+        if (!formData.SUPPLIER_NAME.trim()) {
+            newErrors.SUPPLIER_NAME = 'Supplier name is required';
+        }
+
+        if (!formData.REMARKS.trim()) {
+            newErrors.REMARKS = 'Remarks are required';
+        }
+
+        if (formData.SERVICES.length === 0) {
+            newErrors.SERVICES = 'At least one service is required';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleDeliveryChange = (deliveryId: string) => {
+        const selectedDelivery = availableDeliveries.find(d => d.ID.toString() === deliveryId);
+
+        setFormData(prev => ({
+            ...prev,
+            DELIVERY_ID: deliveryId,
+            SUPPLIER_NAME: selectedDelivery?.SUPPLIER_NAME || ''
+        }));
+
+        if (errors.DELIVERY_ID) {
+            setErrors(prev => ({ ...prev, DELIVERY_ID: '' }));
+        }
+    };
+
     const handleAddService = () => {
         if (!selectedServiceId) return;
 
@@ -85,7 +125,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                 SERVICE_ID: parseInt(selectedServiceId),
                 NAME: service.NAME,
                 DESCRIPTION: service.DESCRIPTION,
-                QUANTITY: serviceQuantity,
+                QUANTITY: 1,
                 UNIT_PRICE: service.HOURLY_RATE
             };
 
@@ -95,7 +135,10 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
             }));
 
             setSelectedServiceId('');
-            setServiceQuantity(1);
+
+            if (errors.SERVICES) {
+                setErrors(prev => ({ ...prev, SERVICES: '' }));
+            }
         }
     };
 
@@ -109,20 +152,22 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Prepare updated rework data
-        const updatedReworkData = {
-            ...formData,
-            PO_ID: parseInt(formData.PO_ID),
-            UPDATED_AT: new Date().toISOString()
-        };
+        if (validateForm()) {
+            // Prepare updated rework data
+            const updatedReworkData = {
+                ...formData,
+                DELIVERY_ID: parseInt(formData.DELIVERY_ID),
+                UPDATED_AT: new Date().toISOString()
+            };
 
-        console.log('Updated Rework Data:', updatedReworkData);
+            console.log('Updated Rework Data:', updatedReworkData);
 
-        // In real application, you would send PATCH request to backend
-        alert('Rework updated successfully!');
+            // In real application, you would send PATCH request to backend
+            alert('Rework updated successfully!');
 
-        // Redirect back to reworks list
-        router.visit(reworks().url);
+            // Redirect back to reworks list
+            router.visit(reworks().url);
+        }
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -130,6 +175,10 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
             ...prev,
             [field]: value
         }));
+
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: '' }));
+        }
     };
 
     const handleDelete = () => {
@@ -214,28 +263,39 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                         <div className="space-y-8">
                                             {/* Basic Information */}
                                             <div className="space-y-6">
-                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
                                                     Basic Information
                                                 </h3>
 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            PO ID *
+                                                            Delivery <span className="text-red-500">*</span>
                                                         </label>
-                                                        <input
-                                                            type="number"
+                                                        <select
                                                             required
-                                                            value={formData.PO_ID}
-                                                            onChange={(e) => handleInputChange('PO_ID', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                            placeholder="Enter PO ID"
-                                                        />
+                                                            value={formData.DELIVERY_ID}
+                                                            onChange={(e) => handleDeliveryChange(e.target.value)}
+                                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                                errors.DELIVERY_ID ? 'border-red-500' : 'border-sidebar-border'
+                                                            }`}
+                                                        >
+                                                            <option value="">Select a delivery</option>
+                                                            {availableDeliveries.map(delivery => (
+                                                                <option key={delivery.ID} value={delivery.ID}>
+                                                                    Delivery #{delivery.ID} - {delivery.SUPPLIER_NAME}
+                                                                    {delivery.PO_ID && ` (PO: ${delivery.PO_ID})`}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        {errors.DELIVERY_ID && (
+                                                            <p className="text-red-500 text-xs mt-1">{errors.DELIVERY_ID}</p>
+                                                        )}
                                                     </div>
 
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            Created Date *
+                                                            Created Date <span className="text-red-500">*</span>
                                                         </label>
                                                         <input
                                                             type="date"
@@ -249,21 +309,27 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Supplier Name *
+                                                        Supplier Name <span className="text-red-500">*</span>
                                                     </label>
                                                     <input
                                                         type="text"
                                                         required
                                                         value={formData.SUPPLIER_NAME}
                                                         onChange={(e) => handleInputChange('SUPPLIER_NAME', e.target.value)}
-                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                        placeholder="Enter supplier name"
+                                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                            errors.SUPPLIER_NAME ? 'border-red-500' : 'border-sidebar-border'
+                                                        }`}
+                                                        placeholder="Supplier name will auto-populate when delivery is selected"
+                                                        readOnly
                                                     />
+                                                    {errors.SUPPLIER_NAME && (
+                                                        <p className="text-red-500 text-xs mt-1">{errors.SUPPLIER_NAME}</p>
+                                                    )}
                                                 </div>
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Status *
+                                                        Status <span className="text-red-500">*</span>
                                                     </label>
                                                     <select
                                                         required
@@ -280,16 +346,21 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Remarks *
+                                                        Remarks <span className="text-red-500">*</span>
                                                     </label>
                                                     <textarea
                                                         required
                                                         value={formData.REMARKS}
                                                         onChange={(e) => handleInputChange('REMARKS', e.target.value)}
                                                         rows={3}
-                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
+                                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                            errors.REMARKS ? 'border-red-500' : 'border-sidebar-border'
+                                                        }`}
                                                         placeholder="Describe the rework requirements..."
                                                     />
+                                                    {errors.REMARKS && (
+                                                        <p className="text-red-500 text-xs mt-1">{errors.REMARKS}</p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -300,7 +371,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                                 </h3>
 
                                                 {/* Add Service Form */}
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                             Service
@@ -319,19 +390,6 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                                         </select>
                                                     </div>
 
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            Quantity
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={serviceQuantity}
-                                                            onChange={(e) => setServiceQuantity(parseInt(e.target.value) || 1)}
-                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                        />
-                                                    </div>
-
                                                     <div className="flex items-end">
                                                         <button
                                                             type="button"
@@ -347,7 +405,9 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                                 {/* Services List */}
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Selected Services
+                                                        Selected Services {errors.SERVICES && (
+                                                        <span className="text-red-500 text-xs"> - {errors.SERVICES}</span>
+                                                    )}
                                                     </label>
 
                                                     {formData.SERVICES.length === 0 ? (

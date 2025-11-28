@@ -60,15 +60,15 @@ export default function ContactDetailModal({
                             {/* Basic Info */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Status
-                                        </label>
-                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getContactStatusColor(status)}`}>
-                                            {ContactStatusIcons[status as keyof typeof ContactStatusIcons]}
-                                            {statusText}
-                                        </div>
-                                    </div>
+                                    {/*<div>*/}
+                                    {/*    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">*/}
+                                    {/*        Status*/}
+                                    {/*    </label>*/}
+                                    {/*    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getContactStatusColor(status)}`}>*/}
+                                    {/*        {ContactStatusIcons[status as keyof typeof ContactStatusIcons]}*/}
+                                    {/*        {statusText}*/}
+                                    {/*    </div>*/}
+                                    {/*</div>*/}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Full Name

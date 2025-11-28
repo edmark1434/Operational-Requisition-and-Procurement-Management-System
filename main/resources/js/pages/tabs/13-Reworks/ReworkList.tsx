@@ -49,8 +49,8 @@ export default function ReworkList({ reworks, onReworkClick, viewMode, isLoading
                     <div className="col-span-2">Supplier</div>
                     <div className="col-span-2">Services</div>
                     <div className="col-span-1 text-center">Status</div>
-                    <div className="col-span-2 text-right">Total Cost</div>
-                    <div className="col-span-1 text-right">Actions</div>
+                    {/*<div className="col-span-2 text-right">Total Cost</div>*/}
+                    <div className="col-span-3 text-right">Actions</div>
                 </div>
 
                 {/* Table Body */}
@@ -97,15 +97,15 @@ export default function ReworkList({ reworks, onReworkClick, viewMode, isLoading
                                 </div>
                             </div>
 
-                            {/* Total Cost */}
-                            <div className="col-span-2 flex items-center justify-end">
-                                <span className={`text-sm font-bold ${getPriceLevelColor(rework.TOTAL_COST)}`}>
-                                    {formatCurrency(rework.TOTAL_COST)}
-                                </span>
-                            </div>
+                            {/*/!* Total Cost *!/*/}
+                            {/*<div className="col-span-2 flex items-center justify-end">*/}
+                            {/*    <span className={`text-sm font-bold ${getPriceLevelColor(rework.TOTAL_COST)}`}>*/}
+                            {/*        {formatCurrency(rework.TOTAL_COST)}*/}
+                            {/*    </span>*/}
+                            {/*</div>*/}
 
                             {/* Actions */}
-                            <div className="col-span-1 flex items-center justify-end space-x-2">
+                            <div className="col-span-3 flex items-center justify-end space-x-2">
                                 <Link
                                     href={`/reworks/${rework.ID}/edit`}
                                     onClick={(e) => e.stopPropagation()}
@@ -196,12 +196,12 @@ function ReworkCard({ rework, onClick, viewMode }: {
                             {rework.SERVICES.length}
                         </span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Total:</span>
-                        <span className={`font-semibold ${getPriceLevelColor(rework.TOTAL_COST)}`}>
-                            {formatCurrency(rework.TOTAL_COST)}
-                        </span>
-                    </div>
+                    {/*<div className="flex justify-between">*/}
+                    {/*    <span className="text-gray-500 dark:text-gray-400">Total:</span>*/}
+                    {/*    <span className={`font-semibold ${getPriceLevelColor(rework.TOTAL_COST)}`}>*/}
+                    {/*        {formatCurrency(rework.TOTAL_COST)}*/}
+                    {/*    </span>*/}
+                    {/*</div>*/}
                 </div>
             </div>
         );
@@ -264,13 +264,13 @@ function ReworkCard({ rework, onClick, viewMode }: {
                     </span>
                 </div>
 
-                {/* Total Cost */}
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Total Cost:</span>
-                    <span className={`text-sm font-bold ${getPriceLevelColor(rework.TOTAL_COST)}`}>
-                        {formatCurrency(rework.TOTAL_COST)}
-                    </span>
-                </div>
+                {/*/!* Total Cost *!/*/}
+                {/*<div className="flex justify-between items-center">*/}
+                {/*    <span className="text-sm text-gray-600 dark:text-gray-400">Total Cost:</span>*/}
+                {/*    <span className={`text-sm font-bold ${getPriceLevelColor(rework.TOTAL_COST)}`}>*/}
+                {/*        {formatCurrency(rework.TOTAL_COST)}*/}
+                {/*    </span>*/}
+                {/*</div>*/}
 
                 {/* PO Reference */}
                 <div className="flex justify-between items-center pt-2 border-t border-sidebar-border">

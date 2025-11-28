@@ -138,7 +138,7 @@ export default function MakesAndCategories() {
                             </div>
 
                             {/* Makes Filters */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                                 {/* Search */}
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -155,18 +155,18 @@ export default function MakesAndCategories() {
                                     />
                                 </div>
 
-                                {/* Status Filter */}
-                                <div>
-                                    <select
-                                        value={makeStatusFilter}
-                                        onChange={(e) => setMakeStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                    >
-                                        <option value="all">All Status</option>
-                                        <option value="active">Active Only</option>
-                                        <option value="inactive">Inactive Only</option>
-                                    </select>
-                                </div>
+                                {/*/!* Status Filter *!/*/}
+                                {/*<div>*/}
+                                {/*    <select*/}
+                                {/*        value={makeStatusFilter}*/}
+                                {/*        onChange={(e) => setMakeStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}*/}
+                                {/*        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"*/}
+                                {/*    >*/}
+                                {/*        <option value="all">All Status</option>*/}
+                                {/*        <option value="active">Active Only</option>*/}
+                                {/*        <option value="inactive">Inactive Only</option>*/}
+                                {/*    </select>*/}
+                                {/*</div>*/}
                             </div>
                         </div>
                         <div className="flex-1">
