@@ -36,6 +36,9 @@ return new class extends Migration
                 (
                     'Administrator',
                     'Manages users, roles and permissions, suppliers, settings, as well as the list of items, makes, and categories'
+                ),(
+                    'Requestor',
+                    'Creates purchase requests, tracks request status, and views approved items'
                 );
             END;
             $$;

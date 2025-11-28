@@ -14,7 +14,7 @@ class Service extends Model
     /** @use HasFactory<\Database\Factories\ServiceFactory> */
     use HasFactory;
     protected $table = 'services';
-    protected $fillable = ['name','description','hourly_rate','vendor_id','is_active'];
+    protected $fillable = ['name','description','hourly_rate','vendor_id','is_active','category'];
 
     public function vendor(){
         $this->belongsTo(Vendor::class, 'vendor_id');

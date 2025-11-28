@@ -17,7 +17,7 @@ return new class extends Migration
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->enum('status', Rework::STATUS);
             $table->text('remarks');
-            $table->foreignId('po_id')->constrained('purchase_order')->cascadeOnUpdate();
+            $table->foreignId('delivery_id')->constrained('delivery')->cascadeOnUpdate();
         });
     }
 
