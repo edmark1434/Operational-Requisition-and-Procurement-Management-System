@@ -16,52 +16,36 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->string('description', 255)->nullable();
+            $table->boolean('is_active')->default(true);
         });
-         DB::unprepared("
-            CREATE OR REPLACE FUNCTION get_roles(p_id INT DEFAULT NULL)
-            RETURNS SETOF role AS $$
-            BEGIN
-                RETURN QUERY
-                SELECT * FROM role
-                WHERE (p_id IS NULL OR id = p_id)
-                ORDER BY id;
-            END;
-            $$ LANGUAGE plpgsql;
-        ");
-
         DB::unprepared("
-            CREATE OR REPLACE PROCEDURE create_role(p_name VARCHAR, p_description VARCHAR)
+            CREATE OR REPLACE PROCEDURE seed_role()
             LANGUAGE plpgsql
             AS $$
             BEGIN
-                INSERT INTO role(name, description)
-                VALUES (p_name, p_description);
+                INSERT INTO role (name, description)
+                VALUES
+                (
+                    'Encoder',
+                    'Records requisitions, deliveries and returns, and merges purchase orders to ready for issuance'
+                ),
+                (
+                    'Manager',
+                    'Manages inventory, approves requisitions and issues purchase orders and returns'
+                ),
+                (
+                    'Administrator',
+                    'Manages users, roles and permissions, suppliers, settings, as well as the list of items, makes, and categories'
+                ),(
+                    'Requestor',
+                    'Creates purchase requests, tracks request status, and views approved items'
+                );
             END;
             $$;
         ");
 
-        DB::unprepared("
-            CREATE OR REPLACE PROCEDURE update_role(p_id INT, p_name VARCHAR DEFAULT NULL, p_description VARCHAR DEFAULT NULL)
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                UPDATE role
-                SET
-                    name = COALESCE(p_name, name),
-                    description = COALESCE(p_description, description)
-                WHERE id = p_id;
-            END;
-            $$;
-        ");
-        DB::unprepared("
-            CREATE OR REPLACE PROCEDURE delete_role(p_id INT)
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                DELETE FROM role WHERE id = p_id;
-            END;
-            $$;
-        ");
+        DB::unprepared("CALL seed_role();");
+        
     }
 
     /**
@@ -70,9 +54,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('role');
-        DB::unprepared("DROP FUNCTION IF EXISTS get_roles(INT);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS create_role(VARCHAR, VARCHAR);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS update_role(INT, VARCHAR, VARCHAR);");
-        DB::unprepared("DROP PROCEDURE IF EXISTS delete_role(INT);");
+        DB::unprepared("DROP PROCEDURE IF EXISTS seed_role();");
     }
 };

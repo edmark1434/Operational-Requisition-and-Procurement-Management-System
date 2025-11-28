@@ -6,12 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\DeliveryItem;
 use App\Models\Category;
+use App\Models\RequisitionService;
+use App\Models\DeliveryService;
+use App\Models\OrderService;
+use App\Models\ReworkService;
+use App\Models\OrderItem;
+use App\Models\RequisitionItem;
 use App\Models\Make;
 class Item extends Model
 {
     use HasFactory;
     protected $table = 'item';
-    protected $fillable = ['barcode','name','dimensions','unit_price','current_stock','make_id','category_id'];
+    protected $fillable = ['barcode','name','dimensions','unit_price','current_stock','make_id','category_id','vendor_id','is_active'];
     
     public function make(){
         return $this->belongsTo(Make::class,'make_id');
@@ -19,24 +25,33 @@ class Item extends Model
     public function category(){
         return $this->belongsTo(Category::class,'category_id');
     }
-    public function delivery(){
-        return $this->hasMany(DeliveryItem::class,'item_id');
-    }
     public function return_item()
     {
-        return $this->hasMany(\App\Models\ReturnItem::class, 'item_id');
+        return $this->hasMany(ReturnItem::class, 'item_id');
     }
     public function requisition_item()
     {
-        return $this->hasMany(\App\Models\RequisitionItem::class, 'item_id');
+        return $this->hasMany(RequisitionItem::class, 'item_id');
     }
     public function order_item()
     {
-        return $this->hasMany(\App\Models\OrderItem::class, 'item_id');
+        return $this->hasMany(OrderItem::class, 'item_id');
     }
     public function delivery_item()
     {
-        return $this->hasMany(\App\Models\DeliveryItem::class, 'item_id');
+        return $this->hasMany(DeliveryItem::class, 'item_id');
+    }
+    public function requisition_service(){
+        $this->hasMany(RequisitionService::class, 'item_id');
+    }
+    public function order_service(){
+        $this->hasMany(OrderService::class, 'item_id');
+    }
+    public function delivery_service(){
+        $this->hasMany(DeliveryService::class, 'item_id');
+    }
+    public function rework_service(){
+        $this->hasMany(ReworkService::class, 'item_id');
     }
     public $timestamps = false;
 }
