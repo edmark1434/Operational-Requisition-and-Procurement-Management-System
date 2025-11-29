@@ -31,10 +31,16 @@ class Returns extends Model
     /**
      * Each return belongs to one delivery
      */
-    public function delivery()
+    public function originalDelivery()
     {
-        return $this->belongsTo(Delivery::class, 'delivery_id');
+        return $this->belongsToMany(Delivery::class, 'return_delivery', 'return_id', 'old_delivery_id');
     }
+
+    public function newDelivery()
+    {
+        return $this->belongsToMany(Delivery::class, 'return_delivery', 'return_id', 'new_delivery_id');
+    }
+
     public function return_item()
     {
         return $this->belongsTo(ReturnItem::class, 'return_id');

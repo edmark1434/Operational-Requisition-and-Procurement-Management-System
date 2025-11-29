@@ -20,7 +20,6 @@ return new class extends Migration
             $table->enum('status',Returns::STATUS)->default('Pending');
             $table->text('remarks')->nullable();
             $table->unsignedBigInteger('delivery_id')->nullable();
-            $table->foreign('delivery_id')->references('id')->on('delivery')->onDelete('set null');
         });
     }
 
