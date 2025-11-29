@@ -26,6 +26,7 @@ interface Requisition {
 
 interface RequisitionsPageProps {
     requisitions: Requisition[]; // Data from Laravel
+    dbCategories: string[];      // Master list of categories from Laravel
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -35,7 +36,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Requisitions({ requisitions: serverRequisitions }: RequisitionsPageProps) {
+export default function Requisitions({
+                                         requisitions: serverRequisitions,
+                                         dbCategories = [] // Default to empty array to prevent crash if backend isn't ready
+                                     }: RequisitionsPageProps) {
+
     // 1. State for Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
@@ -75,14 +80,19 @@ export default function Requisitions({ requisitions: serverRequisitions }: Requi
     }, [localRequisitions, searchTerm, statusFilter, priorityFilter, categoryFilter]);
 
     // --- Extract Unique Values for Dropdowns ---
-    const statuses = useMemo(() => ['All', ...Array.from(new Set(localRequisitions.map(r => r.status)))], [localRequisitions]);
-    const priorities = useMemo(() => ['All', ...Array.from(new Set(localRequisitions.map(r => r.priority)))], [localRequisitions]);
-    const allCategories = useMemo(() => {
-        const cats = new Set<string>();
-        localRequisitions.forEach(r => r.categories?.forEach(c => cats.add(c)));
-        return ['All', ...Array.from(cats)];
-    }, [localRequisitions]);
 
+    // 1. Static Values (Always show these options)
+    const statuses = [
+        'All', 'pending', 'approved', 'partially_approved',
+        'rejected', 'ordered', 'awaiting_pickup', 'delivered', 'received'
+    ];
+
+    const priorities = ['All', 'Low', 'Normal', 'High'];
+
+    // 2. CATEGORIES (Pulling from Database Prop)
+    // Now we just take the list passed from Laravel and add "All" to the front.
+    // No filtering, no conditions. It shows everything in the DB.
+    const allCategories = ['All', ...dbCategories];
 
     // --- Handlers ---
     const handleStatusUpdate = (id: number, newStatus: string, reason?: string) => {
