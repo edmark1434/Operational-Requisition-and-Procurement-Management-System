@@ -119,17 +119,19 @@ export default function UserAdd({roles,permissions,role_perm}:Prop) {
     }
 };
 
-    const handlePermissionChange = (permissionId: string, isChecked: boolean) => {
+    const handlePermissionChange = (permissionId: number | string, isChecked: boolean) => {
+        const id = String(permissionId); // convert to string ALWAYS
+
         setFormData(prev => {
             if (isChecked) {
                 return {
                     ...prev,
-                    PERMISSIONS: [...prev.PERMISSIONS, permissionId]
+                    PERMISSIONS: [...prev.PERMISSIONS, id]
                 };
             } else {
                 return {
                     ...prev,
-                    PERMISSIONS: prev.PERMISSIONS.filter(id => id !== permissionId)
+                    PERMISSIONS: prev.PERMISSIONS.filter(p => p !== id)
                 };
             }
         });
@@ -448,7 +450,7 @@ export default function UserAdd({roles,permissions,role_perm}:Prop) {
                                                                     type="checkbox"
                                                                     id={`permission-${permission.PERMISSION_ID}`}
                                                                     checked={formData.PERMISSIONS.includes(String(permission.PERMISSION_ID))}
-                                                                    onChange={(e) => handlePermissionChange(permission.PERMISSION_ID, e.target.checked)}
+                                                                    onChange={(e) => handlePermissionChange(String(permission.PERMISSION_ID), e.target.checked)}
                                                                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                                                 />
                                                                 <label
