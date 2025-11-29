@@ -162,12 +162,6 @@ export default function UserAdd({roles,permissions,role_perm}:Prop) {
     };
 
     router.post(userCreate(), payload, {
-        onSuccess: () => {
-            toast('User added successfully!');
-            setTimeout(() => {
-                router.visit(users().url); // redirect to users list
-            }, 2000);
-        },
         onError: (errors) => {
             const normalizedErrors: { [key: string]: string } = {};
             Object.keys(errors).forEach(key => {
@@ -589,14 +583,14 @@ export default function UserAdd({roles,permissions,role_perm}:Prop) {
                                             </label>
                                             <p className="text-sm text-gray-900 dark:text-white font-mono">{formData.USERNAME}</p>
                                         </div>
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 Status
                                             </label>
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                                 Active
                                             </span>
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </div>
 

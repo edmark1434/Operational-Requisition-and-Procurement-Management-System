@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { makesandcategories } from '@/routes';
+import { makeCreate, makesandcategories } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -38,24 +38,12 @@ export default function MakeAdd({ auth }: { auth: any }) {
         e.preventDefault();
 
         if (validateForm()) {
-            // Generate new make ID
-            const newMakeId = Math.max(...makeData.map(make => make.ID), 0) + 1;
 
             // Prepare make data
             const makeDataToAdd = {
-                ID: newMakeId,
                 ...formData,
-                CREATED_AT: new Date().toISOString(),
-                UPDATED_AT: new Date().toISOString()
             };
-
-            console.log('New Make Data:', makeDataToAdd);
-
-            // In real application, you would send POST request to backend
-            alert('Make added successfully!');
-
-            // Redirect back to makes & categories
-            router.visit(makesandcategories().url);
+            router.post(makeCreate(), makeDataToAdd);
         }
     };
 

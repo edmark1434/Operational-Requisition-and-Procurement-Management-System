@@ -6,9 +6,6 @@ export const transformMakesData = () => {
         ID: make.ID,
         NAME: make.NAME,
         IS_ACTIVE: make.IS_ACTIVE,
-        STATUS: make.IS_ACTIVE ? 'active' : 'inactive',
-        CREATED_AT: new Date().toISOString(),
-        UPDATED_AT: new Date().toISOString()
     }));
 };
 
@@ -19,8 +16,5 @@ export const transformCategoriesData = () => {
         DESCRIPTION: category.DESCRIPTION,
         TYPE: category.TYPE,
         IS_ACTIVE: true, // Default since your dataset doesn't have this field
-        STATUS: 'active',
-        CREATED_AT: new Date().toISOString(),
-        UPDATED_AT: new Date().toISOString()
     }));
 };

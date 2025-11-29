@@ -42,16 +42,19 @@ class Item extends Model
         return $this->hasMany(DeliveryItem::class, 'item_id');
     }
     public function requisition_service(){
-        $this->hasMany(RequisitionService::class, 'item_id');
+        return $this->hasMany(RequisitionService::class, 'item_id');
     }
     public function order_service(){
-        $this->hasMany(OrderService::class, 'item_id');
+        return $this->hasMany(OrderService::class, 'item_id');
     }
     public function delivery_service(){
-        $this->hasMany(DeliveryService::class, 'item_id');
+        return $this->hasMany(DeliveryService::class, 'item_id');
     }
     public function rework_service(){
-        $this->hasMany(ReworkService::class, 'item_id');
+        return $this->hasMany(ReworkService::class, 'item_id');
+    }
+    public function vendor(){
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
     public $timestamps = false;
 }

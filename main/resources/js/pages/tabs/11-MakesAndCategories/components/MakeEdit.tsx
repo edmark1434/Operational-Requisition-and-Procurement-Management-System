@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { makesandcategories } from '@/routes';
+import { makeDelete, makesandcategories, makeUpdate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -8,6 +8,7 @@ import makeData from '@/pages/datasets/make';
 interface MakeEditProps {
     auth: any;
     makeId: number;
+    make: any
 }
 
 const breadcrumbs = (makeId: number): BreadcrumbItem[] => [
@@ -21,7 +22,7 @@ const breadcrumbs = (makeId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function MakeEdit({ auth, makeId }: MakeEditProps) {
+export default function MakeEdit({ auth, makeId,make }: MakeEditProps) {
     const [formData, setFormData] = useState({
         NAME: '',
         IS_ACTIVE: true
@@ -31,35 +32,9 @@ export default function MakeEdit({ auth, makeId }: MakeEditProps) {
 
     // Load make data on component mount
     useEffect(() => {
-        loadMakeData();
+        setFormData(make);
+        setIsLoading(false)
     }, [makeId]);
-
-    const loadMakeData = () => {
-        setIsLoading(true);
-
-        try {
-            // Find the make to edit
-            const make = makeData.find(make => make.ID === makeId);
-
-            if (!make) {
-                console.error(`Make #${makeId} not found`);
-                alert('Make not found!');
-                router.visit(makesandcategories().url);
-                return;
-            }
-
-            setFormData({
-                NAME: make.NAME || '',
-                IS_ACTIVE: make.IS_ACTIVE || true
-            });
-        } catch (error) {
-            console.error('Error loading make data:', error);
-            alert('Error loading make data!');
-            router.visit(makesandcategories().url);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -67,16 +42,9 @@ export default function MakeEdit({ auth, makeId }: MakeEditProps) {
         // Prepare updated make data
         const updatedMakeData = {
             ...formData,
-            UPDATED_AT: new Date().toISOString()
         };
 
-        console.log('Updated Make Data:', updatedMakeData);
-
-        // In real application, you would send PATCH request to backend
-        alert('Make updated successfully!');
-
-        // Redirect back to makes & categories
-        router.visit(makesandcategories().url);
+        router.put(makeUpdate(makeId), updatedMakeData);
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -87,14 +55,7 @@ export default function MakeEdit({ auth, makeId }: MakeEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting make:', makeId);
-
-        // In real application, you would send DELETE request to backend
-        alert('Make deleted successfully!');
-        setShowDeleteConfirm(false);
-
-        // Redirect back to makes & categories
-        router.visit(makesandcategories().url);
+        router.delete(makeDelete(makeId));
     };
 
     const handleCancel = () => {

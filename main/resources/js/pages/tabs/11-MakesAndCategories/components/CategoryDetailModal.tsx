@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { getCategoryTypeColor } from '../utils/styleutils';
+import { router } from '@inertiajs/react';
+import { categoryDeleteModel, makesandcategories } from '@/routes';
+import { toast } from 'sonner';
 
 interface CategoryDetailModalProps {
     category: any;
@@ -21,10 +24,12 @@ export default function CategoryDetailModal({
     const typeText = category?.TYPE === 'item' ? 'Item' : 'Service';
 
     const handleDelete = () => {
-        if (category) {
-            onDelete(category.CAT_ID);
-        }
-        setShowDeleteConfirm(false);
+        router.delete(categoryDeleteModel(category.CAT_ID), {
+            onSuccess: () => {
+                toast('Category deleted successfully!');
+                router.visit(makesandcategories.url());
+            }
+        })
     };
 
     if (!isOpen) return null;

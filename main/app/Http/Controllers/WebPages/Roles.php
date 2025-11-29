@@ -14,9 +14,9 @@ class Roles extends Controller
     protected $base_path = "tabs/09-Roles";
     public function index()
     {
-        $success = session('success');
-        $message = session('message');
-        $roles = Role::all();
+        $success = session()->pull('success');
+        $message = session()->pull('message');
+        $roles = Role::where('is_active',true)->get();
         $permission = Permission::all();
         $role_permission = RolePermission::all();
         return Inertia::render($this->base_path .'/Main',[
@@ -125,7 +125,7 @@ class Roles extends Controller
 
     public function delete($id){
         RolePermission::where('role_id', $id)->delete();
-        Role::where('id', $id)->delete();
+        Role::where('id', $id)->update(['is_active' => false]);
         return redirect()->route('roles')->with([
             'success'=> true,
             'message' => "Role deleted successfully!"
