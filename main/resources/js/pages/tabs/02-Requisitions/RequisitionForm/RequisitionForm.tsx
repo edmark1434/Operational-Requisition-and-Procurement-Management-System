@@ -172,38 +172,35 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         }
     };
 
+// Inside RequisitionForm.tsx
+
     const saveItem = (id: string) => {
+        // 1. Find the row we are trying to save
         const itemToSave = items.find(item => item.id === id);
         if (!itemToSave) return;
 
-        // Validate required fields
+        // 2. Validate that the Child successfully set the ID
         if (!itemToSave.itemName.trim() || !itemToSave.quantity.trim() || !itemToSave.category.trim()) {
-            alert('Please fill in category, item name and quantity before saving the item.');
+            alert('Please fill in category, item name and quantity before saving.');
             return;
         }
 
-        // Link to actual item if it exists in the system
-        const matchedSystemItem = systemItems.find(sysItem =>
-            sysItem.name.toLowerCase() === itemToSave.itemName.toLowerCase()
-        );
+        // --- KEY FIX STARTS HERE ---
+        // We do NOT look up the item again. The Child component already did that.
+        // We just check if an ID exists.
 
+        if (!itemToSave.itemId) {
+            alert("System Error: Item ID is missing. Please re-select the item from the dropdown.");
+            return;
+        }
+
+        // 3. Lock the row (set isSaved to true)
         setItems(prev => {
-            const updatedItems = prev.map(item =>
-                item.id === id ? {
-                    ...item,
-                    isSaved: true,
-                    itemId: matchedSystemItem?.id
-                } : item
+            return prev.map(item =>
+                item.id === id ? { ...item, isSaved: true } : item
             );
-
-            const savedItem = updatedItems.find(item => item.id === id);
-            if (savedItem) {
-                const filteredItems = updatedItems.filter(item => item.id !== id);
-                return [...filteredItems, savedItem];
-            }
-
-            return updatedItems;
         });
+        // --- KEY FIX ENDS HERE ---
     };
 
     const editItem = (id: string) => {
@@ -387,11 +384,31 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         setShowPreview(true);
     };
 
+
     const handleConfirmSubmit = () => {
-        // TODO: Add submission logic when backend is ready
-        alert('Requisition submitted successfully! (Demo mode)');
-        setShowPreview(false);
-        router.visit('/requisitions');
+        // 1. Prepare data
+        // (previewData is already ready)
+
+        // 2. Send to backend using the URL string, NOT the route() helper
+        // CHANGE THIS LINE BELOW:
+        router.post('/requisitions', previewData, {
+            onBefore: () => {
+                // Optional: You can add loading state here
+            },
+            onSuccess: () => {
+                setShowPreview(false);
+                // Inertia handles the redirect for you
+            },
+            onError: (errors) => {
+                console.error('Backend Errors:', errors);
+                setShowPreview(false);
+                // This will highlight the red error boxes on your form
+                setValidationErrors(errors);
+
+                // Optional: Alert the user
+                alert('Please check the form for errors.');
+            }
+        });
     };
 
     const clearForm = () => {
