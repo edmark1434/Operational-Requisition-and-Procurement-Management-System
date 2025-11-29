@@ -17,10 +17,10 @@ return new class extends Migration
             $table->id();
             $table->enum('type',Requisition::TYPES);
             $table->timestamps();
-            $table->enum('status',Requisition::STATUS);
+            $table->enum('status',Requisition::STATUS)->default('Pending');
             $table->string('remarks')->nullable();
             $table->string('requestor')->nullable();
-            $table->string('notes')->nullable();    
+            $table->string('notes')->nullable();
             $table->string('priority', 15)->default('NORMAL');
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
         });
