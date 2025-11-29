@@ -1,8 +1,16 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import {Head, Link, router, usePage} from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { getAvailablePurchaseOrders, getPurchaseOrderItems, formatCurrency, formatDate } from './utils';
+
+// Define delivery types
+export const DELIVERY_TYPES = {
+    ITEM_PURCHASE: 'Item Purchase',
+    SERVICE_DELIVERY: 'Service Delivery',
+    ITEM_RETURN: 'Item Return',
+    SERVICE_REWORK: 'Service Rework'
+};
 
 // Import the new datasets
 import returns from '../../datasets/returns';
@@ -10,79 +18,103 @@ import returnItems from '../../datasets/return_items';
 import reworks from '../../datasets/reworks';
 
 // Type definitions
-interface ReworkService {
-    ID: number;
-    SERVICE_ID: number;
-    NAME: string;
-    DESCRIPTION: string;
-    QUANTITY: number;
-    UNIT_PRICE: number;
+export interface Item {
+    id: number;
+    barcode: string | null;
+    name: string;
+    dimensions: string | null;
+    unit_price: number;
+    current_stock: number;
+    is_active: boolean;
+    make_id: number | null;
+    category_id: number;
+    vendor_id: number | null;
 }
 
-interface Rework {
-    ID: number;
-    CREATED_AT: string;
-    STATUS: string;
-    REMARKS: string;
-    PO_ID: number;
-    SUPPLIER_NAME: string;
-    SERVICES: ReworkService[];
+export interface Service {
+    id: number;
+    name: string;
+    description: string;
+    hourly_rate: number;
+    is_active: boolean;
+    category_id: number;
+    vendor_id: number | null;
 }
 
-interface ReturnItem {
-    ID: number;
-    RETURN_ID: number;
-    ITEM_ID: number;
-    QUANTITY: number;
-    REASON: string;
+export interface PurchaseOrder {
+    id: number;
+    ref_no: string;
+    type: string;          // from PurchaseOrder::TYPES
+    created_at: string;    // ISO timestamp
+    total_cost: number;
+    payment_type: string;  // from PurchaseOrder::PAYMENT_TYPE
+    status: string;        // from PurchaseOrder::status
+    remarks: string | null;
+    req_id: number | null;
+    vendor_id: number | null;
 }
 
-interface Return {
-    ID: number;
-    CREATED_AT: string;
-    RETURN_DATE: string;
-    STATUS: string;
-    REMARKS: string;
-    DELIVERY_ID: number;
-    SUPPLIER_NAME: string;
+export interface OrderItem {
+    id: number;
+    po_id: number;
+    item_id: number;
+    item: Item;
+    quantity: number;
 }
 
-interface SelectedItem {
-    ITEM_ID: number;
-    ITEM_NAME: string;
-    QUANTITY: number;
-    UNIT_PRICE: number;
-    BARCODE: string;
-    MAX_QUANTITY: number;
+export interface OrderService {
+    id: number;
+    po_id: number;
+    service_id: number;
+    service: Service;
+    item_id: number | null;
+    item: Item | null;
 }
 
-interface SelectedService {
-    SERVICE_ID: number;
-    SERVICE_NAME: string;
-    DESCRIPTION: string;
-    QUANTITY: number;
-    UNIT_PRICE: number;
+export interface Return {
+    id: number;
+    created_at: string;    // ISO timestamp
+    return_date: string;   // ISO date
+    status: string;        // from Returns::status
+    remarks: string | null;
+    delivery_id: number | null;
 }
 
-interface ServiceItem {
-    SERVICE_ID: number;
-    NAME: string;
-    DESCRIPTION: string;
-    QUANTITY: number;
-    UNIT_PRICE: number;
-    SELECTED?: boolean;
+export interface ReturnItem {
+    id: number;
+    return_id: number;
+    item_id: number;
+    item: Item;
+    quantity: number;
 }
 
-interface AvailableService {
-    SERVICE_ID: number;
-    NAME: string;
-    DESCRIPTION: string;
-    QUANTITY: number;
-    UNIT_PRICE: number;
-    HOURLY_RATE?: number;
-    VENDOR_ID?: number;
-    CATEGORY_ID?: number;
-    IS_ACTIVE?: boolean;
+export interface Rework {
+    id: number;
+    created_at: string;    // ISO timestamp
+    status: string;        // from Rework::status
+    remarks: string;
+}
+
+export interface ReworkService {
+    id: number;
+    rework_id: number;
+    service_id: number;
+    service: Service;
+    item_id: number | null;
+    item: Item | null;
+}
+
+
+interface FormItem {
+    item_id: number;
+    quantity: number;
+    unit_price: number;
+}
+
+interface FormService {
+    service_id: number;
+    item_id: number | null;
+    hourly_rate: number;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -96,15 +128,20 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Delivery type options
-const DELIVERY_TYPES = {
-    ITEM_PURCHASE: 'Item Purchase',
-    SERVICE_DELIVERY: 'Service Delivery',
-    ITEM_RETURN: 'Item Return',
-    SERVICE_REWORK: 'Service Rework'
-};
-
 export default function DeliveryAdd({ auth }: { auth: any }) {
+    const { purchaseOrders: backendPurchaseOrders, returns, reworks, orderItems, orderServices, returnItems, reworkService: reworkServices, types, statuses, items, services } = usePage<{
+        purchaseOrders: PurchaseOrder[];
+        returns: Return[];
+        reworks: Rework[];
+        orderItems: OrderItem[];
+        orderServices: OrderService[];
+        returnItems: ReturnItem[];
+        reworkService: ReworkService[];
+        types: string[];
+        statuses: string[];
+        items: Item[];
+        services: Service[];
+    }>().props;
     const [formData, setFormData] = useState({
         DELIVERY_TYPE: '',
         PO_ID: '',
@@ -113,13 +150,13 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
         RECEIPT_NO: '',
         DELIVERY_DATE: '',
         REMARKS: '',
-        STATUS: 'pending',
+        STATUS: 'Pending',
         RECEIPT_PHOTO: ''
     });
-    const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-    const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+    const [selectedItems, setSelectedItems] = useState<FormItem[]>([]);
+    const [selectedServices, setSelectedServices] = useState<FormService[]>([]);
     const [errors, setErrors] = useState<{[key: string]: string}>({});
-    const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
+    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(backendPurchaseOrders);
     const [availableReturns, setAvailableReturns] = useState<Return[]>([]);
     const [availableReworks, setAvailableReworks] = useState<Rework[]>([]);
 
@@ -137,27 +174,14 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
     }, []);
 
     const loadPurchaseOrders = () => {
-        const availablePOs = getAvailablePurchaseOrders();
-        // Filter to only show approved and completed POs for deliveries
-        const filteredPOs = availablePOs.filter(po =>
-            po.STATUS === 'approved' || po.STATUS === 'completed'
-        );
-        setPurchaseOrders(filteredPOs);
+        setPurchaseOrders(purchaseOrders);
     };
     const loadReturns = () => {
-        // Filter returns that are pending and available for delivery
-        const pendingReturns = returns.filter((returnItem: Return) =>
-            returnItem.STATUS === 'pending'
-        );
-        setAvailableReturns(pendingReturns);
+        setAvailableReturns(returns);
     };
 
     const loadReworks = () => {
-        // Filter reworks that are pending and available for delivery
-        const pendingReworks = reworks.filter((rework: Rework) =>
-            rework.STATUS === 'pending'
-        );
-        setAvailableReworks(pendingReworks);
+        setAvailableReworks(reworks);
     };
 
     const handleReceiptPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,9 +201,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
 
     // Calculate total cost from selected items and services
     const calculateTotalCost = () => {
-        const itemsTotal = selectedItems.reduce((total, item) => total + (item.QUANTITY * item.UNIT_PRICE), 0);
-        const servicesTotal = selectedServices.reduce((total, service) => total + (service.QUANTITY * service.UNIT_PRICE), 0);
-        return itemsTotal + servicesTotal;
+        return selectedItems.reduce((total, item) => total + (item.quantity * item.unit_price), 0);
     };
 
     const validateForm = () => {
@@ -189,19 +211,19 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
             newErrors.DELIVERY_TYPE = 'Delivery type is required';
         }
 
-        if (formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE || formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_DELIVERY) {
+        if (formData.DELIVERY_TYPE === 'Item Purchase' || formData.DELIVERY_TYPE === 'Service Delivery') {
             if (!formData.PO_ID) {
                 newErrors.PO_ID = 'Purchase order is required';
             }
         }
 
-        if (formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_RETURN) {
+        if (formData.DELIVERY_TYPE === 'Item Return') {
             if (!formData.RETURN_ID) {
                 newErrors.RETURN_ID = 'Return is required';
             }
         }
 
-        if (formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_REWORK) {
+        if (formData.DELIVERY_TYPE === 'Service Rework') {
             if (!formData.REWORK_ID) {
                 newErrors.REWORK_ID = 'Rework is required';
             }
@@ -225,14 +247,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
         }
 
         selectedItems.forEach((item, index) => {
-            if (item.QUANTITY <= 0) {
+            if (item.quantity <= 0) {
                 newErrors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
-            }
-        });
-
-        selectedServices.forEach((service, index) => {
-            if (service.QUANTITY <= 0) {
-                newErrors[`service_${index}_quantity`] = 'Quantity must be greater than 0';
             }
         });
 
@@ -287,86 +303,81 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
     };
 
     const loadReturnItems = (returnId: number) => {
-        const returnItem = availableReturns.find(r => r.ID === returnId);
-        const items = returnItems.filter((ri: ReturnItem) => ri.RETURN_ID === returnId);
-
-        const itemsWithDetails = items.map(item => ({
-            ITEM_ID: item.ITEM_ID,
-            ITEM_NAME: `Return Item #${item.ID}`,
-            QUANTITY: item.QUANTITY,
-            UNIT_PRICE: 0, // Returns typically don't have unit price
-            BARCODE: '',
-            MAX_QUANTITY: item.QUANTITY
-        }));
-
-        setSelectedItems(itemsWithDetails);
+        const itemReturn = availableReturns.find(r => r.id === returnId);
+        const items = returnItems.filter((ri: ReturnItem) => ri.return_id === returnId);
+        if (itemReturn && items) {
+            const itemsWithDetails = items.map(item => ({
+                item_id: item.item_id,
+                item_name: item.item.name,
+                quantity: item.quantity,
+                unit_price: item.item.unit_price, // Returns typically don't have unit price
+                max_quantity: item.quantity
+            }));
+            setSelectedItems(itemsWithDetails);
+        }
     };
 
     const loadReworkServices = (reworkId: number) => {
-        const rework = availableReworks.find(r => r.ID === reworkId);
-        if (rework && rework.SERVICES) {
-            const servicesWithDetails = rework.SERVICES.map((service: ReworkService) => ({
-                SERVICE_ID: service.SERVICE_ID,
-                SERVICE_NAME: service.NAME,
-                DESCRIPTION: service.DESCRIPTION,
-                QUANTITY: service.QUANTITY,
-                UNIT_PRICE: service.UNIT_PRICE
+        const rework = availableReworks.find(r => r.id === reworkId);
+        const services = reworkServices.filter(rs => rs.rework_id === reworkId);
+        if (rework && services) {
+            const servicesWithDetails = services.map((service: ReworkService) => ({
+                service_id: service.service_id,
+                service_name: service.service.name,
+                description: service.service.description,
+                hourly_rate: service.service.hourly_rate,
+                item_id: service.item_id ? service.item_id : null,
             }));
             setSelectedServices(servicesWithDetails);
         }
     };
 
     const handleAddItem = (item: any) => {
-        const existingItem = selectedItems.find(selected => selected.ITEM_ID === item.ITEM_ID);
+        const existingItem = selectedItems.find(selected => selected.item_id === item.item_id);
 
         if (!existingItem) {
             setSelectedItems(prev => [...prev, {
-                ITEM_ID: item.ITEM_ID,
-                ITEM_NAME: item.ITEM_NAME,
-                QUANTITY: 1,
-                UNIT_PRICE: item.UNIT_PRICE,
-                BARCODE: item.BARCODE,
-                MAX_QUANTITY: item.QUANTITY_ORDERED
+                item_id: item.item_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price
             }]);
         }
     };
 
     const handleAddService = (service: any) => {
-        const existingService = selectedServices.find(selected => selected.SERVICE_ID === service.SERVICE_ID);
+        const existingService = selectedServices.find(selected => selected.service_id === service.service_id);
 
         if (!existingService) {
             setSelectedServices(prev => [...prev, {
-                SERVICE_ID: service.SERVICE_ID,
-                SERVICE_NAME: service.NAME,
-                DESCRIPTION: service.DESCRIPTION,
-                QUANTITY: service.QUANTITY,
-                UNIT_PRICE: service.UNIT_PRICE
+                service_id: service.service_id,
+                item_id: service.item_id,
+                hourly_rate: service.hourly_rate
             }]);
         }
     };
 
     const handleRemoveItem = (itemId: number) => {
-        setSelectedItems(prev => prev.filter(item => item.ITEM_ID !== itemId));
+        setSelectedItems(prev => prev.filter(item => item.item_id !== itemId));
     };
 
     const handleRemoveService = (serviceId: number) => {
-        setSelectedServices(prev => prev.filter(service => service.SERVICE_ID !== serviceId));
+        setSelectedServices(prev => prev.filter(service => service.service_id !== serviceId));
     };
 
     const handleItemQuantityChange = (itemId: number, quantity: number) => {
         setSelectedItems(prev => prev.map(item =>
-            item.ITEM_ID === itemId ? {
+            item.item_id === itemId ? {
                 ...item,
-                QUANTITY: Math.max(1, quantity)
+                quantity: Math.max(1, quantity)
             } : item
         ));
     };
 
     const handleServiceQuantityChange = (serviceId: number, quantity: number) => {
         setSelectedServices(prev => prev.map(service =>
-            service.SERVICE_ID === serviceId ? {
+            service.service_id === serviceId ? {
                 ...service,
-                QUANTITY: Math.max(1, quantity)
+                quantity: Math.max(1, quantity)
             } : service
         ));
     };
@@ -376,15 +387,15 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
     };
 
     const getSelectedPurchaseOrder = () => {
-        return purchaseOrders.find(po => po.ID.toString() === formData.PO_ID);
+        return purchaseOrders.find(po => po.id.toString() === formData.PO_ID);
     };
 
     const getSelectedReturn = () => {
-        return availableReturns.find(ret => ret.ID.toString() === formData.RETURN_ID);
+        return availableReturns.find(ret => ret.id.toString() === formData.RETURN_ID);
     };
 
     const getSelectedRework = () => {
-        return availableReworks.find(rework => rework.ID.toString() === formData.REWORK_ID);
+        return availableReworks.find(rework => rework.id.toString() === formData.REWORK_ID);
     };
 
     const getAvailableItems = () => {
@@ -393,22 +404,22 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
         return getPurchaseOrderItems(poId);
     };
 
-    const getAvailableServices = (): AvailableService[] => {
+    const getAvailableServices = (): Service[] => {
         if (!formData.PO_ID) return [];
         const selectedPO = getSelectedPurchaseOrder();
-        return selectedPO?.SERVICES || [];
+        return orderServices.filter(s => s.po_id === selectedPO?.id).map(s => s.service);
     };
 
     const getFilteredPurchaseOrders = () => {
         if (formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE) {
             return purchaseOrders.filter(po =>
-                po.ORDER_TYPE === 'items' &&
-                (po.STATUS === 'approved' || po.STATUS === 'completed')
+                po.type === 'items' &&
+                (po.status === 'approved' || po.status === 'completed')
             );
         } else if (formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_DELIVERY) {
             return purchaseOrders.filter(po =>
-                po.ORDER_TYPE === 'services' &&
-                (po.STATUS === 'approved' || po.STATUS === 'completed')
+                po.type === 'services' &&
+                (po.status === 'approved' || po.status === 'completed')
             );
         }
         return [];
@@ -421,25 +432,24 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
             const calculatedTotalCost = calculateTotalCost();
 
             const deliveryData = {
-                DELIVERY_TYPE: formData.DELIVERY_TYPE,
-                DELIVERY_DATE: formData.DELIVERY_DATE,
-                TOTAL_COST: calculatedTotalCost,
-                RECEIPT_NO: formData.RECEIPT_NO,
-                RECEIPT_PHOTO: formData.RECEIPT_PHOTO,
-                STATUS: formData.STATUS,
-                REMARKS: formData.REMARKS,
-                PO_ID: formData.PO_ID ? parseInt(formData.PO_ID) : null,
-                RETURN_ID: formData.RETURN_ID ? parseInt(formData.RETURN_ID) : null,
-                REWORK_ID: formData.REWORK_ID ? parseInt(formData.REWORK_ID) : null,
-                ITEMS: selectedItems.map(item => ({
-                    ITEM_ID: item.ITEM_ID,
-                    QUANTITY: item.QUANTITY,
-                    UNIT_PRICE: item.UNIT_PRICE
+                delivery_type: formData.DELIVERY_TYPE,
+                delivery_date: formData.DELIVERY_DATE,
+                total_cost: calculatedTotalCost,
+                receipt_no: formData.RECEIPT_NO,
+                receipt_photo: formData.RECEIPT_PHOTO,
+                status: formData.STATUS,
+                remarks: formData.REMARKS,
+                po_id: formData.PO_ID ? parseInt(formData.PO_ID) : null,
+                return_id: formData.RETURN_ID ? parseInt(formData.RETURN_ID) : null,
+                rework_id: formData.REWORK_ID ? parseInt(formData.REWORK_ID) : null,
+                items: selectedItems.map(item => ({
+                    item_id: item.item_id,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price
                 })),
-                SERVICES: selectedServices.map(service => ({
-                    SERVICE_ID: service.SERVICE_ID,
-                    QUANTITY: service.QUANTITY,
-                    UNIT_PRICE: service.UNIT_PRICE
+                services: selectedServices.map(service => ({
+                    service_id: service.service_id,
+                    hourly_rate: service.hourly_rate,
                 }))
             };
 
@@ -469,7 +479,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
             RECEIPT_NO: '',
             DELIVERY_DATE: '',
             REMARKS: '',
-            STATUS: 'pending',
+            STATUS: 'Pending',
             RECEIPT_PHOTO: ''
         });
         setSelectedItems([]);
@@ -540,10 +550,9 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                         }`}
                                                     >
                                                         <option value="">Select delivery type</option>
-                                                        <option value={DELIVERY_TYPES.ITEM_PURCHASE}>Item Purchase</option>
-                                                        <option value={DELIVERY_TYPES.SERVICE_DELIVERY}>Service Delivery</option>
-                                                        <option value={DELIVERY_TYPES.ITEM_RETURN}>Item Return</option>
-                                                        <option value={DELIVERY_TYPES.SERVICE_REWORK}>Service Rework</option>
+                                                        {types.map(type => (
+                                                            <option value={type}>{type}</option>
+                                                        ))}
                                                     </select>
                                                     {errors.DELIVERY_TYPE && (
                                                         <p className="text-red-500 text-xs mt-1">{errors.DELIVERY_TYPE}</p>
@@ -618,8 +627,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                             >
                                                                 <option value="">Select a purchase order</option>
                                                                 {getFilteredPurchaseOrders().map(po => (
-                                                                    <option key={po.ID} value={po.ID}>
-                                                                        {po.REFERENCE_NO} - {po.SUPPLIER_NAME} - {formatCurrency(po.TOTAL_COST)}
+                                                                    <option key={po.id} value={po.id}>
+                                                                        {po.ref_no} - Vendor ID: {po.vendor_id} - {formatCurrency(po.total_cost)}
                                                                     </option>
                                                                 ))}
                                                             </select>
@@ -644,8 +653,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                             >
                                                                 <option value="">Select a purchase order</option>
                                                                 {getFilteredPurchaseOrders().map(po => (
-                                                                    <option key={po.ID} value={po.ID}>
-                                                                        {po.REFERENCE_NO} - {po.SUPPLIER_NAME} - {formatCurrency(po.TOTAL_COST)}
+                                                                    <option key={po.id} value={po.id}>
+                                                                        {po.ref_no} - Vendor ID: {po.vendor_id} - {formatCurrency(po.total_cost)}
                                                                     </option>
                                                                 ))}
                                                             </select>
@@ -670,8 +679,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                             >
                                                                 <option value="">Select a return</option>
                                                                 {availableReturns.map(ret => (
-                                                                    <option key={ret.ID} value={ret.ID}>
-                                                                        Return #{ret.ID} - {ret.SUPPLIER_NAME} - {formatDate(ret.CREATED_AT)}
+                                                                    <option key={ret.id} value={ret.id}>
+                                                                        Return #{ret.id} - {formatDate(ret.created_at)}
                                                                     </option>
                                                                 ))}
                                                             </select>
@@ -696,8 +705,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                             >
                                                                 <option value="">Select a rework</option>
                                                                 {availableReworks.map(rework => (
-                                                                    <option key={rework.ID} value={rework.ID}>
-                                                                        Rework #{rework.ID} - {rework.SUPPLIER_NAME} - {formatDate(rework.CREATED_AT)}
+                                                                    <option key={rework.id} value={rework.id}>
+                                                                        Rework #{rework.id} - {formatDate(rework.created_at)}
                                                                     </option>
                                                                 ))}
                                                             </select>
@@ -742,13 +751,12 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                     </label>
                                                     <select
                                                         value={formData.STATUS}
-                                                        onChange={(e) => handleInputChange('STATUS', e.target.value)}
+                                                        onChange={(e) => handleInputChange('status', e.target.value)}
                                                         className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                                     >
-                                                        <option value="pending">Pending</option>
-                                                        <option value="in-transit">In Transit</option>
-                                                        <option value="delivered">Delivered</option>
-                                                        <option value="cancelled">Cancelled</option>
+                                                        {statuses.map(status => (
+                                                            <option value={status}>{status}</option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                             </div>
@@ -761,21 +769,21 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                     </h4>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                         <div>
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Supplier:</span>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Vendor ID:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedPurchaseOrder()?.SUPPLIER_NAME}
+                                                                {getSelectedPurchaseOrder()?.vendor_id || 'N/A'}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Order Date:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedPurchaseOrder()?.CREATED_AT ? formatDate(getSelectedPurchaseOrder()!.CREATED_AT) : 'N/A'}
+                                                                {getSelectedPurchaseOrder()?.created_at ? formatDate(getSelectedPurchaseOrder()!.created_at) : 'N/A'}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Payment Type:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedPurchaseOrder()?.PAYMENT_TYPE}
+                                                                {getSelectedPurchaseOrder()?.payment_type}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -789,21 +797,21 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                     </h4>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                         <div>
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Supplier:</span>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Return ID:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedReturn()?.SUPPLIER_NAME}
+                                                                {getSelectedReturn()?.id}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Return Date:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedReturn()?.CREATED_AT ? formatDate(getSelectedReturn()!.CREATED_AT) : 'N/A'}
+                                                                {getSelectedReturn()?.created_at ? formatDate(getSelectedReturn()!.created_at) : 'N/A'}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Remarks:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedReturn()?.REMARKS}
+                                                                {getSelectedReturn()?.remarks}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -817,21 +825,21 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                     </h4>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                         <div>
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Supplier:</span>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Rework ID:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedRework()?.SUPPLIER_NAME}
+                                                                {getSelectedRework()?.id}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Rework Date:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedRework()?.CREATED_AT ? formatDate(getSelectedRework()!.CREATED_AT) : 'N/A'}
+                                                                {getSelectedRework()?.created_at ? formatDate(getSelectedRework()!.created_at) : 'N/A'}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Remarks:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedRework()?.REMARKS}
+                                                                {getSelectedRework()?.remarks}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -877,7 +885,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleAddItem(item)}
-                                                                        disabled={selectedItems.some(selected => selected.ITEM_ID === item.ITEM_ID)}
+                                                                        disabled={selectedItems.some(selected => selected.item_id === item.ITEM_ID)}
                                                                         className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                                                     >
                                                                         Add
@@ -898,20 +906,20 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                         </div>
                                                         <div className="divide-y divide-sidebar-border">
                                                             {selectedItems.map((item, index) => (
-                                                                <div key={item.ITEM_ID} className="p-4">
+                                                                <div key={item.item_id} className="p-4">
                                                                     <div className="flex justify-between items-start mb-3">
                                                                         <div className="flex-1">
-                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{item.ITEM_NAME}</p>
+                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</p>
                                                                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                                Unit Price: {formatCurrency(item.UNIT_PRICE)}
+                                                                                Unit Price: {formatCurrency(item.unit_price)}
                                                                             </p>
                                                                             <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                                                                                Barcode: {item.BARCODE}
+                                                                                Item ID: {item.item_id}
                                                                             </p>
                                                                         </div>
                                                                         <button
                                                                             type="button"
-                                                                            onClick={() => handleRemoveItem(item.ITEM_ID)}
+                                                                            onClick={() => handleRemoveItem(item.item_id)}
                                                                             className="text-red-600 hover:text-red-700 p-1"
                                                                         >
                                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -928,8 +936,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                             <input
                                                                                 type="number"
                                                                                 min="1"
-                                                                                value={item.QUANTITY}
-                                                                                onChange={(e) => handleItemQuantityChange(item.ITEM_ID, parseInt(e.target.value) || 0)}
+                                                                                value={item.quantity}
+                                                                                onChange={(e) => handleItemQuantityChange(item.item_id, parseInt(e.target.value) || 0)}
                                                                                 className={`w-full px-3 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
                                                                                     errors[`item_${index}_quantity`] ? 'border-red-500' : 'border-sidebar-border'
                                                                                 }`}
@@ -939,7 +947,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                             )}
                                                                             {formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE && (
                                                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                                    Ordered: {item.MAX_QUANTITY} (reference only)
+                                                                                    Ordered: {item.quantity} (reference only)
                                                                                 </p>
                                                                             )}
                                                                         </div>
@@ -948,7 +956,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                                 Total Value
                                                                             </label>
                                                                             <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                                                                {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
+                                                                                {formatCurrency(item.quantity * item.unit_price)}
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -987,21 +995,21 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                             Available Services from Purchase Order
                                                         </h4>
                                                         <div className="space-y-2 max-h-60 overflow-y-auto">
-                                                            {getAvailableServices().map((service: AvailableService) => (
-                                                                <div key={service.SERVICE_ID} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border">
+                                                            {getAvailableServices().map((service: Service) => (
+                                                                <div key={service.id} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border">
                                                                     <div className="flex-1">
-                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{service.NAME}</p>
+                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{service.name}</p>
                                                                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                            {service.DESCRIPTION}
+                                                                            {service.description}
                                                                         </p>
                                                                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                            Ordered: {service.QUANTITY} • Rate: {formatCurrency(service.UNIT_PRICE)}/hour
+                                                                            Rate: {formatCurrency(service.hourly_rate)}/hour
                                                                         </p>
                                                                     </div>
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleAddService(service)}
-                                                                        disabled={selectedServices.some(selected => selected.SERVICE_ID === service.SERVICE_ID)}
+                                                                        disabled={selectedServices.some(selected => selected.service_id === service.id)}
                                                                         className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                                                     >
                                                                         Add
@@ -1022,20 +1030,20 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                         </div>
                                                         <div className="divide-y divide-sidebar-border">
                                                             {selectedServices.map((service, index) => (
-                                                                <div key={service.SERVICE_ID} className="p-4">
+                                                                <div key={service.service_id} className="p-4">
                                                                     <div className="flex justify-between items-start mb-3">
                                                                         <div className="flex-1">
-                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{service.SERVICE_NAME}</p>
+                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{services.find(s => s.id === service.service_id)?.name || 'Unknown Service'}</p>
                                                                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                                {service.DESCRIPTION}
+                                                                                {services.find(s => s.id === service.service_id)?.description || 'No description'}
                                                                             </p>
                                                                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                                Rate: {formatCurrency(service.UNIT_PRICE)}/hour
+                                                                                Service ID: {service.service_id}
                                                                             </p>
                                                                         </div>
                                                                         <button
                                                                             type="button"
-                                                                            onClick={() => handleRemoveService(service.SERVICE_ID)}
+                                                                            onClick={() => handleRemoveService(service.service_id)}
                                                                             className="text-red-600 hover:text-red-700 p-1"
                                                                         >
                                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1052,8 +1060,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                             <input
                                                                                 type="number"
                                                                                 min="1"
-                                                                                value={service.QUANTITY}
-                                                                                onChange={(e) => handleServiceQuantityChange(service.SERVICE_ID, parseInt(e.target.value) || 0)}
+                                                                                value={1}
+                                                                                onChange={(e) => handleServiceQuantityChange(service.service_id, parseInt(e.target.value) || 0)}
                                                                                 className={`w-full px-3 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
                                                                                     errors[`service_${index}_quantity`] ? 'border-red-500' : 'border-sidebar-border'
                                                                                 }`}
@@ -1067,7 +1075,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                                 Total Value
                                                                             </label>
                                                                             <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                                                                {formatCurrency(service.QUANTITY * service.UNIT_PRICE)}
+                                                                                {formatCurrency(services.find(s => s.id === service.service_id)?.hourly_rate || 0)}
                                                                             </p>
                                                                         </div>
                                                                     </div>

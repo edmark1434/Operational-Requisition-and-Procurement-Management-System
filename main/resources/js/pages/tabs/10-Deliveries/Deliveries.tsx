@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import {Head, Link, usePage} from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -14,32 +14,31 @@ import { transformDeliveriesData } from './utils';
 import { useDeliveriesFilters } from './hooks';
 
 // Add proper TypeScript interfaces
-interface DeliveryItem {
-    ID: number;
-    ITEM_ID: number;
-    ITEM_NAME: string;
-    QUANTITY: number;
-    UNIT_PRICE: number;
-    BARCODE?: string;
-    CATEGORY?: string;
+interface Delivery {
+    id: number;
+    type: string;
+    delivery_date: string;
+    total_cost: number;
+    receipt_no: string;
+    receipt_photo: string | null;
+    status: string;
+    remarks: string | null;
+    po_id: number | null;
 }
 
-interface Delivery {
-    ID: number;
-    RECEIPT_NO: string;
-    DELIVERY_DATE: string;
-    TOTAL_COST: number;
-    STATUS: string;
-    REMARKS: string;
-    RECEIPT_PHOTO: string;
-    PO_ID: number;
-    PO_REFERENCE: string;
-    SUPPLIER_ID?: number;
-    SUPPLIER_NAME: string;
-    TOTAL_ITEMS: number;
-    TOTAL_VALUE: number;
-    DELIVERY_TYPE?: string;
-    ITEMS: DeliveryItem[];
+export interface DeliveryItem {
+    id: number;
+    delivery_id: number | null;
+    item_id: number | null;
+    quantity: number;
+    unit_price: number;
+}
+
+export interface DeliveryService {
+    id: number;
+    delivery_id: number;
+    service_id: number;
+    item_id: number | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -50,24 +49,25 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Deliveries() {
+    const { deliveries: backendDeliveries, types, statuses } = usePage<{
+        deliveries: Delivery[];
+        types: string[];
+        statuses: string[];
+    }>().props;
+    const [deliveries, setDeliveries] = useState<Delivery[]>(backendDeliveries);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [typeFilter, setTypeFilter] = useState('All');
     const [dateFilter, setDateFilter] = useState('All');
     const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [deliveries, setDeliveries] = useState<Delivery[]>(transformDeliveriesData());
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
-    const {
-        filteredDeliveries,
-        statuses,
-        deliveryTypes,
-        dateRanges
-    } = useDeliveriesFilters(deliveries, searchTerm, statusFilter, dateFilter, typeFilter);
+    const {filteredDeliveries, dateRanges} = useDeliveriesFilters(deliveries, searchTerm, statusFilter, dateFilter, typeFilter);
 
     const handleDeleteDelivery = (id: number) => {
-        setDeliveries(prev => prev.filter(delivery => delivery.ID !== id));
+        setDeliveries(prev => prev.filter(delivery => delivery.id !== id));
         setIsDetailModalOpen(false);
     };
 
@@ -75,15 +75,15 @@ export default function Deliveries() {
     const handleStatusChange = (deliveryId: number, newStatus: string) => {
         setDeliveries(prev =>
             prev.map(delivery =>
-                delivery.ID === deliveryId
-                    ? { ...delivery, STATUS: newStatus }
+                delivery.id === deliveryId
+                    ? { ...delivery, status: newStatus }
                     : delivery
             )
         );
 
         // Update selected delivery if it's the one being changed
-        if (selectedDelivery && selectedDelivery.ID === deliveryId) {
-            setSelectedDelivery({ ...selectedDelivery, STATUS: newStatus });
+        if (selectedDelivery && selectedDelivery.id === deliveryId) {
+            setSelectedDelivery({ ...selectedDelivery, status: newStatus });
         }
 
         // In a real application, you would also make an API call here
@@ -134,7 +134,7 @@ export default function Deliveries() {
                     dateFilter={dateFilter}
                     setDateFilter={setDateFilter}
                     statuses={statuses}
-                    deliveryTypes={deliveryTypes}
+                    deliveryTypes={types}
                     dateRanges={dateRanges}
                     resultsCount={filteredDeliveries.length}
                     viewMode={viewMode}
@@ -156,7 +156,7 @@ export default function Deliveries() {
                         isOpen={isDetailModalOpen}
                         onClose={closeAllModals}
                         onEdit={() => {
-                            window.location.href = `/deliveries/${selectedDelivery.ID}/edit`;
+                            window.location.href = `/deliveries/${selectedDelivery.id}/edit`;
                         }}
                         onDelete={handleDeleteDelivery}
                         onStatusChange={handleStatusChange}

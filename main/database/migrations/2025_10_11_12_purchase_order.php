@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('purchase_order', function (Blueprint $table) {
             $table->id();
-            $table->string('references_no')->unique();
+            $table->string('ref_no')->unique();
             $table->enum('type',PurchaseOrder::TYPES);
             $table->timestamp('created_at')->useCurrent();
             $table->decimal('total_cost', 15, 2);

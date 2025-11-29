@@ -28,7 +28,7 @@ class PurchaseOrder extends Model
      */
     protected $fillable = [
         'type',
-        'references_no',
+        'ref_no',
         'total_cost',
         'payment_type',
         'status',
