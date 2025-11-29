@@ -1,11 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { requisitionform } from '@/routes';
+// import { requisitionform } from '@/routes'; // (Assuming this is used elsewhere or commented out)
 import { StatusIcons } from './utils/icons';
 import { getStatusColor, getPriorityColor } from './utils/styleUtils';
 import { formatDate } from './utils/formatters';
 
 interface Requisition {
     id: number;
+    references_no: string; // <--- ADDED THIS
     requestor: string;
     priority: string;
     type: string;
@@ -49,7 +50,6 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No requisitions found</h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-4">Try adjusting your search or filters.</p>
-                        {/* BUTTON REMOVED HERE */}
                     </div>
                 </div>
             </div>
@@ -62,7 +62,7 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
                 {/* Column Headers */}
                 <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 border-b border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                     <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        REQ #
+                        REF NO.
                     </div>
                     <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         TYPE
@@ -85,7 +85,6 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
                     <div className="space-y-3 lg:space-y-0">
                         {requisitions.map((requisition: any) => (
                             <RequisitionListItem
-                                // Try lowercase 'id', if missing try uppercase 'ID', if missing use index (last resort)
                                 key={requisition.id || requisition.ID || Math.random()}
                                 requisition={requisition}
                                 onClick={() => onRequisitionClick(requisition)}
@@ -110,9 +109,13 @@ function RequisitionListItem({
 }) {
     // 1. Normalize the data
     const id = requisition.id || requisition.ID;
+
+    // NEW: Extract Reference Number. Fallback to ID if reference is missing.
+    const referenceNo = requisition.references_no || requisition.REFERENCES_NO || `#${id}`;
+
     const status = requisition.status || requisition.STATUS;
     const type = requisition.type || requisition.TYPE;
-    const priority = requisition.priority || requisition.PRIORITY; // <--- This is the SAFE variable
+    const priority = requisition.priority || requisition.PRIORITY;
     const requestor = requisition.requestor || requisition.REQUESTOR;
     const notes = requisition.notes || requisition.NOTES;
     const remarks = requisition.remarks || requisition.REMARKS;
@@ -124,10 +127,10 @@ function RequisitionListItem({
     return (
         <div onClick={onClick} className="border border-sidebar-border rounded-lg lg:border-0 lg:rounded-none lg:border-b bg-white dark:bg-sidebar p-4 lg:py-3 hover:shadow-md lg:hover:shadow-none transition-all duration-200 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 lg:hover:bg-gray-50 dark:lg:hover:bg-sidebar">
             <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center">
-                {/* REQ # */}
+                {/* REF # (CHANGED FROM ID TO REFERENCE NO) */}
                 <div className="col-span-2 mb-3 lg:mb-0">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
-                        #{id} {/* USE SAFE ID */}
+                         {referenceNo}
                     </span>
                 </div>
 
@@ -144,7 +147,6 @@ function RequisitionListItem({
 
                 {/* STATUS */}
                 <div className="col-span-2 mb-3 lg:mb-0">
-                    {/* USE SAFE 'status' VARIABLE HERE 👇 */}
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
                         {StatusIcons[status?.toLowerCase() as keyof typeof StatusIcons] || StatusIcons.pending}
                         {getStatusDisplayName(status)}
@@ -154,7 +156,7 @@ function RequisitionListItem({
                 {/* DETAILS */}
                 <div className="col-span-3 mb-3 lg:mb-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {requestor} {/* USE SAFE REQUESTOR */}
+                        {requestor}
                     </p>
                     {status?.toLowerCase() === 'rejected' && remarks ? (
                         <p className="text-xs text-red-600 dark:text-red-400 truncate mt-1 font-medium">
@@ -189,7 +191,6 @@ function RequisitionListItem({
 
                 {/* PRIORITY */}
                 <div className="col-span-2 mb-3 lg:mb-0">
-                    {/* USE SAFE 'priority' VARIABLE HERE 👇 */}
                     <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${getPriorityColor(priority)}`}>
                         {priority}
                     </div>
@@ -199,7 +200,7 @@ function RequisitionListItem({
                 <div className="col-span-1 flex items-center justify-between lg:justify-end">
                     <div className="text-right">
                         <p className="text-xs text-gray-500 dark:text-gray-500">
-                            {formatDate(date)} {/* USE SAFE DATE */}
+                            {formatDate(date)}
                         </p>
                     </div>
                     <div className="flex-shrink-0 text-gray-400 ml-3">
