@@ -63,13 +63,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('users',[Users::class,'index'])->name('users');
     Route::get('users/add',[Users::class,"store"])->name('useradd');
     Route::get('users/{id}/edit',[Users::class,"edit"])->name('useredit');
+    Route::put('/users/${id}/edit/status',[Users::class,"editStatus"])->name('usereditStatus');
+    Route::put('/users/${id}/update',[Users::class,"updateUser"])->name('userUpdate');
+    Route::post('/users/create',[Users::class,"createUser"])->name('userCreate');
+    Route::delete('/users/${id}/delete',[Users::class,"deleteUser"])->name('userDelete');
 
     Route::get('roles',[Roles::class,'index'])->name('roles');
     Route::get('roles/add',[Roles::class,"store"])->name('roleadd');
-    Route::get('roles/added',[Roles::class,"roleAdd"])->name('roleAdded');
+    Route::post('roles/added',[Roles::class,"roleAdd"])->name('roleAdded');
     Route::get('roles/{id}/edit',[Roles::class,"edit"])->name('roleedit');
     Route::put('roles/{id}/update',[Roles::class,"update"])->name('roleUpdate');
-    Route::put('roles/{id}/delete',[Roles::class,"delete"])->name('roleDelete');
+    Route::delete('roles/{id}/delete',[Roles::class,"delete"])->name('roleDelete');
 
     Route::get('makes-categories',[MakesAndCategories::class,'index'])->name('makesandcategories');
     Route::get('makes-categories/category/add',[MakesAndCategories::class,"store_category"])->name('categoryadd');
