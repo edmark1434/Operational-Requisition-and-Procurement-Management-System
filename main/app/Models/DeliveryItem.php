@@ -12,14 +12,14 @@ class DeliveryItem extends Model
     use HasFactory;
     protected $table = 'delivery_item';
     protected $fillable = [
-        'purchase_id',
+        'delivery_id',
         'item_id',
         'quantity',
         'unit_price',
     ];
-    public function purchaseOrder()
+    public function delivery()
     {
-        return $this->belongsTo(PurchaseOrder::class,'purchase_id');
+        return $this->belongsTo(Delivery::class,'delivery_id');
     }
     public function item()
     {

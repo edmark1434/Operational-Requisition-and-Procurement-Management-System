@@ -11,7 +11,7 @@ class Make extends Model
     protected $table = 'make';
     protected $fillable = ['name','is_active'];
     public $timestamps = false;
-    public function item()
+    public function items()
     {
         return $this->hasMany(Item::class, 'make_id');
     }

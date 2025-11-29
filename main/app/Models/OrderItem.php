@@ -14,12 +14,12 @@ class OrderItem extends Model
     protected $fillable = [
         'po_id','item_id','quantity'
     ];
-    public function purchase_order(){
+    public function purchaseOrder(){
         return $this->belongsTo(PurchaseOrder::class,'po_id');
     }
     public function item(){
         return $this->belongsTo(Item::class,'item_id');
     }
-    
+
     public $timestamps = false;
 }

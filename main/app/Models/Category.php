@@ -11,11 +11,15 @@ class Category extends Model
 {
     use HasFactory;
     protected $table = 'category';
-    protected $fillable = ['name', 'description','is_active'];
-    
+    protected $fillable = ['name', 'description', 'type', 'is_active'];
+
     public function item()
     {
         return $this->hasMany(Item::class, 'category_id');
+    }
+    public function service()
+    {
+        return $this->hasMany(Service::class, 'service_id');
     }
     public function categoryVendor(){
         return $this->hasMany(CategoryVendor::class, 'category_id');

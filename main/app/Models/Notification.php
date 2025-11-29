@@ -9,11 +9,11 @@ class Notification extends Model
 {
     use HasFactory;
     protected $table = 'notification';
-    protected $fillable = ['user_id','message','is_read','created_at','user_id'];
+    protected $fillable = ['user_id','message','is_read','created_at'];
 
     public function user(){
         return $this->belongsTo(User::class,'user_id');
     }
-    
+
     public $timestamps = false;
 }

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->text('description');
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
-            $table->foreignId('type_id')->constrained('audit_log_types')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignId('type_id')->constrained('audit_log_type')->cascadeOnDelete()->cascadeOnUpdate();
         });
     }
 

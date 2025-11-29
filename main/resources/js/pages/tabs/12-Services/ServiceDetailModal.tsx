@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { ServiceStatusIcons } from './utils/icons';
-import { getServiceStatusColor, getServiceCategoryColor, getPriceLevelColor } from './utils/styleUtils';
-import { formatCurrency, formatHourlyRate, formatDate } from './utils/formatters';
+import { getServiceCategoryColor, getPriceLevelColor } from './utils/styleUtils';
+import { formatHourlyRate } from './utils/formatters';
 
 interface ServiceDetailModalProps {
     service: any;
@@ -20,12 +19,9 @@ export default function ServiceDetailModal({
                                            }: ServiceDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const status = service?.IS_ACTIVE ? 'active' : 'inactive';
-    const statusText = service?.IS_ACTIVE ? 'Active' : 'Inactive';
-
     const handleDelete = () => {
         if (service) {
-            onDelete(service.ID);
+            onDelete(service.id);
         }
         setShowDeleteConfirm(false);
     };
@@ -40,7 +36,7 @@ export default function ServiceDetailModal({
                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Service #{service?.ID} Details
+                                Service #{service?.id} Details
                             </h2>
                             <button
                                 onClick={onClose}
@@ -73,7 +69,7 @@ export default function ServiceDetailModal({
                                             Service Name
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {service?.NAME}
+                                            {service?.name}
                                         </p>
                                     </div>
                                     <div>
@@ -81,15 +77,15 @@ export default function ServiceDetailModal({
                                             Description
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white">
-                                            {service?.DESCRIPTION}
+                                            {service?.description}
                                         </p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Category
                                         </label>
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getServiceCategoryColor(service?.CATEGORY)}`}>
-                                            {service?.CATEGORY}
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getServiceCategoryColor(service?.category)}`}>
+                                            {service?.category}
                                         </span>
                                     </div>
                                 </div>
@@ -98,8 +94,8 @@ export default function ServiceDetailModal({
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Hourly Rate
                                         </label>
-                                        <p className={`text-lg font-bold ${getPriceLevelColor(service?.HOURLY_RATE || 0)}`}>
-                                            {formatHourlyRate(service?.HOURLY_RATE || 0)}
+                                        <p className={`text-lg font-bold ${getPriceLevelColor(service?.hourly_rate || 0)}`}>
+                                            {formatHourlyRate(service?.hourly_rate || 0)}
                                         </p>
                                     </div>
                                     <div>
@@ -107,45 +103,17 @@ export default function ServiceDetailModal({
                                             Vendor
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {service?.VENDOR_NAME}
+                                            {service?.vendor ?? 'No vendor assigned'}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Vendor Contact
-                                        </label>
                                         <p className="text-sm text-blue-600 dark:text-blue-400">
-                                            <a href={`mailto:${service?.VENDOR_EMAIL}`} className="hover:underline">
-                                                {service?.VENDOR_EMAIL}
+                                            <a href={`mailto:${service?.vendor_email}`} className="hover:underline">
+                                                {service?.vendor_email}
                                             </a>
                                         </p>
                                         <p className="text-sm text-gray-900 dark:text-white mt-1">
-                                            {service?.VENDOR_CONTACT_NUMBER}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Additional Details */}
-                            <div className="space-y-4 border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Additional Details
-                                </h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Date Added
-                                        </label>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {service?.CREATED_AT ? formatDate(service.CREATED_AT) : 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Last Updated
-                                        </label>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {service?.UPDATED_AT ? formatDate(service.UPDATED_AT) : 'N/A'}
+                                            {service?.vendor_contact_num}
                                         </p>
                                     </div>
                                 </div>
@@ -188,7 +156,7 @@ export default function ServiceDetailModal({
                                 Delete Service
                             </h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Are you sure you want to delete "{service?.NAME}"? This action cannot be undone.
+                                Are you sure you want to delete "{service?.name}"? This action cannot be undone.
                             </p>
                         </div>
                         <div className="p-6 flex justify-end gap-3">

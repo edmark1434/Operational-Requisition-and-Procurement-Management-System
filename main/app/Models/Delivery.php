@@ -10,7 +10,6 @@ use App\Models\Returns;
 use App\Models\DeliveryService;
 class Delivery extends Model
 {
-    /** @use HasFactory<\Database\Factories\DeliveryFactory> */
     use HasFactory;
     protected $table = 'delivery';
     protected $fillable = [
@@ -33,11 +32,31 @@ class Delivery extends Model
     {
         return $this->hasMany(DeliveryItem::class, 'delivery_id');
     }
-    public function returns(){
-        return $this->hasMany(Returns::class,'delivery_id');
-    }
     public function delivery_service(){
         $this->hasMany(DeliveryService::class, 'delivery_id');
     }
+    public function returns()
+    {
+        return $this->belongsToMany(Returns::class, 'return_delivery', 'old_delivery_id', 'return_id')
+            ->withPivot(['new_delivery_id']);
+    }
+    public function reworks()
+    {
+        return $this->belongsToMany(Rework::class, 'rework_delivery', 'old_delivery_id', 'rework_id')
+            ->withPivot(['new_delivery_id']);
+    }
+
+    // NEW: deliveries created *because of* a return
+    public function newDeliveriesFromReturns()
+    {
+        return $this->belongsToMany(Returns::class, 'return_delivery', 'new_delivery_id', 'return_id');
+    }
+
+    // NEW: deliveries created *because of* a rework
+    public function newDeliveriesFromReworks()
+    {
+        return $this->belongsToMany(Rework::class, 'rework_delivery', 'new_delivery_id', 'rework_id');
+    }
+
     public $timestamps = false;
 }

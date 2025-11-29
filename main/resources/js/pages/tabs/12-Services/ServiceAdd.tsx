@@ -1,11 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
-import { services } from '@/routes';
+import {servicepost, services} from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
-import CATEGORY_OPTIONS from '@/pages/datasets/category';
-import SUPPLIER_OPTIONS from '@/pages/datasets/supplier';
-import serviceData from "@/pages/datasets/service";
+import {Head, Link, router, usePage} from '@inertiajs/react';
+import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -18,17 +15,36 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function ServiceAdd({ auth }: { auth: any }) {
+type Category = {
+    id: number;
+    name: string;
+    description: string;
+    type: 'Items' | 'Services';
+    is_active: boolean;
+};
+
+type Vendor = {
+    id: number;
+    name: string;
+    email: string | null;
+    contact_number: string | null;
+    allows_cash: boolean;
+    allows_disbursement: boolean;
+    allows_store_credit: boolean;
+    is_active: boolean;
+};
+
+export default function ServiceAdd({}: { auth: any }) {
+    const { categories, vendors } = usePage<{
+        categories: Category[];
+        vendors: Vendor[];
+    }>().props;
     const [formData, setFormData] = useState({
         NAME: '',
         DESCRIPTION: '',
         HOURLY_RATE: '',
         CATEGORY: '',
         VENDOR_ID: '',
-        VENDOR_NAME: '',
-        VENDOR_EMAIL: '',
-        VENDOR_CONTACT_NUMBER: '',
-        IS_ACTIVE: true
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
 
@@ -51,51 +67,23 @@ export default function ServiceAdd({ auth }: { auth: any }) {
             newErrors.CATEGORY = 'Category is required';
         }
 
-        if (!formData.VENDOR_ID) {
-            newErrors.VENDOR_ID = 'Vendor is required';
-        }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    };
-
-    const handleVendorChange = (vendorId: string) => {
-        const selectedVendor = SUPPLIER_OPTIONS.find(s => s.ID.toString() === vendorId);
-        if (selectedVendor) {
-            setFormData(prev => ({
-                ...prev,
-                VENDOR_ID: vendorId,
-                VENDOR_NAME: selectedVendor.NAME,
-                VENDOR_EMAIL: selectedVendor.EMAIL,
-                VENDOR_CONTACT_NUMBER: selectedVendor.CONTACT_NUMBER
-            }));
-            if (errors.VENDOR_ID) {
-                setErrors(prev => ({ ...prev, VENDOR_ID: '' }));
-            }
-        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         if (validateForm()) {
-            // Generate new service ID
-            const newServiceId = Math.max(...serviceData.map(service => service.ID), 0) + 1;
-
             // Prepare service data
             const serviceDataToAdd = {
-                ID: newServiceId,
                 ...formData,
                 HOURLY_RATE: parseFloat(formData.HOURLY_RATE),
-                CATEGORY_ID: CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY)?.CAT_ID || 7,
-                VENDOR_ID: parseInt(formData.VENDOR_ID),
-                CREATED_AT: new Date().toISOString(),
-                UPDATED_AT: new Date().toISOString()
+                CATEGORY_ID: parseInt(formData.CATEGORY),
+                VENDOR_ID: formData.VENDOR_ID ? parseInt(formData.VENDOR_ID) : null,
             };
 
-            console.log('New Service Data:', serviceDataToAdd);
-
-            // In real application, you would send POST request to backend
+            router.post(servicepost().url, serviceDataToAdd);
             alert('Service added successfully!');
 
             // Redirect back to services list
@@ -121,10 +109,6 @@ export default function ServiceAdd({ auth }: { auth: any }) {
             HOURLY_RATE: '',
             CATEGORY: '',
             VENDOR_ID: '',
-            VENDOR_NAME: '',
-            VENDOR_EMAIL: '',
-            VENDOR_CONTACT_NUMBER: '',
-            IS_ACTIVE: true
         });
         setErrors({});
     };
@@ -134,9 +118,6 @@ export default function ServiceAdd({ auth }: { auth: any }) {
             router.visit(services().url);
         }
     };
-
-    // Filter categories to only show service categories
-    const serviceCategories = CATEGORY_OPTIONS.filter(cat => cat.TYPE === 'service');
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -235,9 +216,9 @@ export default function ServiceAdd({ auth }: { auth: any }) {
                                                         }`}
                                                     >
                                                         <option value="">Select a category</option>
-                                                        {serviceCategories.map(category => (
-                                                            <option key={category.CAT_ID} value={category.NAME}>
-                                                                {category.NAME}
+                                                        {categories.map(category => (
+                                                            <option key={category.id} value={category.id}>
+                                                                {category.name}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -266,19 +247,6 @@ export default function ServiceAdd({ auth }: { auth: any }) {
                                                     )}
                                                 </div>
                                             </div>
-
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    id="is_active"
-                                                    checked={formData.IS_ACTIVE}
-                                                    onChange={(e) => handleInputChange('IS_ACTIVE', e.target.checked)}
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                                />
-                                                <label htmlFor="is_active" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                                    Active Service
-                                                </label>
-                                            </div>
                                         </div>
 
                                         {/* Vendor Information */}
@@ -294,15 +262,15 @@ export default function ServiceAdd({ auth }: { auth: any }) {
                                                     <select
                                                         required
                                                         value={formData.VENDOR_ID}
-                                                        onChange={(e) => handleVendorChange(e.target.value)}
+                                                        onChange={(e) => handleInputChange('VENDOR_ID', e.target.value)}
                                                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
                                                             errors.VENDOR_ID ? 'border-red-500' : 'border-sidebar-border'
                                                         }`}
                                                     >
                                                         <option value="">Select a vendor</option>
-                                                        {SUPPLIER_OPTIONS.map(vendor => (
-                                                            <option key={vendor.ID} value={vendor.ID}>
-                                                                {vendor.NAME}
+                                                        {vendors.map(vendor => (
+                                                            <option key={vendor.id} value={vendor.id}>
+                                                                {vendor.name}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -319,7 +287,7 @@ export default function ServiceAdd({ auth }: { auth: any }) {
                                                                 Email
                                                             </label>
                                                             <p className="text-sm text-gray-900 dark:text-white">
-                                                                {formData.VENDOR_EMAIL}
+                                                                {vendors.find(v => v.id.toString() === formData.VENDOR_ID)?.email || 'N/A'}
                                                             </p>
                                                         </div>
                                                         <div>
@@ -327,7 +295,7 @@ export default function ServiceAdd({ auth }: { auth: any }) {
                                                                 Contact Number
                                                             </label>
                                                             <p className="text-sm text-gray-900 dark:text-white">
-                                                                {formData.VENDOR_CONTACT_NUMBER}
+                                                                {vendors.find(v => v.id.toString() === formData.VENDOR_ID)?.contact_number || 'N/A'}
                                                             </p>
                                                         </div>
                                                     </div>
