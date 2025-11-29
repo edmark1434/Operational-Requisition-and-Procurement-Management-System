@@ -1,63 +1,105 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { requisitions, requisitionform } from '@/routes';
+import { requisitions as requisitionsRoute, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 
-// Import your actual datasets
-import requisitionsData from '@/pages/datasets/requisition';
-import requisitionItemsData from '@/pages/datasets/requisition_item';
-import itemsData from '@/pages/datasets/items';
-import categoriesData from '@/pages/datasets/category';
-import usersData from '@/pages/datasets/user';
-
-// Import components
+// Import Components
 import RequisitionStats from './RequisitionStats';
 import SearchAndFilters from './SearchAndFilters';
 import RequisitionsList from './RequisitionsList';
 import RequisitionDetailModal from './RequisitionDetailModal';
 
-// Import utilities
-import { transformRequisitionData } from './utils/index';
-import { useRequisitionFilters } from './hooks';
+// --- Types based on your Laravel Controller ---
+interface Requisition {
+    id: number;
+    requestor: string;
+    priority: string;
+    type: string;
+    status: string;
+    notes: string;
+    remarks?: string;
+    created_at: string;
+    total_cost: number;
+    categories: string[];
+}
+
+interface RequisitionsPageProps {
+    requisitions: Requisition[]; // Data from Laravel
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Requisitions',
-        href: requisitions().url,
+        href: '/requisitions',
     },
 ];
 
-export default function Requisitions() {
+export default function Requisitions({ requisitions: serverRequisitions }: RequisitionsPageProps) {
+    // 1. State for Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
     const [categoryFilter, setCategoryFilter] = useState('All');
-    const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
+
+    // 2. State for Modal
+    const [selectedRequisition, setSelectedRequisition] = useState<Requisition | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [requisitions, setRequisitions] = useState(transformRequisitionData());
 
-    const {
-        filteredRequisitions,
-        statuses,
-        priorities,
-        allCategories
-    } = useRequisitionFilters(requisitions, searchTerm, statusFilter, priorityFilter, categoryFilter);
+    // 3. Local state for requisitions (so we can update status instantly on the UI)
+    const [localRequisitions, setLocalRequisitions] = useState<Requisition[]>(serverRequisitions || []);
 
+    // --- Filter Logic (Replaces useRequisitionFilters hook) ---
+    // We use useMemo so it doesn't slow down the page
+    const filteredRequisitions = useMemo(() => {
+        return localRequisitions.filter(req => {
+            // Search (ID, Requestor, or Notes)
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch =
+                req.requestor.toLowerCase().includes(searchLower) ||
+                req.id.toString().includes(searchLower) ||
+                (req.notes && req.notes.toLowerCase().includes(searchLower));
+
+            // Status Filter
+            const matchesStatus = statusFilter === 'All' || req.status.toLowerCase() === statusFilter.toLowerCase();
+
+            // Priority Filter
+            const matchesPriority = priorityFilter === 'All' || req.priority.toLowerCase() === priorityFilter.toLowerCase();
+
+            // Category Filter (Checks if the category array contains the selected filter)
+            const matchesCategory = categoryFilter === 'All' ||
+                (req.categories && req.categories.some(cat => cat.toLowerCase() === categoryFilter.toLowerCase()));
+
+            return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+        });
+    }, [localRequisitions, searchTerm, statusFilter, priorityFilter, categoryFilter]);
+
+    // --- Extract Unique Values for Dropdowns ---
+    const statuses = useMemo(() => ['All', ...Array.from(new Set(localRequisitions.map(r => r.status)))], [localRequisitions]);
+    const priorities = useMemo(() => ['All', ...Array.from(new Set(localRequisitions.map(r => r.priority)))], [localRequisitions]);
+    const allCategories = useMemo(() => {
+        const cats = new Set<string>();
+        localRequisitions.forEach(r => r.categories?.forEach(c => cats.add(c)));
+        return ['All', ...Array.from(cats)];
+    }, [localRequisitions]);
+
+
+    // --- Handlers ---
     const handleStatusUpdate = (id: number, newStatus: string, reason?: string) => {
-        setRequisitions(prev =>
+        // Update local state immediately (Optimistic UI)
+        setLocalRequisitions(prev =>
             prev.map(req =>
-                req.ID === id ? {
+                req.id === id ? {
                     ...req,
-                    STATUS: newStatus,
-                    REMARKS: reason || req.REMARKS,
-                    UPDATED_AT: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                    status: newStatus,
+                    remarks: reason || req.remarks,
+                    // Note: In a real app, you should also trigger a router.post() here to save to DB
                 } : req
             )
         );
     };
 
-    const openModal = (requisition: any) => {
+    const openModal = (requisition: Requisition) => {
         setSelectedRequisition(requisition);
         setIsModalOpen(true);
     };
@@ -85,8 +127,8 @@ export default function Requisitions() {
                     </Link>
                 </div>
 
-                {/* Stats */}
-                <RequisitionStats requisitions={requisitions} />
+                {/* Stats - Uses the real filtered data now */}
+                <RequisitionStats requisitions={localRequisitions} />
 
                 {/* Search and Filters */}
                 <SearchAndFilters
