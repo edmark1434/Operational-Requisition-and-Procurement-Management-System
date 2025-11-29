@@ -13,7 +13,7 @@ class Category extends Model
     protected $table = 'category';
     protected $fillable = ['name', 'description', 'type', 'is_active'];
 
-    public function item()
+    public function items()
     {
         return $this->hasMany(Item::class, 'category_id');
     }

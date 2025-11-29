@@ -26,15 +26,26 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard',[Dashboard::class,'index'])->name('dashboard');
 
-// REQUISITION PART
-    Route::get('requisitions',[RequisitionController::class,'index'])->name('requisitions');
-    //    --------------------------------------------------------------------- REQUISITION FORM
-    Route::get('requisitionform',[RequisitionController::class,'requisitionForm'])->name('requisitionform');
+// --- REQUISITION ROUTES ---
+    Route::get('requisitions', [RequisitionController::class, 'index'])->name('requisitions');
 
-    Route::post('requisitionform', [RequisitionController::class, 'store'])->name('requisition.store');
+// KEEP THIS ONE (Standard REST naming):
+    Route::post('/requisitions', [RequisitionController::class, 'store'])->name('requisitions.store');
 
-    //    --------------------------------------------------------------------- REQUISITION EDIT
-    Route::get('requisitions/{id}/edit',[RequisitionController::class,'requisitionEdit'])->name('requisitionedit');
+// Form Page
+    Route::get('requisitionform', [RequisitionController::class, 'requisitionForm'])->name('requisitionform');
+
+// DELETE OR COMMENT OUT THIS LINE (It is a duplicate):
+// Route::post('/requisition/store', [RequisitionController::class, 'store'])->name('requisition.store');
+    // Submission (Keep only ONE store route)
+    Route::post('/requisition/store', [RequisitionController::class, 'store'])->name('requisition.store');
+
+    // Edit
+    Route::get('requisitions/{id}/edit', [RequisitionController::class, 'requisitionEdit'])->name('requisitionedit');
+
+    // API Routes for Dropdowns
+    Route::get('/requisition/api/categories', [RequisitionController::class, 'getCategories']);
+    Route::get('/requisition/api/items/{categoryId}', [RequisitionController::class, 'getItemsByCategory']);
 
     // INVENTORY PART (Main / Add / Edit)
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
