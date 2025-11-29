@@ -12,10 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_link', function (Blueprint $table) {
+        Schema::create('requisition_order_service', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('po_from_id')->constrained('purchase_order')->cascadeOnDelete();
-            $table->foreignId('po_to_id')->constrained('purchase_order')->cascadeOnDelete();
+            $table->foreignId('req_service_id')->constrained('requisition_services')->cascadeOnDelete();
+            $table->foreignId('po_service_id')->constrained('order_services')->cascadeOnDelete();
         });
 
     }
@@ -25,7 +25,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_link');
+        Schema::dropIfExists('requisition_order_service');
 
     }
 };

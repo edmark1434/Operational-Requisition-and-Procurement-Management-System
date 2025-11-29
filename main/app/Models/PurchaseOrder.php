@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Vendor;
-use App\Models\OrderLink;
+use App\Models\RequisitionOrderItem;
 use App\Models\Requisition;
 use App\Models\Delivery;
 use App\Models\DeliveryItem;
@@ -54,16 +54,6 @@ class PurchaseOrder extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class, 'po_id');
-    }
-
-    public function linksFrom()
-    {
-        return $this->hasMany(OrderLink::class, 'po_from_id');
-    }
-
-    public function linksTo()
-    {
-        return $this->hasMany(OrderLink::class, 'po_to_id');
     }
 
     public function delivery()
