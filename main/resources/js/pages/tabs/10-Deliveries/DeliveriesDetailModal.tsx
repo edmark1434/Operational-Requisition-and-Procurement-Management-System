@@ -2,37 +2,63 @@ import { useState, useEffect, useRef } from 'react';
 import { DeliveriesIcons } from './utils/icons';
 import { getDeliveriesStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
+import deliveryItems from "@/pages/datasets/delivery_items";
+import {usePage} from "@inertiajs/react";
 
 // Add proper TypeScript interfaces
-interface DeliveryItem {
-    ID: number;
-    ITEM_ID: number;
-    ITEM_NAME: string;
-    QUANTITY: number;
-    UNIT_PRICE: number;
-    BARCODE?: string;
-    CATEGORY?: string;
+export interface Item {
+    id: number;
+    barcode: string | null;
+    name: string;
+    dimensions: string | null;
+    unit_price: number;
+    current_stock: number;
+    is_active: boolean;
+    make_id: number | null;
+    category_id: number;
+    vendor_id: number | null;
+}
+
+export interface Service {
+    id: number;
+    name: string;
+    description: string;
+    hourly_rate: number;
+    is_active: boolean;
+    category_id: number;
+    vendor_id: number | null;
 }
 
 interface Delivery {
-    ID: number;
-    RECEIPT_NO: string;
-    DELIVERY_DATE: string;
-    TOTAL_COST: number;
-    STATUS: string;
-    REMARKS: string;
-    RECEIPT_PHOTO: string;
-    PO_ID: number;
-    PO_REFERENCE: string;
-    SUPPLIER_ID?: number;
-    SUPPLIER_NAME: string;
-    TOTAL_ITEMS: number;
-    TOTAL_VALUE: number;
-    ITEMS: DeliveryItem[];
+    id: number;
+    type: string;
+    delivery_date: string;
+    total_cost: number;
+    receipt_no: string;
+    receipt_photo: string | null;
+    status: string;
+    remarks: string | null;
+    po_id: number | null;
+}
+
+export interface DeliveryItem {
+    id: number;
+    delivery_id: number | null;
+    item_id: number | null;
+    item: Item;
+    quantity: number;
+    unit_price: number;
+}
+
+export interface DeliveryService {
+    id: number;
+    delivery_id: number;
+    service_id: number;
+    service: Service;
+    item_id: number | null;
 }
 
 interface DeliveriesDetailModalProps {
-    delivery: Delivery;
     isOpen: boolean;
     onClose: () => void;
     onEdit: () => void;
@@ -40,43 +66,29 @@ interface DeliveriesDetailModalProps {
     onStatusChange: (deliveryId: number, newStatus: string) => void;
 }
 
-interface StatusOption {
-    value: string;
-    label: string;
-    description: string;
-}
-
-// Add this helper function to format status display
-function formatStatusDisplay(status: string): string {
-    switch (status?.toLowerCase()) {
-        case 'received':
-            return 'Received';
-        case 'with returns':
-            return 'With Returns';
-        default:
-            return status;
-    }
-}
-
 export default function DeliveriesDetailModal({
-                                                  delivery,
                                                   isOpen,
                                                   onClose,
                                                   onEdit,
                                                   onDelete,
                                                   onStatusChange
                                               }: DeliveriesDetailModalProps) {
+    const { delivery, deliveryItems, deliveryServices } = usePage<{
+        delivery: Delivery;
+        deliveryItems: DeliveryItem[];
+        deliveryServices: DeliveryService[];
+    }>().props;
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
     const [showStatusDropdown, setShowStatusDropdown] = useState<boolean>(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = () => {
-        onDelete(delivery.ID);
+        onDelete(delivery.id);
         setShowDeleteConfirm(false);
     };
 
     const handleStatusChange = (newStatus: string) => {
-        onStatusChange(delivery.ID, newStatus);
+        onStatusChange(delivery.id, newStatus);
         setShowStatusDropdown(false);
         onClose(); // Auto-close the modal after status change
     };
@@ -95,11 +107,6 @@ export default function DeliveriesDetailModal({
         };
     }, []);
 
-    const statusOptions: StatusOption[] = [
-        { value: 'received', label: 'Received', description: 'All items have been received successfully' },
-        { value: 'with returns', label: 'With Returns', description: 'Some items were returned or had issues' }
-    ];
-
     if (!isOpen || !delivery) return null;
 
     return (
@@ -111,10 +118,10 @@ export default function DeliveriesDetailModal({
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                    Delivery #{delivery.RECEIPT_NO}
+                                    Delivery #{delivery.receipt_no}
                                 </h2>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                    Delivered on {formatDateTime(delivery.DELIVERY_DATE)}
+                                    Delivered on {formatDateTime(delivery.delivery_date)}
                                 </p>
                             </div>
                             <button
@@ -139,9 +146,9 @@ export default function DeliveriesDetailModal({
                                             Status
                                         </label>
                                         <div className="flex items-center gap-2">
-                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getDeliveriesStatusColor(delivery?.STATUS)}`}>
-                                                <DeliveryStatusIcon status={delivery?.STATUS} />
-                                                {formatStatusDisplay(delivery?.STATUS)}
+                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getDeliveriesStatusColor(delivery?.status)}`}>
+                                                <DeliveryStatusIcon status={delivery?.status} />
+                                                delivery?.status
                                             </div>
                                             <div className="relative" ref={dropdownRef}>
                                                 <button
@@ -166,18 +173,18 @@ export default function DeliveriesDetailModal({
                                                                         key={status.value}
                                                                         onClick={() => handleStatusChange(status.value)}
                                                                         className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
-                                                                            delivery?.STATUS === status.value
+                                                                            delivery?.status === status.value
                                                                                 ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
                                                                                 : 'border border-transparent'
                                                                         }`}
                                                                     >
                                                                         <div className="flex items-center gap-3 flex-1">
                                                                             <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
-                                                                                delivery?.STATUS === status.value
+                                                                                delivery?.status === status.value
                                                                                     ? 'bg-blue-600 dark:bg-blue-400'
                                                                                     : 'bg-gray-300 dark:bg-gray-600'
                                                                             }`}>
-                                                                                {delivery?.STATUS === status.value && (
+                                                                                {delivery?.status === status.value && (
                                                                                     <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                                                     </svg>
@@ -206,7 +213,7 @@ export default function DeliveriesDetailModal({
                                             Receipt Number
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white font-medium font-mono">
-                                            {delivery.RECEIPT_NO}
+                                            {delivery.receipt_no}
                                         </p>
                                     </div>
                                     <div>
@@ -214,7 +221,7 @@ export default function DeliveriesDetailModal({
                                             Delivery Date
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white">
-                                            {formatDate(delivery.DELIVERY_DATE)}
+                                            {formatDate(delivery.delivery_date)}
                                         </p>
                                     </div>
                                 </div>
@@ -240,21 +247,21 @@ export default function DeliveriesDetailModal({
                                             Total Cost
                                         </label>
                                         <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                            {formatCurrency(delivery.TOTAL_COST)}
+                                            {formatCurrency(delivery.total_cost)}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Receipt Photo */}
-                            {delivery.RECEIPT_PHOTO && (
+                            {delivery.receipt_photo && (
                                 <div className="border-t border-sidebar-border pt-6">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                         Receipt Photo
                                     </h3>
                                     <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
                                         <img
-                                            src={delivery.RECEIPT_PHOTO}
+                                            src={delivery.receipt_photo}
                                             alt="Delivery receipt"
                                             className="max-w-full h-auto rounded-lg max-h-64 object-contain"
                                         />
@@ -304,13 +311,13 @@ export default function DeliveriesDetailModal({
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        {delivery.ITEMS?.map((item: DeliveryItem) => (
+                                        {deliveryItems?.map((item: DeliveryItem) => (
                                             <tr key={item.ID} className="border-b border-sidebar-border last:border-b-0">
                                                 <td className="p-3 text-sm text-gray-900 dark:text-white">{item.ITEM_NAME}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{item.QUANTITY}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(item.UNIT_PRICE)}</td>
+                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(item.unit_price)}</td>
                                                 <td className="p-3 text-sm text-gray-900 dark:text-white font-medium">
-                                                    {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
+                                                    {formatCurrency(item.quantity * item.unit_price)}
                                                 </td>
                                                 <td className="p-3 text-sm text-gray-900 dark:text-white font-mono">{item.BARCODE}</td>
                                             </tr>
@@ -321,14 +328,14 @@ export default function DeliveriesDetailModal({
                             </div>
 
                             {/* Remarks */}
-                            {delivery.REMARKS && (
+                            {delivery.remarks && (
                                 <div className="border-t border-sidebar-border pt-6">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                         Remarks
                                     </h3>
                                     <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
                                         <p className="text-sm text-gray-900 dark:text-white">
-                                            {delivery.REMARKS}
+                                            {delivery.remarks}
                                         </p>
                                     </div>
                                 </div>
@@ -371,7 +378,7 @@ export default function DeliveriesDetailModal({
                                 Delete Delivery
                             </h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Are you sure you want to delete delivery "{delivery.RECEIPT_NO}"? This action cannot be undone.
+                                Are you sure you want to delete delivery "{delivery.receipt_no}"? This action cannot be undone.
                             </p>
                         </div>
                         <div className="p-6 flex justify-end gap-3">

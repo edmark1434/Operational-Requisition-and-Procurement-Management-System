@@ -11,7 +11,7 @@ class DeliveryService extends Model
 {
     /** @use HasFactory<\Database\Factories\DeliverServiceFactory> */
     use HasFactory;
-    protected $fillable = ['delivery_id', 'service_id', 'item_id'];
+    protected $fillable = ['delivery_id', 'service_id', 'item_id', 'hourly_rate'];
 
     public function delivery(){
         $this->belongsTo(Delivery::class, 'delivery_id');

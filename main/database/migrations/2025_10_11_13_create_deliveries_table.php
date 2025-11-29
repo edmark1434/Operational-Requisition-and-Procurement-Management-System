@@ -15,6 +15,7 @@ return new class extends Migration
     {
         Schema::create('delivery', function (Blueprint $table) {
             $table->id();
+            $table->string('ref_no', 50)->unique();
             $table->enum('type',Delivery::TYPES);
             $table->date('delivery_date');
             $table->decimal('total_cost', 15, 2);
