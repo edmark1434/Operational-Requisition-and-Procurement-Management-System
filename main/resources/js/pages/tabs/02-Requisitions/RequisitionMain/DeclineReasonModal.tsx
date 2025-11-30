@@ -20,7 +20,7 @@ export default function DeclineReasonModal({ isOpen, onClose, onConfirm }: Decli
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-100">
             <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
                 {/* Header */}
                 <div className="p-6 border-b border-sidebar-border">
