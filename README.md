@@ -45,7 +45,7 @@ Follow these steps to set up the project locally.
 > - npm install
 > - npm install --save-dev @vitejs/plugin-react
 > - npm install @inertia/react
-
+> - npm install sonner
 
 #### 4. Start the Development
 > - php artisan serve

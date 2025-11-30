@@ -34,6 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('requisitionform', [RequisitionController::class, 'requisitionForm'])->name('requisitionform');
     Route::post('/requisition/store', [RequisitionController::class, 'store'])->name('requisition.store');
     Route::get('requisitions/{id}/edit', [RequisitionController::class, 'requisitionEdit'])->name('requisitionedit');
+    Route::get('requisitions/{id}/adjust', [RequisitionController::class, 'requisitionAdjust'])->name('requisitionadjust');
 
     // API Routes for Dropdowns
     Route::get('/requisition/api/categories', [RequisitionController::class, 'getCategories']);

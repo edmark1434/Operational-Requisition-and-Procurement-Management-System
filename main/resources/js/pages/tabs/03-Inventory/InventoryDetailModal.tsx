@@ -95,9 +95,12 @@ export default function InventoryDetailModal({
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Category
+                                            Makes & Categories
                                         </label>
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 dark:bg-sidebar text-gray-600 dark:text-gray-400 border border-sidebar-border">
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                                                 {item?.MAKE_NAME || 'Unknown manufacturer'}
+                                            </span>
+                                        <span className="inline-flex items-center px-2.5 py-0.5 ml-2  rounded-full text-xs font-medium bg-gray-50 dark:bg-sidebar text-gray-600 dark:text-gray-400 border border-sidebar-border">
                                         {item?.CATEGORY}
                                     </span>
                                     </div>
@@ -135,7 +138,7 @@ export default function InventoryDetailModal({
                             {/* Supplier Information */}
                             <div className="border-t border-sidebar-border pt-6">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Supplier Information
+                                    Vendor Information
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>

@@ -161,6 +161,15 @@ export default function RequisitionDetailModal({
         onClose();
     };
 
+    const handleAdjust = () => {
+        // Updated to use real Inertia router.
+        // Matches web.php route: 'requisitions/{id}/edit'
+        router.get(`/requisitions/${id}/adjust`);
+        // We do not need onClose() here necessarily as Inertia will navigate away,
+        // but keeping it ensures modal state is clean if you use preserveState
+        onClose();
+    };
+
     const handleCreatePurchaseOrder = () => {
         // Matches web.php route: 'purchases/create'
         router.get('/purchases/create');
@@ -410,13 +419,22 @@ export default function RequisitionDetailModal({
                                     </div>
 
                                     {/* Footer Action Buttons */}
+                                    {/* Footer Action Buttons */}
                                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                                         <div className="flex justify-between items-center">
-                                            {/* EDIT BUTTON */}
-                                            <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
-                                                Edit Requisition
-                                            </button>
+                                            {/* LEFT SIDE BUTTONS */}
+                                            <div className="flex gap-3">
+                                                {/* EDIT BUTTON */}
+                                                <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                                                    Edit Requisition
+                                                </button>
+                                                {/* ADJUST REQUISITION BUTTON */}
+                                                <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">
+                                                    Adjust Requisition
+                                                </button>
+                                            </div>
 
+                                            {/* RIGHT SIDE BUTTONS */}
                                             <div className="flex gap-3">
                                                 {isPending && (
                                                     <>
