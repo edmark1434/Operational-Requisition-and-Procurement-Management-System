@@ -1,18 +1,9 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-// import { router } from '@inertiajs/react'; // MOCKED FOR PREVIEW below
+import { router } from '@inertiajs/react'; // ACTIVATED: Now using real router
 import { Dialog, Transition } from '@headlessui/react';
 import { X } from 'lucide-react';
 
-// --- MOCKS & UTILITIES (Inlined for standalone preview) ---
-// In your real project, you can keep importing these from your utils folder
-
-// Mock Router
-const router = {
-    get: (url: string) => console.log(`Navigating to ${url}`),
-    post: (url: string, data: any) => console.log(`Posting to ${url}`, data),
-};
-
-// Utils: Style Helpers
+// --- UTILITIES (Style Helpers) ---
 const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
         case 'approved':
@@ -53,7 +44,7 @@ const formatTime = (date: string) => {
     return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 };
 
-// Mock Component: DeclineReasonModal
+// Component: DeclineReasonModal
 function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
     const [reason, setReason] = useState('');
     return (
@@ -95,7 +86,6 @@ const PriorityIcons = {
     low: <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
 };
 
-// --- END MOCKS ---
 
 interface RequisitionDetailModalProps {
     requisition: any;
@@ -125,7 +115,6 @@ export default function RequisitionDetailModal({
     const priority = safeReq.priority || safeReq.PRIORITY || 'normal';
     const requestor = safeReq.requestor || safeReq.REQUESTOR || 'Unknown';
     const created_at = safeReq.created_at || safeReq.CREATED_AT;
-    const updated_at = safeReq.updated_at || safeReq.UPDATED_AT;
     const notes = safeReq.notes || safeReq.NOTES;
     const remarks = safeReq.remarks || safeReq.REMARKS;
 
@@ -164,11 +153,16 @@ export default function RequisitionDetailModal({
     };
 
     const handleEdit = () => {
+        // Updated to use real Inertia router.
+        // Matches web.php route: 'requisitions/{id}/edit'
         router.get(`/requisitions/${id}/edit`);
+        // We do not need onClose() here necessarily as Inertia will navigate away,
+        // but keeping it ensures modal state is clean if you use preserveState
         onClose();
     };
 
     const handleCreatePurchaseOrder = () => {
+        // Matches web.php route: 'purchases/create'
         router.get('/purchases/create');
         onClose();
     };
@@ -228,7 +222,7 @@ export default function RequisitionDetailModal({
                             >
                                 <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white dark:bg-sidebar text-left align-middle shadow-xl transition-all border border-sidebar-border flex flex-col max-h-[90vh]">
 
-                                    {/* Header - NOW SHOWS REFERENCE NUMBER */}
+                                    {/* Header */}
                                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10 flex items-center justify-between">
                                         <Dialog.Title as="h3" className="text-xl font-bold text-gray-900 dark:text-white">
                                             {references_no} | Details
@@ -323,14 +317,13 @@ export default function RequisitionDetailModal({
                                                         Grand Total Cost
                                                     </label>
                                                     <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                                        {/* USING total_cost COLUMN */}
                                                         ₱{Number(total_cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* NOTES AND REMARKS SECTION (ADDED) */}
+                                        {/* NOTES AND REMARKS SECTION */}
                                         <div className="space-y-4">
                                             {notes && (
                                                 <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
@@ -369,11 +362,7 @@ export default function RequisitionDetailModal({
                                                         const iQty = item.quantity || item.QUANTITY || 0;
                                                         const iName = item.name || item.NAME || 'Unknown';
                                                         const iCat = item.category || item.CATEGORY || 'General';
-
-                                                        // 1. Get Unit Price
                                                         const iPrice = item.unit_price || item.UNIT_PRICE || 0;
-
-                                                        // 2. Force Calculation: Quantity * Unit Price
                                                         const iTotal = iQty * iPrice;
 
                                                         return (
@@ -423,9 +412,11 @@ export default function RequisitionDetailModal({
                                     {/* Footer Action Buttons */}
                                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                                         <div className="flex justify-between items-center">
+                                            {/* EDIT BUTTON */}
                                             <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                                                 Edit Requisition
                                             </button>
+
                                             <div className="flex gap-3">
                                                 {isPending && (
                                                     <>
@@ -450,7 +441,7 @@ export default function RequisitionDetailModal({
     );
 }
 
-// --- HELPER COMPONENTS & FUNCTIONS ---
+// --- HELPER FUNCTIONS ---
 function RequisitionStatusIcon({ status }: { status: string }) {
     const safeStatus = (status || 'pending').toLowerCase();
     switch (safeStatus) {
