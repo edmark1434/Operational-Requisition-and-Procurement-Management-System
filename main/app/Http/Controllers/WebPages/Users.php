@@ -18,10 +18,10 @@ class Users extends Controller
     protected $base_path = "tabs/08-Users";
     public function index()
     {
-        $success = session('success');
-        $message = session('message');
-        $users = User::all();
-        $roles = Role::all();
+        $success = session()->pull('success');
+        $message = session()->pull('message');
+        $users = User::where('is_active',true)->get();
+        $roles = Role::where('is_active',true)->get();
         $permission = Permission::all();
         $role_permission = RolePermission::all();
         return Inertia::render($this->base_path .'/Users',[
@@ -60,7 +60,7 @@ class Users extends Controller
         ]);
     }
     public function store(){
-        $roles = Role::all();
+        $roles = Role::where('is_active',true)->get();
         $permission = Permission::all();
         $role_permission = RolePermission::all();
         return Inertia::render($this->base_path .'/UserAdd',[
@@ -88,8 +88,8 @@ class Users extends Controller
         ]);
     }
     public function edit($id){
-        $users = User::all();
-        $roles = Role::all();
+        $users = User::where('is_active',true)->get();
+        $roles = Role::where('is_active',true)->get();
         $permission = Permission::all();
         $username = User::where('id', $id)->get('username');
         $user_permission = UserPermission::where('user_id', $id)->get();
@@ -136,6 +136,10 @@ class Users extends Controller
         $user->update([
             'is_active' => $status == 'active'
         ]); 
+        return redirect()->route('users')->with([
+            'success' => true,
+            'message' => 'User deleted successfully'
+        ]);
     }
 public function createUser(Request $request)
     {
@@ -165,17 +169,20 @@ public function createUser(Request $request)
             }
             UserPermission::insert($userPermissions);
         });
-        
+        return redirect()->route('users')->with([
+            'success' => true,
+            'message' => 'User created successfully'
+        ]);
     }
 
     public function updateUser(Request $request,$id){
         $ownedPermission = session('unique', []);
-        $username = session('username', '');
+        $username = session()->pull('username', '');
         $rules = [
             'fullname' => 'required|string|max:255',
             'password' => 'string|min:8',
         ];
-        if(!$username == $request->input('username')){
+        if(!($username == $request->input('username'))){
             $rules['username'] = 'required|string|max:50|unique:users,username';
         }
         $validated = $request->validate($rules);
@@ -206,11 +213,14 @@ public function createUser(Request $request)
             ...$validated,
             'is_active' => $request->input('status') === 'active'
         ]);
-        
+        return redirect()->route('users')->with([
+            'success' => true,
+            'message' => 'User updated successfully'
+        ]);
     }
     public function deleteUser($id){
         UserPermission::where('user_id', $id)->delete();
-        User::where('id', $id)->delete();
+        User::where('id', $id)->update(['is_active' => false]);
         return redirect()->route('users')->with([
             'success' => true,
             'message' => 'User deleted successfully'

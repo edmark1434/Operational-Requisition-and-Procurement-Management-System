@@ -7,8 +7,8 @@ export default function MakesCategoriesStats({ makes, categories }: MakesCategor
     const totalMakes = makes.length;
     const activeMakes = makes.filter(make => make.IS_ACTIVE).length;
     const totalCategories = categories.length;
-    const itemCategories = categories.filter(cat => cat.TYPE === 'item').length;
-    const serviceCategories = categories.filter(cat => cat.TYPE === 'service').length;
+    const itemCategories = categories.filter(cat => cat.TYPE === 'Items').length;
+    const serviceCategories = categories.filter(cat => cat.TYPE === 'Services').length;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

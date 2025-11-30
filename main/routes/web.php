@@ -42,7 +42,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // INVENTORY
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
     Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');
+    Route::post('inventory/add',[Inventory::class,"create"])->name('inventoryCreate');
     Route::get('inventory/{id}/edit',[Inventory::class,"edit"])->name('inventoryedit');
+    Route::put('inventory/{id}/edit',[Inventory::class,"update"])->name('inventoryUpdate');
+    Route::delete('inventory/{id}/delete',[Inventory::class,"delete"])->name('inventoryDelete');
+    Route::delete('inventory/{id}/deleteModal',[Inventory::class,"deleteModal"])->name('inventoryDeleteModal');
 
     // PURCHASES
     Route::get('purchases',[Purchasing::class,'index'])->name('purchases');
@@ -86,9 +90,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // MAKES & CATEGORIES
     Route::get('makes-categories',[MakesAndCategories::class,'index'])->name('makesandcategories');
     Route::get('makes-categories/category/add',[MakesAndCategories::class,"store_category"])->name('categoryadd');
+    Route::post('makes-categories/category/add',[MakesAndCategories::class,"create_category"])->name('categoryCreate');
     Route::get('makes-categories/category/{id}/edit',[MakesAndCategories::class,"edit_category"])->name('categoryedit');
+    Route::put('makes-categories/category/{id}/editUpdate',[MakesAndCategories::class,"update_category"])->name('categoryUpdate');
+    Route::delete('makes-categories/category/{id}/DeleteCategory',[MakesAndCategories::class,"categDelete"])->name('categoryDelete');
+    Route::delete('makes-categories/category/{id}/DeleteModelCategory',[MakesAndCategories::class,"categDeleteModel"])->name('categoryDeleteModel');
     Route::get('makes-categories/make/add',[MakesAndCategories::class,"store_make"])->name('makeadd');
+    Route::post('makes-categories/make/add',[MakesAndCategories::class,"create_make"])->name('makeCreate');
     Route::get('makes-categories/make/{id}/edit',[MakesAndCategories::class,"edit_make"])->name('makeedit');
+    Route::put('makes-categories/make/{id}/editUpdate',[MakesAndCategories::class,"update_make"])->name('makeUpdate');
+    Route::delete('makes-categories/make/{id}/Delete',[MakesAndCategories::class,"delete"])->name('makeDelete');
+    Route::delete('makes-categories/make/{id}/DeleteModel',[MakesAndCategories::class,"deleteModel"])->name('makedeleteModel');
 
     // SERVICES
     Route::get('services',[Services::class,'index'])->name('services');

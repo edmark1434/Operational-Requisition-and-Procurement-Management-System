@@ -1,13 +1,15 @@
 import AppLayout from '@/layouts/app-layout';
-import { makesandcategories } from '@/routes';
+import { categoryUpdate, makesandcategories } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import categoryData from '@/pages/datasets/category';
+import { categDelete } from '@/actions/App/Http/Controllers/WebPages/MakesAndCategories';
 
 interface CategoryEditProps {
     auth: any;
     categoryId: number;
+    category: any;
 }
 
 const breadcrumbs = (categoryId: number): BreadcrumbItem[] => [
@@ -21,47 +23,22 @@ const breadcrumbs = (categoryId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function CategoryEdit({ auth, categoryId }: CategoryEditProps) {
+export default function CategoryEdit({ auth, categoryId, category }: CategoryEditProps) {
     const [formData, setFormData] = useState({
         NAME: '',
         DESCRIPTION: '',
-        TYPE: 'item'
+        TYPE: 'Items'
     });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     // Load category data on component mount
     useEffect(() => {
-        loadCategoryData();
+        setFormData(category);
+        setIsLoading(false);
     }, [categoryId]);
 
-    const loadCategoryData = () => {
-        setIsLoading(true);
-
-        try {
-            // Find the category to edit
-            const category = categoryData.find(cat => cat.CAT_ID === categoryId);
-
-            if (!category) {
-                console.error(`Category #${categoryId} not found`);
-                alert('Category not found!');
-                router.visit(makesandcategories().url);
-                return;
-            }
-
-            setFormData({
-                NAME: category.NAME || '',
-                DESCRIPTION: category.DESCRIPTION || '',
-                TYPE: category.TYPE || 'item'
-            });
-        } catch (error) {
-            console.error('Error loading category data:', error);
-            alert('Error loading category data!');
-            router.visit(makesandcategories().url);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,16 +46,8 @@ export default function CategoryEdit({ auth, categoryId }: CategoryEditProps) {
         // Prepare updated category data
         const updatedCategoryData = {
             ...formData,
-            UPDATED_AT: new Date().toISOString()
         };
-
-        console.log('Updated Category Data:', updatedCategoryData);
-
-        // In real application, you would send PATCH request to backend
-        alert('Category updated successfully!');
-
-        // Redirect back to makes & categories
-        router.visit(makesandcategories().url);
+        router.put(categoryUpdate(categoryId),updatedCategoryData);
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -89,14 +58,7 @@ export default function CategoryEdit({ auth, categoryId }: CategoryEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting category:', categoryId);
-
-        // In real application, you would send DELETE request to backend
-        alert('Category deleted successfully!');
-        setShowDeleteConfirm(false);
-
-        // Redirect back to makes & categories
-        router.visit(makesandcategories().url);
+        router.delete(categDelete(categoryId));
     };
 
     const handleCancel = () => {
@@ -206,8 +168,8 @@ export default function CategoryEdit({ auth, categoryId }: CategoryEditProps) {
                                                         onChange={(e) => handleInputChange('TYPE', e.target.value)}
                                                         className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                                     >
-                                                        <option value="item">Item Category</option>
-                                                        <option value="service">Service Category</option>
+                                                        <option value="Items">Item Category</option>
+                                                        <option value="Services">Service Category</option>
                                                     </select>
                                                 </div>
                                             </div>

@@ -1,16 +1,19 @@
 // ItemEdit.tsx
 import AppLayout from '@/layouts/app-layout';
-import { inventory } from '@/routes';
+import { inventory, inventoryDelete, inventoryUpdate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import CATEGORY_OPTIONS from '@/pages/datasets/category';
 import SUPPLIER_OPTIONS from '@/pages/datasets/supplier';
 import itemsData from "@/pages/datasets/items";
+import { toast, Toaster } from 'sonner';
 
 interface ItemEditProps {
     auth: any;
     itemId: number;
+    item: any,
+    CATEGORY_OPTIONS:any[]
 }
 
 const breadcrumbs = (itemId: number): BreadcrumbItem[] => [
@@ -24,7 +27,7 @@ const breadcrumbs = (itemId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function ItemEdit({ auth, itemId }: ItemEditProps) {
+export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEditProps) {
     const [formData, setFormData] = useState({
         NAME: '',
         BARCODE: '',
@@ -41,50 +44,10 @@ export default function ItemEdit({ auth, itemId }: ItemEditProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load item data on component mount
     useEffect(() => {
-        loadItemData();
-    }, [itemId]);
-
-    const loadItemData = () => {
-        setIsLoading(true);
-
-        try {
-            // Find the item to edit
-            const item = itemsData.find(item => item.ITEM_ID === itemId);
-
-            if (!item) {
-                console.error(`Item #${itemId} not found`);
-                alert('Item not found!');
-                router.visit(inventory().url);
-                return;
-            }
-
-            // Transform item data to match form structure
-            const category = CATEGORY_OPTIONS.find(cat => cat.CAT_ID === item.CATEGORY_ID);
-            const supplier = SUPPLIER_OPTIONS.find(sup => sup.ID === item.SUPPLIER_ID);
-
-            setFormData({
-                NAME: item.NAME || '',
-                BARCODE: item.BARCODE || '',
-                CATEGORY: category?.NAME || '',
-                UNIT_PRICE: item.UNIT_PRICE || 0,
-                CURRENT_STOCK: item.CURRENT_STOCK || 0,
-                DIMENSIONS: item.DIMENSIONS || '',
-                MAKE_ID: item.MAKE_ID || 1,
-                SUPPLIER_ID: item.SUPPLIER_ID?.toString() || '',
-                SUPPLIER_NAME: supplier?.NAME || '',
-                SUPPLIER_EMAIL: supplier?.EMAIL || '',
-                SUPPLIER_CONTACT_NUMBER: supplier?.CONTACT_NUMBER || ''
-            });
-        } catch (error) {
-            console.error('Error loading item data:', error);
-            alert('Error loading item data!');
-            router.visit(inventory().url);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        setFormData(item);
+        setIsLoading(false);
+    }, []);
 
     const handleSupplierChange = (supplierId: string) => {
         const selectedSupplier = SUPPLIER_OPTIONS.find(s => s.ID.toString() === supplierId);
@@ -107,16 +70,13 @@ export default function ItemEdit({ auth, itemId }: ItemEditProps) {
             ...formData,
             CATEGORY_ID: CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY)?.CAT_ID || 1,
             SUPPLIER_ID: parseInt(formData.SUPPLIER_ID),
-            UPDATED_AT: new Date().toISOString()
         };
-
-        console.log('Updated Item Data:', updatedItemData);
-
-        // In real application, you would send PATCH request to backend
-        alert('Item updated successfully!');
-
-        // Redirect back to inventory list
-        router.visit(inventory().url);
+        router.put(inventoryUpdate(itemId), updatedItemData, {
+            onError: (err) => {
+                console.log(err);
+            }
+        });
+        
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -127,14 +87,8 @@ export default function ItemEdit({ auth, itemId }: ItemEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting item:', itemId);
-
-        // In real application, you would send DELETE request to backend
-        alert('Item deleted successfully!');
+        router.delete(inventoryDelete(itemId));
         setShowDeleteConfirm(false);
-
-        // Redirect back to inventory list
-        router.visit(inventory().url);
     };
 
     const handleCancel = () => {
@@ -388,6 +342,7 @@ export default function ItemEdit({ auth, itemId }: ItemEditProps) {
                         </div>
                     </div>
                 </div>
+                <Toaster/>
             </AppLayout>
 
             {/* Delete Confirmation Modal */}

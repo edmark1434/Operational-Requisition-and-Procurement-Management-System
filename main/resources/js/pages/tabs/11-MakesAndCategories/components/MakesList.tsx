@@ -65,7 +65,6 @@ export default function MakesList({ makes, onMakeClick }: MakesListProps) {
                         <div className="col-span-2 flex items-center justify-end space-x-2">
                             <Link
                                 href={`/makes-categories/make/${make.ID}/edit`}
-                                onClick={(e) => e.stopPropagation()}
                                 className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded"
                                 title="Edit Make"
                             >

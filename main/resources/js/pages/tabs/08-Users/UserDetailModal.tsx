@@ -97,10 +97,10 @@ export default function UserDetailModal({
                         </div>
 
                         {/* Basic Info */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                             <div className="space-y-4">
                                 
-                                <div>
+                                {/* <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Status
                                     </label>
@@ -108,7 +108,7 @@ export default function UserDetailModal({
                                         <User className="w-4 h-4" />
                                         {user.status === 'active' ? 'Active' : 'Inactive'}
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                             <div className="space-y-4">
                                 <div>
@@ -142,14 +142,14 @@ export default function UserDetailModal({
                                         onClick={() => handleStatusChange('inactive')}
                                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
                                     >
-                                        Deactivate User
+                                        Delete User
                                     </button>
                                 ) : (
                                     <button
                                         onClick={() => handleStatusChange('active')}
-                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
                                     >
-                                        Activate User
+                                        Delete User
                                     </button>
                                 )}
                             </div>
