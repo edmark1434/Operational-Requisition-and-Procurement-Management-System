@@ -45,7 +45,7 @@ type Category = {
 type Vendor = {
     id: number;
     name: string;
-    email: string | null;
+    email: string;
     contact_number: string | null;
     allows_cash: boolean;
     allows_disbursement: boolean;
