@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        User::factory(5)->create();
         $this->call([
             MakeSeeder::class,
             CategorySeeder::class,
@@ -42,7 +43,6 @@ class DatabaseSeeder extends Seeder
             VendorContactSeeder::class,
             UserPermissionSeeder::class,
         ]);
-        User::factory(5)->create();
         // Category::factory(5)->create();
         // CategorySupplier::factory(5)->create();
         // Notification::factory(5)->create();

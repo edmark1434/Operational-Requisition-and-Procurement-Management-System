@@ -115,7 +115,11 @@ const StatusBadge = ({ type }: { type: string }) => {
     );
 };
 
-export default function AuditLogs() {
+interface Prop{
+    'audit_log': any[],
+    'audit_log_type' : any[]
+}
+export default function AuditLogs({audit_log,audit_log_type}:Prop) {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [filteredLogs, setFilteredLogs] = useState<AuditLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -126,22 +130,7 @@ export default function AuditLogs() {
     // Available types for filter
     const availableTypes = [
         'All',
-        // Requisition events
-        'requisition_created', 'requisition_approved', 'requisition_rejected',
-        'requisition_changed', 'requisition_awaiting_pickup', 'requisition_received',
-        // Purchase order events
-        'purchase_order_created', 'purchase_order_merged', 'purchase_order_updated',
-        'purchase_order_issued', 'purchase_order_rejected',
-        // Delivery events
-        'delivery_created', 'delivery_updated', 'delivery_completed',
-        // Return events
-        'return_created', 'return_issued', 'return_rejected', 'return_replaced',
-        // Inventory events
-        'item_created', 'item_updated', 'item_removed',
-        // Supplier events
-        'supplier_created', 'supplier_updated', 'supplier_removed',
-        // User events
-        'user_login', 'user_created', 'permission_updated'
+        ...audit_log_type
     ];
 
     const dateRanges = ['All', 'Today', 'Last 7 days', 'Last 30 days', 'Last 90 days'];
@@ -171,8 +160,7 @@ export default function AuditLogs() {
         setIsLoading(true);
         // Simulate API call
         setTimeout(() => {
-            const transformedLogs = transformAuditLogData();
-            setLogs(transformedLogs);
+            setLogs(audit_log);
             setIsLoading(false);
         }, 1000);
     };
@@ -517,7 +505,7 @@ export default function AuditLogs() {
                                 >
                                     {availableTypes.map(type => (
                                         <option key={type} value={type}>
-                                            {type === 'All' ? 'All Types' : type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            {type === 'All' ? 'All Types' : type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                         </option>
                                     ))}
                                 </select>

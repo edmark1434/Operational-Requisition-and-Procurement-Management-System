@@ -4,8 +4,11 @@ namespace App\Http\Controllers\WebPages;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Make;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+
 class MakesAndCategories extends Controller
 {
     protected $base_path = "tabs/11-MakesAndCategories";
@@ -42,11 +45,17 @@ class MakesAndCategories extends Controller
         return Inertia::render($this->base_path .'/components/CategoryAdd');
     }
     public function create_category(Request $request){
+        $user = Auth::user();
         Category::create([
             'name' => $request->input('NAME'),
             'description' => $request->input('DESCRIPTION'),
             'type' => $request->input('TYPE'),
         ]);
+        AuditLog::create(attributes: [
+                'description' => "Created category ".$request->input('NAME')." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 25
+            ]);
         return redirect()->route('makesandcategories')->with([
             'success' => true,
             'message' => 'Category added successfully'
@@ -64,11 +73,17 @@ class MakesAndCategories extends Controller
         ]);
     }
     public function update_category(Request $request,$id){
+        $user = Auth::user();
         Category::findOrFail($id)->update([
             'name' => $request->input('NAME'),
             'description' => $request->input('DESCRIPTION'),
             'type' => $request->input('TYPE'),
         ]);
+        AuditLog::create(attributes: [
+                'description' => "Updated category ".$request->input('NAME')." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 26
+            ]);
         return redirect()->route('makesandcategories')->with([
             'success' => true,
             'message' => 'Category updated successfully'
@@ -78,10 +93,17 @@ class MakesAndCategories extends Controller
         return Inertia::render($this->base_path .'/components/MakeAdd');
     }
     public function create_make(Request $request){
+        $user = Auth::user();
         Make::create([
             'name' => $request->input('NAME'),
             'is_active' => $request->input('IS_ACTIVE'),
         ]);
+            AuditLog::create(attributes: [
+                'description' => "Created make ".$request->input('NAME')." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 22
+            ]);
+        
         return redirect()->route('makesandcategories')->with([
             'success' => true,
             'message' => 'Make added successfully'
@@ -98,10 +120,16 @@ class MakesAndCategories extends Controller
         ]);
     }
     public function update_make(Request $request,$id){
+        $user = Auth::user();
         Make::findOrFail($id)->update([
             'name' => $request->input('NAME'),
             'is_active' => $request->input('IS_ACTIVE'),
         ]);
+        AuditLog::create(attributes: [
+                'description' => "Updated make ".$request->input('NAME')." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 23
+            ]);
         return redirect()->route('makesandcategories')->with([
             'success' => true,
             'message' => 'Make updated successfully'
@@ -109,25 +137,53 @@ class MakesAndCategories extends Controller
     }
 
     public function delete($id){
+        $user = Auth::user();
         Make::findOrFail($id)->update(['is_active' => false]);
+        $make= Make::findOrFail($id);
+        AuditLog::create(attributes: [
+                'description' => "Deleted make ".$make->name." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 22
+        ]);
         return redirect()->route('makesandcategories')->with([
             'success' => true,
             'message' => 'Make deleted successfully'
         ]);
     }
     public function categDelete($id){
+        $user = Auth::user();
         Category::findOrFail($id)->update(['is_active' => false]);
+        $categ= Category::findOrFail($id);
+        AuditLog::create(attributes: [
+                'description' => "Deleted category ".$categ->name." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 27
+        ]);
         return redirect()->route('makesandcategories')->with([
             'success' => true,
-            'message' => 'Make deleted successfully'
+            'message' => 'Category deleted successfully'
         ]);
     }
 
     public function deleteModel($id){
+        $user = Auth::user();
         Make::findOrFail($id)->update(['is_active' => false]);
+        $make= Make::findOrFail($id);
+        AuditLog::create(attributes: [
+                'description' => "Deleted make ".$make->name." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 22
+        ]);
     }
     public function CategDeleteModel($id){
+        $user = Auth::user();
         Category::findOrFail($id)->update(['is_active' => false]);
+        $categ= Category::findOrFail($id);
+        AuditLog::create(attributes: [
+                'description' => "Deleted category ".$categ->name." by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 27
+        ]);
     }
 }
 

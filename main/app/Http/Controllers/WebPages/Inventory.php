@@ -5,9 +5,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Permission;
+use App\Models\AuditLog;
 use App\Models\UserPermission;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Http\Request;
 
@@ -94,6 +96,12 @@ class Inventory extends Controller
                 DB::table('notification')->insert($insertData);
             }
         }
+            $user = Auth::user();
+            AuditLog::create(attributes: [
+                    'description' => "Item created ".  $request->input('NAME'). " by ". $user->fullname,
+                    'user_id' => $user->id,
+                    'type_id' => 16
+                ]);
         return redirect()->route('inventory')->with([
             'success' => true,
             'message' => 'Item added successfully'
@@ -160,6 +168,13 @@ class Inventory extends Controller
                     'user_id' => $user->user_id
                 ];
             }
+            $user = Auth::user();
+            $item = Item::findOrFail($id);
+            AuditLog::create(attributes: [
+                    'description' => "Item ". $item->name. " updated by ". $user->fullname,
+                    'user_id' => $user->id,
+                    'type_id' => 17
+                ]);
             if(!empty($insertData)){
                 DB::table('notification')->insert($insertData);
             }
@@ -171,13 +186,27 @@ class Inventory extends Controller
     }
     public function delete($id){
         Item::findOrFail($id)->update(['is_active' => false]);
+        $user = Auth::user();
+        $item = Item::findOrFail($id);
+        AuditLog::create(attributes: [
+                'description' => "Item ". $item->name. " deleted by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 18
+            ]);
         return redirect()->route('inventory')->with([
             'success' => true,
             'message' => 'Item deleted successfully'
         ]);
     }
     public function deleteModal($id){
+        $user = Auth::user();
         Item::findOrFail($id)->update(['is_active' => false]);
+        $item = Item::findOrFail($id);
+        AuditLog::create(attributes: [
+                'description' => "Item ". $item->name. " deleted by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 18
+            ]);
     }
 }
 

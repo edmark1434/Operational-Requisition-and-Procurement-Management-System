@@ -20,7 +20,7 @@ export default function CategoryAdd({ auth }: { auth: any }) {
     const [formData, setFormData] = useState({
         NAME: '',
         DESCRIPTION: '',
-        TYPE: 'item'
+        TYPE: 'Items'
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
 
