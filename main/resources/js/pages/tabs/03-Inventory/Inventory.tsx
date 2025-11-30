@@ -34,7 +34,7 @@ export default function Inventory({ item, success, message }: Prop) {
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedItem, setSelectedItem] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [inventory, setInventory] = useState(item);
+    const [inventory, setInventory] = useState(item || []);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
     const {

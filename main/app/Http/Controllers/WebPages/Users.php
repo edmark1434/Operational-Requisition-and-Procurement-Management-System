@@ -5,12 +5,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\AuditLog;
 use App\Models\RolePermission;
 use App\Models\UserPermission;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 
 class Users extends Controller
@@ -91,11 +93,11 @@ class Users extends Controller
         $users = User::where('is_active',true)->get();
         $roles = Role::where('is_active',true)->get();
         $permission = Permission::all();
-        $username = User::where('id', $id)->get('username');
+        $user = User::where('id', $id)->first();
         $user_permission = UserPermission::where('user_id', $id)->get();
         $unique_id = UserPermission::where('user_id', $id)->pluck('perm_id');
         session(['unique' => $unique_id->toArray()]);
-        session(['username' => $username]);
+        session(['username' => $user->username]);
         return Inertia::render($this->base_path .'/UserEdit', [
             'userId' => (int)$id,
             'usersList' => $users->map(function ($user) {
@@ -106,7 +108,7 @@ class Users extends Controller
                     "created_at" => $user->created_at,
                     "status" => $user->is_active ? 'active' : 'inactive'
                 ];
-            }),
+                }),
             'permissions' => $permission->map(function ($perm) {
                 return [
                     'PERMISSION_ID' => $perm->id,
@@ -143,6 +145,7 @@ class Users extends Controller
     }
 public function createUser(Request $request)
     {
+        $user = Auth::user();
         // Validate the request (optional, but recommended)
         $request->validate([
             'fullname' => 'required|string|max:255',
@@ -169,6 +172,11 @@ public function createUser(Request $request)
             }
             UserPermission::insert($userPermissions);
         });
+            AuditLog::create(attributes: [
+                'description' => "User created by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 34
+            ]);
         return redirect()->route('users')->with([
             'success' => true,
             'message' => 'User created successfully'
@@ -176,13 +184,15 @@ public function createUser(Request $request)
     }
 
     public function updateUser(Request $request,$id){
+        $user = Auth::user();
         $ownedPermission = session('unique', []);
         $username = session()->pull('username', '');
         $rules = [
             'fullname' => 'required|string|max:255',
             'password' => 'string|min:8',
         ];
-        if(!($username == $request->input('username'))){
+
+        if($username != $request->input('username')){
             $rules['username'] = 'required|string|max:50|unique:users,username';
         }
         $validated = $request->validate($rules);
@@ -190,7 +200,22 @@ public function createUser(Request $request)
 
         $removedIds = array_diff($ownedPermission, $newPermission); // [1, 4, 5]
         $addedIds = array_diff($newPermission, $ownedPermission); 
+
+            if(count($removedIds) > 0 || count($addedIds) > 0){
+            AuditLog::create(attributes: [
+                'description' => "Update permission's of ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 35
+            ]);
+        }
+        if(!empty($validated['password'])){
+            AuditLog::create([
+                'description' => "Update password's of ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 36
+            ]);
         
+        }
         if(!empty($removedIds)){
         DB::table('user_permission')
                 ->where('user_id', $id)
@@ -219,8 +244,14 @@ public function createUser(Request $request)
         ]);
     }
     public function deleteUser($id){
+        $user = Auth::user();
         UserPermission::where('user_id', $id)->delete();
         User::where('id', $id)->update(['is_active' => false]);
+            AuditLog::create(attributes: [
+                'description' => "Deleted user account by ". $user->fullname,
+                'user_id' => $user->id,
+                'type_id' => 37
+            ]);
         return redirect()->route('users')->with([
             'success' => true,
             'message' => 'User deleted successfully'

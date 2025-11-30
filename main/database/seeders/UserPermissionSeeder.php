@@ -2,11 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Role;
-use App\Models\RolePermission;
-use App\Models\User;
-use App\Models\UserPermission;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Seeder;
 
 class UserPermissionSeeder extends Seeder
@@ -14,45 +10,62 @@ class UserPermissionSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    public function run(): void
+   public function run()
     {
-        // DEMO USERS
-        $roles = [1, 2, 3]; // role IDs for the first 3 users
+        DB::table('user_permission')->insert([
+            // User 1
+            ['user_id' => 1, 'perm_id' => 1],
+            ['user_id' => 1, 'perm_id' => 6],
+            ['user_id' => 1, 'perm_id' => 7],
+            ['user_id' => 1, 'perm_id' => 8],
+            ['user_id' => 1, 'perm_id' => 10],
+            ['user_id' => 1, 'perm_id' => 11],
+            ['user_id' => 1, 'perm_id' => 12],
+            ['user_id' => 1, 'perm_id' => 13],
+            ['user_id' => 1, 'perm_id' => 14],
+            ['user_id' => 1, 'perm_id' => 16],
 
-        // Assign fixed roles to the first 3 users
-        foreach ($roles as $index => $roleId) {
-            $user = User::find($index + 1); // users with id 1, 2, 3
-            if (!$user) continue;
+            // User 2
+            ['user_id' => 2, 'perm_id' => 1],
+            ['user_id' => 2, 'perm_id' => 3],
+            ['user_id' => 2, 'perm_id' => 4],
+            ['user_id' => 2, 'perm_id' => 6],
+            ['user_id' => 2, 'perm_id' => 8],
+            ['user_id' => 2, 'perm_id' => 9],
+            ['user_id' => 2, 'perm_id' => 10],
+            ['user_id' => 2, 'perm_id' => 13],
+            ['user_id' => 2, 'perm_id' => 15],
+            ['user_id' => 2, 'perm_id' => 17],
+            ['user_id' => 2, 'perm_id' => 18],
+            ['user_id' => 2, 'perm_id' => 23],
+            ['user_id' => 2, 'perm_id' => 24],
 
-            $permIds = RolePermission::where('role_id', $roleId)->pluck('perm_id');
+            // User 3
+            ['user_id' => 3, 'perm_id' => 1],
+            ['user_id' => 3, 'perm_id' => 6],
+            ['user_id' => 3, 'perm_id' => 10],
+            ['user_id' => 3, 'perm_id' => 13],
+            ['user_id' => 3, 'perm_id' => 17],
+            ['user_id' => 3, 'perm_id' => 18],
+            ['user_id' => 3, 'perm_id' => 19],
+            ['user_id' => 3, 'perm_id' => 20],
+            ['user_id' => 3, 'perm_id' => 21],
+            ['user_id' => 3, 'perm_id' => 22],
+            ['user_id' => 3, 'perm_id' => 23],
+            ['user_id' => 3, 'perm_id' => 24],
+            ['user_id' => 3, 'perm_id' => 25],
+            ['user_id' => 3, 'perm_id' => 26],
+            ['user_id' => 3, 'perm_id' => 27],
+            ['user_id' => 3, 'perm_id' => 28],
+            ['user_id' => 3, 'perm_id' => 29],
+            ['user_id' => 3, 'perm_id' => 30],
+            ['user_id' => 3, 'perm_id' => 31],
+            ['user_id' => 3, 'perm_id' => 32],
+            ['user_id' => 3, 'perm_id' => 33],
 
-            foreach ($permIds as $permId) {
-                UserPermission::firstOrCreate([
-                    'user_id' => $user->id,
-                    'perm_id' => $permId,
-                ]);
-            }
-        }
-
-        // FACTORY
-        $roles = Role::all(); // get all roles
-
-        // Loop through all users except the first 3
-        foreach (User::where('id', '>', 3)->get() as $user) {
-
-            // Pick a random role
-            $role = $roles->random();
-
-            // Get all permission IDs for that role
-            $permIds = RolePermission::where('role_id', $role->id)->pluck('perm_id');
-
-            foreach ($permIds as $permId) {
-                // Insert into user_permission
-                UserPermission::firstOrCreate([
-                    'user_id' => $user->id,
-                    'perm_id' => $permId,
-                ]);
-            }
-        }
+            // User 4
+            ['user_id' => 4, 'perm_id' => 2],
+            ['user_id' => 4, 'perm_id' => 5],
+        ]);
     }
 }
