@@ -78,19 +78,29 @@ class RequisitionController extends Controller
 
     public function requisitionForm()
     {
-        return Inertia::render($this->base_path .'/RequisitionForm/RequisitionForm');
+        // 1. Fetch Categories for Dropdown
+        $dbCategories = Category::where('is_active', true)
+            ->where('type', 'Items')
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        // 2. Pass them to the view
+        return Inertia::render($this->base_path .'/RequisitionForm/RequisitionForm', [
+            'dbCategories' => $dbCategories
+        ]);
     }
 
     public function requisitionEdit($id)
     {
-        // 1. Fetch the Requisition with all necessary relationships
+        // 1. Fetch the Requisition
         $requisition = Requisition::with([
             'user',
             'requisition_items.item.category',
             'requisition_services'
         ])->findOrFail($id);
 
-        // 2. Format Items for the React State
+        // 2. Format Items
         $formattedItems = $requisition->requisition_items->map(function($ri) {
             return [
                 'id' => 'existing_' . $ri->id,
@@ -99,14 +109,13 @@ class RequisitionController extends Controller
                 'category' => $ri->item->category->name ?? 'General',
                 'itemName' => $ri->item->name ?? 'Unknown',
                 'quantity' => (string)$ri->quantity,
-                // Use item price as fallback if pivot price is missing
                 'unit_price' => (string)($ri->item->unit_price ?? 0),
                 'total' => number_format($ri->quantity * ($ri->item->unit_price ?? 0), 2, '.', ''),
                 'isSaved' => true,
             ];
         });
 
-        // 3. Format Services for the React State
+        // 3. Format Services
         $formattedServices = $requisition->requisition_services->map(function($rs) {
             return [
                 'id' => 'existing_' . $rs->id,
@@ -121,13 +130,103 @@ class RequisitionController extends Controller
             ];
         });
 
-        // 4. Send everything to the view
+        // 4. Fetch Categories (ADDED THIS SECTION)
+        $dbCategories = Category::where('is_active', true)
+            ->where('type', 'Items')
+            ->orderBy('name')
+            ->select('id', 'name') // Select ID and Name
+            ->get();
+
+        // 5. Send everything to the view
         return Inertia::render($this->base_path .'/RequisitionMain/RequisitionEdit', [
             'requisitionId' => (int)$id,
             'serverRequisition' => $requisition,
             'initialItems' => $formattedItems,
             'initialServices' => $formattedServices,
+            'dbCategories' => $dbCategories, // Passing to Frontend
         ]);
+    }
+
+
+    public function update(Request $request, $id)
+    {
+        // 1. Validate Input
+        $validated = $request->validate([
+            'requestor' => 'required|string',
+            'priority' => 'required|string',
+            'type' => 'required|in:items,services',
+            'total_amount' => 'required|numeric',
+            'us_id' => 'required',
+            'items' => 'required_if:type,items|array',
+            'services' => 'required_if:type,services|array',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $requisition = Requisition::findOrFail($id);
+
+            // 2. Update Parent Requisition
+            $requisition->update([
+                'user_id' => $request->us_id,
+                'requestor' => $request->requestor,
+                'priority' => ucfirst($request->priority),
+                'type' => ucfirst($request->type),
+                'notes' => $request->notes,
+                // We typically keep status as is during edit, or reset to Pending.
+                // 'status' => 'Pending',
+                'total_cost' => $request->total_amount,
+            ]);
+
+            // 3. Sync Items/Services
+            // Strategy: Delete existing children and recreate them to avoid complex syncing logic
+
+            if ($request->type === 'items') {
+                // Clear any existing services if type switched
+                $requisition->requisition_services()->delete();
+
+                // Clear existing items to replace with new list
+                $requisition->requisition_items()->delete();
+
+                foreach ($request->items as $item) {
+                    // Ensure we have a valid Item ID
+                    if (empty($item['itemId'])) {
+                        throw new \Exception("Item '{$item['itemName']}' is missing a valid ID.");
+                    }
+
+                    $requisition->requisition_items()->create([
+                        'item_id' => $item['itemId'],
+                        'quantity' => $item['quantity'],
+                        'approved_qty' => 0, // Reset approval qty on edit
+                        // 'unit_price' => ... // Add if you store snapshot price
+                    ]);
+                }
+            }
+            elseif ($request->type === 'services') {
+                // Clear any existing items if type switched
+                $requisition->requisition_items()->delete();
+
+                // Clear existing services
+                $requisition->requisition_services()->delete();
+
+                foreach ($request->services as $service) {
+                    $requisition->requisition_services()->create([
+                        'service_id' => $service['originalServiceId'] ?? null,
+                        'service_name' => $service['serviceName'],
+                        'quantity' => $service['quantity'],
+                        // 'description' => $service['description'] ?? '',
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('requisitions')->with('success', 'Requisition updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Update Failed: ' . $e->getMessage()]);
+        }
     }
 
     // --- API Methods ---
