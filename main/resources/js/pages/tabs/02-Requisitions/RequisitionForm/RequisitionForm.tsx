@@ -319,17 +319,28 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         e.preventDefault();
         if (!validateForm()) return;
 
-        const finalRequestor = requestorType === 'self' ? auth.user.fullname : selectedUser || otherRequestor;
+        // 1. Get the correct Name String (for the 'requestor' column)
+        // If 'other', we use otherRequestor because it holds the NAME (even if selected from dropdown)
+        const finalRequestorName = requestorType === 'self'
+            ? auth.user.fullname
+            : otherRequestor;
+
+        // 2. Get the correct User ID (for the 'us_id' column)
+        // If Manual Input: selectedUser is empty -> Fallback to auth.user.id (Logged in Admin)
+        // This stops the "us_id field is required" error while saving the manual name above.
+        const finalUserId = requestorType === 'self'
+            ? auth.user.id
+            : (selectedUser ? parseInt(selectedUser) : auth.user.id);
 
         const formData = {
-            requestor: finalRequestor,
+            requestor: finalRequestorName,
             priority,
             type,
             notes,
             items: type === 'items' ? items.map(item => ({ ...item, itemId: item.itemId || null })) : [],
             services: type === 'services' ? services.map(service => ({ ...service })) : [],
             total_amount: getTotalAmount(),
-            us_id: requestorType === 'self' ? auth.user.id : selectedUser ? parseInt(selectedUser) : null
+            us_id: finalUserId // Now always has a value
         };
 
         setPreviewData(formData);
