@@ -121,6 +121,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('contacts/{id}/edit',[Contact::class,"edit"])->name('contactsedit');
 
     Route::get('notifications',[Notifications::class,'index'])->name('notifications');
+    Route::put('notifications/{id}/editIsRead',[Notifications::class,'editIsRead'])->name('notificationsIsRead');
+    Route::put('notifications/markAsAllRead',[Notifications::class,'markAsAllRead'])->name('notificationsMarkAsAllRead');
 
 });
 

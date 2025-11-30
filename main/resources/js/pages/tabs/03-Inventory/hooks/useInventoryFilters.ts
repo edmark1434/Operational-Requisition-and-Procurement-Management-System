@@ -18,8 +18,8 @@ export const useInventoryFilters = (
             const matchesCategory = categoryFilter === 'All' || item.CATEGORY === categoryFilter;
 
             const matchesStatus = statusFilter === 'All' ||
-                (statusFilter === 'In Stock' && item.CURRENT_STOCK > 10) ||
-                (statusFilter === 'Low Stock' && item.CURRENT_STOCK > 0 && item.CURRENT_STOCK <= 10) ||
+                (statusFilter === 'In Stock' && item.CURRENT_STOCK >= 10) ||
+                (statusFilter === 'Low Stock' && item.CURRENT_STOCK > 0 && item.CURRENT_STOCK < 10) ||
                 (statusFilter === 'Out of Stock' && item.CURRENT_STOCK === 0);
 
             return matchesSearch && matchesCategory && matchesStatus;

@@ -4,7 +4,10 @@ namespace App\Http\Controllers\WebPages;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\Permission;
+use App\Models\UserPermission;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
 
@@ -76,6 +79,21 @@ class Inventory extends Controller
             'category_id' => $request->input('CATEGORY_ID'),
             'vendor_id' => $request->input('SUPPLIER_ID')        
         ]);
+        if($request->input('CURRENT_STOCK') <= 10){
+            $perm_id = Permission::where('name', 'View Items')->value('id');
+            $users = UserPermission::where('perm_id', $perm_id)->get();
+            $insertData = [];
+            foreach($users as $user){
+                $insertData[] = [
+                    'message' => `The item `. $request->input('NAME') . ' has low stocks' ,
+                    'is_read' => false,
+                    'user_id' => $user->user_id
+                ];
+            }
+            if(!empty($insertData)){
+                DB::table('notification')->insert($insertData);
+            }
+        }
         return redirect()->route('inventory')->with([
             'success' => true,
             'message' => 'Item added successfully'
@@ -131,6 +149,21 @@ class Inventory extends Controller
             'category_id' => $request->input('CATEGORY_ID'),
             'vendor_id' => $request->input('SUPPLIER_ID')        
         ]);
+        if($request->input('CURRENT_STOCK') < 10){
+            $perm_id = Permission::where('name', 'View Items')->value('id');
+            $users = UserPermission::where('perm_id', $perm_id)->get();
+            $insertData = [];
+            foreach($users as $user){
+                $insertData[] = [
+                    'message' => `The item `. $request->input('NAME') . ' has low stocks',
+                    'is_read' => false,
+                    'user_id' => $user->user_id
+                ];
+            }
+            if(!empty($insertData)){
+                DB::table('notification')->insert($insertData);
+            }
+        }
         return redirect()->route('inventory')->with([
             'success' => true,
             'message' => 'Item updated successfully'

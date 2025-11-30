@@ -91,7 +91,7 @@ export default function InventoryList({ inventory, onItemClick, viewMode, isLoad
                                     <span className={`text-sm font-semibold ${
                                         item.CURRENT_STOCK === 0
                                             ? 'text-red-600 dark:text-red-400'
-                                            : item.CURRENT_STOCK < 10
+                                            : item.CURRENT_STOCK <= 10
                                                 ? 'text-orange-600 dark:text-orange-400'
                                                 : 'text-green-600 dark:text-green-400'
                                     }`}>
@@ -220,7 +220,7 @@ function InventoryCard({ item, onClick, viewMode }: {
                         <span className="text-gray-500 dark:text-gray-400">Qty:</span>
                         <span className={`font-semibold ${
                             item.CURRENT_STOCK === 0 ? 'text-red-600 dark:text-red-400' :
-                                item.CURRENT_STOCK < 10 ? 'text-orange-600 dark:text-orange-400' :
+                                item.CURRENT_STOCK <= 10 ? 'text-orange-600 dark:text-orange-400' :
                                     'text-green-600 dark:text-green-400'
                         }`}>
                             {item.CURRENT_STOCK}
