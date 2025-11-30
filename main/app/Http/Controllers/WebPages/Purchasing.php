@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\WebPages;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Supplier\SupplierController;
+use App\Models\Category;
 use App\Models\CategoryVendor;
+use App\Models\OrderItem;
+use App\Models\OrderService;
+use App\Models\PurchaseOrder;
 use App\Models\Requisition;
 use App\Models\RequisitionItem;
+use App\Models\RequisitionOrderItem;
 use App\Models\RequisitionService;
 use App\Models\Vendor;
 use Inertia\Inertia;
@@ -26,6 +31,12 @@ class Purchasing extends Controller
             'requisitionServices' => RequisitionService::with('service', 'item')->get(),
             'vendors' => Vendor::query()->where('is_active', true)->get(),
             'vendorCategories' => CategoryVendor::with('vendor', 'category')->get(),
+            'purchaseOrders' => PurchaseOrder::query()->whereNotIn('status', ['Issued', 'Delivered', 'Received'])->get(),
+            'orderItems' => OrderItem::with('item')->get(),
+            'orderServices' => OrderService::with('service', 'item')->get(),
+            'requisitionOrderItems' => RequisitionOrderItem::with('req_item', 'po_item')->get(),
+            'requisitionOrderServices' => RequisitionOrderItem::with('req_service', 'po_service')->get(),
+            'categories' => Category::all(),
         ]);
     }
     public function edit($id){

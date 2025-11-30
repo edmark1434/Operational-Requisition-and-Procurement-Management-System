@@ -14,12 +14,12 @@ class RequisitionOrderItem extends Model
         'req_item_id', 'po_item_id'
     ];
 
-    public function requisitionItem()
+    public function req_item()
     {
         return $this->belongsTo(RequisitionItem::class, 'req_item_id');
     }
 
-    public function purchaseOrderItem()
+    public function po_item()
     {
         return $this->belongsTo(OrderItem::class, 'po_item_id');
     }

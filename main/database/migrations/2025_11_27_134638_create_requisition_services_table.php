@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('req_id')->constrained('requisition')->cascadeOnUpdate();
             $table->foreignId('service_id')->constrained('services')->cascadeOnUpdate();
-            $table->foreignId('item_id')->constrained('item')->cascadeOnUpdate();
+            $table->foreignId('item_id')->nullable()->constrained('item')->cascadeOnUpdate();
         });
     }
 

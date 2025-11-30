@@ -14,12 +14,12 @@ class RequisitionOrderService extends Model
         'req_service_id', 'po_service_id'
     ];
 
-    public function requisitionItem()
+    public function req_service()
     {
         return $this->belongsTo(RequisitionService::class, 'req_service_id');
     }
 
-    public function purchaseOrderItem()
+    public function po_service()
     {
         return $this->belongsTo(OrderService::class, 'po_service_id');
     }

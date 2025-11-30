@@ -1,116 +1,69 @@
 import suppliersData from '@/pages/datasets/supplier';
 import categorySuppliersData from '@/pages/datasets/category_supplier';
 import categoriesData from '@/pages/datasets/category';
+import {
+    Category,
+    CategoryVendor,
+    RequisitionItem,
+    RequisitionService,
+    Vendor
+} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import categories from "@/pages/datasets/category";
 
-export interface SuggestedSupplier {
-    supplier: any;
-    matchScore: number;
-    matchingCategories: string[];
+export interface SuggestedVendor {
+    vendor: any;
+    matchingCategories: Category[];
     matchPercentage: number;
-    categoryIds: number[];
-    isSpecialized: boolean;
 }
 
-export const getSuggestedSuppliers = (items: any[], services: any[], orderType?: string): SuggestedSupplier[] => {
+export const getSuggestedSuppliers = (items: RequisitionItem[], services: RequisitionService[], vendors: Vendor[], categories: Category[], vendorCategories: CategoryVendor[] , orderType?: string,): SuggestedVendor[] => {
     // If no items or services selected, return empty
-    const selectedItems = items?.filter(item => item.SELECTED) || [];
-    const selectedServices = services?.filter(service => service.SELECTED) || [];
+    const selectedItems = items;
+    const selectedServices = services;
 
     if ((!selectedItems || selectedItems.length === 0) && (!selectedServices || selectedServices.length === 0)) {
         return [];
     }
 
     let categoryIds: number[] = [];
-    let selectedCategories: string[] = [];
 
     // Get category IDs and names based on order type and selected items/services
-    if (orderType === 'items' && selectedItems.length > 0) {
+    if (orderType === 'Items' && selectedItems.length > 0) {
         // For items: use CATEGORY_ID from items
         categoryIds = [...new Set(selectedItems
-            .map(item => item.CATEGORY_ID)
-            .filter(Boolean)
+            .map(item => item.item.category_id)
         )];
 
-        // Get category names for display
-        selectedCategories = categoryIds.map(categoryId => {
-            const category = categoriesData.find(cat => cat.CAT_ID === categoryId);
-            return category?.NAME || `Category ${categoryId}`;
-        });
-    } else if (orderType === 'services' && selectedServices.length > 0) {
+    } else if (orderType === 'Services' && selectedServices.length > 0) {
         // For services: use CATEGORY_ID from services
         categoryIds = [...new Set(selectedServices
-            .map(service => service.CATEGORY_ID)
-            .filter(Boolean)
+            .map(service => service.service.category_id)
         )];
-
-        // Get category names for display
-        selectedCategories = categoryIds.map(categoryId => {
-            const category = categoriesData.find(cat => cat.CAT_ID === categoryId);
-            return category?.NAME || `Category ${categoryId}`;
-        });
     }
 
     const totalCategories = categoryIds.length;
-
     if (totalCategories === 0) return [];
 
-    const suggestions: SuggestedSupplier[] = suppliersData.map(supplier => {
+    const suggestions: SuggestedVendor[] = vendors.map(vendor => {
         // Find all categories this supplier serves from category_supplier table
-        const supplierCategoryIds = categorySuppliersData
-            .filter(cs => cs.SUPPLIER_ID === supplier.ID)
-            .map(cs => cs.CATEGORY_ID);
+        const supplierCategoryIds = vendorCategories
+            .filter(cs => cs.vendor_id === vendor.id)
+            .map(cs => cs.category_id);
 
         // Find matching categories
-        const matchingCategoryIds = categoryIds.filter(categoryId =>
-            supplierCategoryIds.includes(categoryId)
-        );
-
-        // Get unique category names for display (only the ones this supplier actually provides)
-        const matchingCategories = [...new Set(matchingCategoryIds.map(categoryId => {
-            const category = categoriesData.find(cat => cat.CAT_ID === categoryId);
-            return category?.NAME || `Category ${categoryId}`;
-        }))];
-
-        // Calculate match score with specialization bonus
-        let matchScore = matchingCategoryIds.length * 10;
-
-        // Check if supplier is specialized in the required service/item types
-        const isSpecialized = checkSupplierSpecialization(supplier.ID, categoryIds, orderType);
-
-        // Add bonus for specialized suppliers
-        if (isSpecialized) {
-            matchScore += 20;
-        }
-
-        const matchPercentage = Math.round((matchingCategoryIds.length / totalCategories) * 100);
+        const matchingCategories = categories
+            .filter(category => supplierCategoryIds.includes(category.id))
+            .filter(category => categoryIds.includes(category.id));
+        const matchPercentage = Math.round((matchingCategories.length / totalCategories) * 100);
 
         return {
-            supplier,
-            matchScore,
+            vendor,
             matchingCategories,
             matchPercentage,
-            categoryIds: matchingCategoryIds,
-            isSpecialized
         };
     });
 
-    // Return suppliers with at least one match, sorted by best match
-    const uniqueSuggestions = suggestions
-        .filter(suggestion => suggestion.matchScore > 0)
-        .sort((a, b) => {
-            // First sort by match score
-            if (b.matchScore !== a.matchScore) {
-                return b.matchScore - a.matchScore;
-            }
-            // Then by specialization
-            if (b.isSpecialized !== a.isSpecialized) {
-                return b.isSpecialized ? 1 : -1;
-            }
-            // Finally by match percentage
-            return b.matchPercentage - a.matchPercentage;
-        });
-
-    return uniqueSuggestions;
+    return suggestions.sort((a, b) => b.matchPercentage - a.matchPercentage);
 };
 
 // Helper function to check if supplier is specialized in the required categories
@@ -141,34 +94,11 @@ const checkSupplierSpecialization = (supplierId: number, requiredCategoryIds: nu
 };
 
 // Helper function to get supplier's actual categories for display
-export const getSupplierCategories = (supplierId: number, orderType?: string): string[] => {
-    const supplierCategoryIds = categorySuppliersData
-        .filter(cs => cs.SUPPLIER_ID === supplierId)
-        .map(cs => cs.CATEGORY_ID);
+export const getSupplierCategories = (categories: Category[], vendorCategories: CategoryVendor[], supplierId: number, orderType?: string): Category[] => {
+    const supplierCategoryIds = vendorCategories
+        .filter(cs => cs.vendor_id === supplierId)
+        .map(cs => cs.category_id);
 
-    const supplierCategories = supplierCategoryIds.map(categoryId => {
-        const category = categoriesData.find(cat => cat.CAT_ID === categoryId);
-        return category?.NAME || `Category ${categoryId}`;
-    });
-
-    // Filter by type if orderType is specified
-    if (orderType) {
-        return supplierCategories.filter(categoryName => {
-            const category = categoriesData.find(cat => cat.NAME === categoryName);
-            if (!category) return false;
-
-            if (orderType === 'services') {
-                return category.TYPE === 'service';
-            } else {
-                return category.TYPE === 'item';
-            }
-        });
-    }
-
-    return supplierCategories;
-};
-
-export const getBestSupplier = (items: any[], services: any[], orderType?: string): SuggestedSupplier | null => {
-    const suggestions = getSuggestedSuppliers(items, services, orderType);
-    return suggestions.length > 0 ? suggestions[0] : null;
+    return categories
+        .filter(c => supplierCategoryIds.includes(c.id))
 };

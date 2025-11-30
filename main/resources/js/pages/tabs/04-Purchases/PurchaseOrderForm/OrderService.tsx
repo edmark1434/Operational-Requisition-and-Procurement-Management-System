@@ -1,12 +1,15 @@
+import {Category, Requisition, RequisitionItem, RequisitionService} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+
 interface OrderServiceProps {
     formData: {
         SERVICES: any[];
     };
-    selectedRequisition: any;
+    selectedRequisition: Requisition[];
     originalQuantities: { [key: number]: number };
     errors: { [key: string]: string };
     onToggleServiceSelection: (serviceId: number) => void;
-    onUpdateServiceQuantity: (serviceId: number, quantity: number) => void;
+    requisitionServices: RequisitionService[];
+    categories: Category[];
 }
 
 export default function OrderService({
@@ -15,7 +18,8 @@ export default function OrderService({
                                          originalQuantities,
                                          errors,
                                          onToggleServiceSelection,
-                                         onUpdateServiceQuantity
+                                         requisitionServices,
+                                         categories
                                      }: OrderServiceProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -146,39 +150,6 @@ export default function OrderService({
                                     </p>
                                 </div>
 
-                                {/* Hours Controls */}
-                                <div className="col-span-2">
-                                    <div className="flex items-center justify-center space-x-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => onUpdateServiceQuantity(service.ID, service.QUANTITY - 1)}
-                                            disabled={service.QUANTITY <= originalQty}
-                                            className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                            title={service.QUANTITY <= originalQty ? "Cannot decrease below requisition hours" : "Decrease hours"}
-                                        >
-                                            -
-                                        </button>
-                                        <div className="text-center min-w-12">
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {service.QUANTITY}
-                                            </span>
-                                            {isIncreased && (
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                    was {originalQty}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => onUpdateServiceQuantity(service.ID, service.QUANTITY + 1)}
-                                            className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
-                                            title="Increase hours"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </div>
-
                                 {/* Service Total */}
                                 <div className="col-span-2 text-right">
                                     <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -250,7 +221,7 @@ export default function OrderService({
                 )}
 
                 {/* Empty State */}
-                {formData.SERVICES.length === 0 && (
+                {requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).length === 0 && (
                     <div className="px-4 py-8 text-center">
                         <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />

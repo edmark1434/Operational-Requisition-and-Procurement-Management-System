@@ -1,17 +1,22 @@
 import { useState } from 'react';
 import SupplierCard from './SupplierCard';
-import { getSupplierCategories } from '../utils/supplierSuggestions';// Import from correct path
+import {getSupplierCategories, SuggestedVendor} from '../utils/supplierSuggestions';
+import {Category, Vendor, CategoryVendor} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+
+// Import from correct path
 
 interface SelectSupplierProps {
     formData: {
         SUPPLIER_ID: string;
         ORDER_TYPE?: string;
     };
-    selectedSupplier: any;
-    suggestedSuppliers: any[];
-    suppliersData: any[];
+    selectedSupplier: Vendor | null;
+    suggestedSuppliers: SuggestedVendor[];
+    suppliersData: Vendor[];
     errors: { [key: string]: string };
     onSupplierChange: (supplierId: string) => void;
+    categories: Category[];
+    vendorCategories: CategoryVendor[];
 }
 
 export default function SelectSupplier({
@@ -20,7 +25,9 @@ export default function SelectSupplier({
                                            suggestedSuppliers,
                                            suppliersData,
                                            errors,
-                                           onSupplierChange
+                                           onSupplierChange,
+                                           categories,
+                                           vendorCategories
                                        }: SelectSupplierProps) {
     const [activeTab, setActiveTab] = useState<'suggested' | 'all'>('suggested');
 
@@ -35,9 +42,9 @@ export default function SelectSupplier({
         }
 
         if (formData.ORDER_TYPE === 'items') {
-            return "Select items from a requisition first to see supplier suggestions";
+            return "Select an item from a requisition first to see supplier suggestions";
         } else if (formData.ORDER_TYPE === 'services') {
-            return "Select services from a requisition first to see supplier suggestions";
+            return "Select a service from a requisition first to see supplier suggestions";
         }
 
         return "Select items or services from a requisition first";
@@ -46,7 +53,7 @@ export default function SelectSupplier({
     // Helper function to get actual supplier categories
     const getActualSupplierCategories = (supplierId: number) => {
         try {
-            return getSupplierCategories(supplierId, formData.ORDER_TYPE);
+            return getSupplierCategories(categories, vendorCategories, supplierId, formData.ORDER_TYPE);
         } catch (error) {
             console.error('Error getting supplier categories:', error);
             return [];
@@ -97,7 +104,7 @@ export default function SelectSupplier({
                                     : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                         >
-                            💡 Suggested ({suggestedSuppliers.length})
+                            💡 Suggested ({suggestedSuppliers.filter(suggestion => suggestion.matchPercentage >= 67).length})
                         </button>
                         <button
                             type="button"
@@ -117,18 +124,21 @@ export default function SelectSupplier({
                         {activeTab === 'suggested' ? (
                             <>
                                 {suggestedSuppliers.length > 0 ? (
-                                    suggestedSuppliers.map((suggestion, index) => (
-                                        <SupplierCard
-                                            key={suggestion.supplier.ID}
-                                            supplier={suggestion.supplier}
-                                            isSelected={formData.SUPPLIER_ID === suggestion.supplier.ID.toString()}
-                                            onSelect={() => applySuggestion(suggestion.supplier.ID.toString())}
-                                            isBestMatch={index === 0}
-                                            matchPercentage={suggestion.matchPercentage}
-                                            matchingCategories={suggestion.matchingCategories}
-                                            orderType={formData.ORDER_TYPE}
-                                            supplierActualCategories={getActualSupplierCategories(suggestion.supplier.ID)}
-                                        />
+                                    suggestedSuppliers
+                                        .filter(suggestion => suggestion.matchPercentage >= 67)
+                                        .map((suggestion, index) => (
+                                            <SupplierCard
+                                                key={suggestion.vendor.id}
+                                                supplier={suggestion.vendor}
+                                                isSelected={formData.SUPPLIER_ID === suggestion.vendor.id.toString()}
+                                                onSelect={() => applySuggestion(suggestion.vendor.id.toString())}
+                                                isBestMatch={index === 0}
+                                                matchPercentage={suggestion.matchPercentage}
+                                                categories={categories}
+                                                matchingCategories={suggestion.matchingCategories}
+                                                orderType={formData.ORDER_TYPE}
+                                                supplierActualCategories={getActualSupplierCategories(suggestion.vendor.id)}
+                                            />
                                     ))
                                 ) : (
                                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -140,19 +150,20 @@ export default function SelectSupplier({
                                 )}
                             </>
                         ) : (
-                            suppliersData.map(supplier => {
+                            suppliersData.map(vendor => {
                                 // Find if this supplier is in suggestions to show matching categories
-                                const suggestion = suggestedSuppliers.find(s => s.supplier.ID === supplier.ID);
+                                const suggestion = suggestedSuppliers.find(s => s.vendor.id === vendor.id);
                                 return (
                                     <SupplierCard
-                                        key={supplier.ID}
-                                        supplier={supplier}
-                                        isSelected={formData.SUPPLIER_ID === supplier.ID.toString()}
-                                        onSelect={() => applySuggestion(supplier.ID.toString())}
+                                        key={vendor.id}
+                                        supplier={vendor}
+                                        isSelected={formData.SUPPLIER_ID === vendor.id.toString()}
+                                        onSelect={() => applySuggestion(vendor.id.toString())}
                                         matchPercentage={suggestion?.matchPercentage || 0}
-                                        matchingCategories={suggestion?.matchingCategories || []}
+                                        categories={categories}
+                                        matchingCategories={[]}
                                         orderType={formData.ORDER_TYPE}
-                                        supplierActualCategories={getActualSupplierCategories(supplier.ID)}
+                                        supplierActualCategories={getActualSupplierCategories(vendor.id)}
                                     />
                                 );
                             })

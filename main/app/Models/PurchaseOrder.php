@@ -33,7 +33,6 @@ class PurchaseOrder extends Model
         'payment_type',
         'status',
         'remarks',
-        'req_id',
         'vendor_id',
         'created_at'
     ];
@@ -41,11 +40,6 @@ class PurchaseOrder extends Model
     /**
      * Relationships
      */
-    public function requisition()
-    {
-        return $this->belongsTo(Requisition::class, 'req_id');
-    }
-
     public function supplier()
     {
         return $this->belongsTo(Vendor::class, 'vendor_id');

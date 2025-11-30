@@ -62,8 +62,8 @@ export default function OrderInfo({
                     }`}
                 >
                     <option value="">Select order type</option>
-                    <option value="items">Items</option>
-                    <option value="services">Services</option>
+                    <option value="Items">Items</option>
+                    <option value="Services">Services</option>
                 </select>
                 {errors.ORDER_TYPE && (
                     <p className="text-red-500 text-xs mt-1">{errors.ORDER_TYPE}</p>

@@ -1,12 +1,15 @@
+import {Category} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+
 interface SupplierCardProps {
     supplier: any;
     isSelected: boolean;
     onSelect: () => void;
     isBestMatch?: boolean;
     matchPercentage?: number;
-    matchingCategories?: string[];
+    categories?: Category[];
+    matchingCategories?: Category[];
     orderType?: string;
-    supplierActualCategories?: string[]; // Add this prop to receive categories from parent
+    supplierActualCategories?: Category[]; // Add this prop to receive categories from parent
 }
 
 export default function SupplierCard({
@@ -14,7 +17,8 @@ export default function SupplierCard({
                                          isSelected,
                                          onSelect,
                                          isBestMatch = false,
-                                         matchPercentage = 0,
+                                         matchPercentage,
+                                         categories = [],
                                          matchingCategories = [],
                                          orderType = 'items',
                                          supplierActualCategories = [] // Default to empty array
@@ -25,25 +29,19 @@ export default function SupplierCard({
     // Determine supplier type based on their actual categories
     const getSupplierType = () => {
         const hasServices = displayCategories.some(cat =>
-            ['IT Services', 'Electrical Services', 'Plumbing Services', 'Cleaning Services',
-                'Catering Services', 'Security Services', 'HVAC Services', 'Landscaping Services',
-                'Equipment Services'].includes(cat)
+            categories.filter(c => c.type === 'Services').includes(cat)
         );
 
         const hasItems = displayCategories.some(cat =>
-            ['Electrical', 'Consumables', 'Tools', 'Parts', 'Equipment', 'Office Supplies'].includes(cat)
+            categories.filter(c => c.type === 'Items').includes(cat)
         );
 
-        if (orderType === 'services' && hasServices) {
-            return { type: 'Service Supplier', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' };
-        } else if (orderType === 'items' && hasItems) {
-            return { type: 'Item Supplier', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
-        } else if (hasServices && hasItems) {
-            return { type: 'Mixed Supplier', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' };
-        } else if (hasServices) {
-            return { type: 'Service Specialist', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' };
+        if (hasServices && hasItems) {
+            return { type: 'Mixed Vendor', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' };
+        } if (hasServices) {
+            return { type: 'Service Vendor', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' };
         } else {
-            return { type: 'Item Specialist', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
+            return { type: 'Item Vendor', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
         }
     };
 
@@ -62,28 +60,26 @@ export default function SupplierCard({
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold text-gray-900 dark:text-white truncate">
-                            {supplier.NAME}
+                            {supplier.name || ''}
                         </span>
                         {isBestMatch && (
                             <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full font-medium shrink-0">
                                 🏆 Best
                             </span>
                         )}
-                        {matchPercentage > 0 && (
-                            <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full shrink-0">
-                                {matchPercentage}%
-                            </span>
-                        )}
+                        <span className={`px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full shrink-0 ${matchPercentage !== undefined && matchPercentage < 67 ? 'bg-gray-10 dark:bg-gray-800' : ''}`}>
+                            {matchPercentage?.toFixed() || 0}%
+                        </span>
                     </div>
 
                     <p className="text-xs text-gray-600 dark:text-gray-400 truncate mb-2">
-                        {supplier.EMAIL}
+                        {supplier.email}
                     </p>
 
                     {/* Supplier Type Indicator */}
                     <div className="mb-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${supplierType.color}`}>
-                            {supplierType.type}
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${supplierType?.color || ''}`}>
+                            {supplierType?.type || ''}
                         </span>
                     </div>
 
@@ -104,7 +100,7 @@ export default function SupplierCard({
                                                 : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                         }`}
                                     >
-                                        {category}
+                                        {category.name}
                                     </span>
                                 );
                             })}
