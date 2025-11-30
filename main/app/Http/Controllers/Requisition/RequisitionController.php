@@ -18,13 +18,13 @@ class RequisitionController extends Controller
 
     public function index()
     {
-        // 1. Fetch Requisitions (Your existing logic)
+        // 1. Fetch Requisitions
         $requisitions = Requisition::with(['requisition_items.item.category'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($req) {
 
-                // Build Category List per requisition
+                // Build Category List
                 $categoryList = [];
                 if ($req->type === 'Items') {
                     $categoryList = $req->requisition_items
@@ -36,13 +36,17 @@ class RequisitionController extends Controller
                     $categoryList = ['Services'];
                 }
 
-                // Build Clean Items List
+                // --- BUILD ITEMS LIST (FIXED PRICE LOGIC) ---
                 $itemsList = $req->requisition_items->map(function($item) {
                     return [
                         'id' => $item->id,
                         'name' => $item->item->name ?? $item->item_name ?? $item->service_name ?? 'Unknown Item',
                         'quantity' => $item->quantity,
-                        'unit_price' => $item->unit_price ?? 0,
+
+                        // ✅ FIX: Look at Master Item table first ($item->item->unit_price)
+                        // If that fails, look at pivot table, else 0.
+                        'unit_price' => $item->item->unit_price ?? $item->unit_price ?? 0,
+
                         'total_price' => $item->total_price ?? 0,
                         'category' => $item->item->category->name ?? $item->category ?? 'General',
                     ];
@@ -60,17 +64,16 @@ class RequisitionController extends Controller
                     'created_at' => $req->created_at,
                     'total_cost' => $req->total_cost,
                     'categories' => $categoryList,
-                    'items' => $itemsList,
+                    'items' => $itemsList, // Passing the fixed list
                 ];
             });
 
-        // 2. Fetch ALL Categories for the Dropdown (FILTERED BY TYPE = Items)
+        // 2. Fetch Categories for Dropdown
         $dbCategories = Category::where('is_active', true)
-            ->where('type', 'Items') // <--- Only get categories for 'Items'
+            ->where('type', 'Items')
             ->orderBy('name')
             ->pluck('name');
 
-        // 3. Render and PASS both variables
         return Inertia::render($this->base_path .'/RequisitionMain/Requisitions', [
             'requisitions' => $requisitions,
             'dbCategories' => $dbCategories

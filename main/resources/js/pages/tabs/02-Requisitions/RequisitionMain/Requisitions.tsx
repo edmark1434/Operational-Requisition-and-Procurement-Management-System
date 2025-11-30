@@ -13,6 +13,7 @@ import RequisitionDetailModal from './RequisitionDetailModal';
 // --- Types based on your Laravel Controller ---
 interface Requisition {
     id: number;
+    references_no?: string; // <--- Reference Number Field (Optional if null in DB)
     requestor: string;
     priority: string;
     type: string;
@@ -58,9 +59,12 @@ export default function Requisitions({
     // We use useMemo so it doesn't slow down the page
     const filteredRequisitions = useMemo(() => {
         return localRequisitions.filter(req => {
-            // Search (ID, Requestor, or Notes)
+            // Search (Reference No, ID, Requestor, or Notes)
             const searchLower = searchTerm.toLowerCase();
+
+            // --- UPDATED SEARCH LOGIC ---
             const matchesSearch =
+                (req.references_no && req.references_no.toLowerCase().includes(searchLower)) || // Check Reference No
                 req.requestor.toLowerCase().includes(searchLower) ||
                 req.id.toString().includes(searchLower) ||
                 (req.notes && req.notes.toLowerCase().includes(searchLower));
@@ -91,7 +95,6 @@ export default function Requisitions({
 
     // 2. CATEGORIES (Pulling from Database Prop)
     // Now we just take the list passed from Laravel and add "All" to the front.
-    // No filtering, no conditions. It shows everything in the DB.
     const allCategories = ['All', ...dbCategories];
 
     // --- Handlers ---

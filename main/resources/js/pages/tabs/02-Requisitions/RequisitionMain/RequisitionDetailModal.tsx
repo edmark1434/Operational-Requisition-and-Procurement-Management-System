@@ -1,13 +1,92 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { router } from '@inertiajs/react';
+// import { router } from '@inertiajs/react'; // MOCKED FOR PREVIEW below
 import { Dialog, Transition } from '@headlessui/react';
 import { X } from 'lucide-react';
 
-// Import your components
-import DeclineReasonModal from './DeclineReasonModal';
-import { StatusIcons, PriorityIcons } from './utils/icons';
-import { getStatusColor, getPriorityColor } from './utils/styleUtils';
-import { formatDate, formatTime } from './utils/formatters';
+// --- MOCKS & UTILITIES (Inlined for standalone preview) ---
+// In your real project, you can keep importing these from your utils folder
+
+// Mock Router
+const router = {
+    get: (url: string) => console.log(`Navigating to ${url}`),
+    post: (url: string, data: any) => console.log(`Posting to ${url}`, data),
+};
+
+// Utils: Style Helpers
+const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'approved': return 'bg-green-100 text-green-800 border-green-200';
+        case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
+        case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 'partially_approved': return 'bg-teal-100 text-teal-800 border-teal-200';
+        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+};
+
+const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+        case 'high': return 'bg-red-100 text-red-800';
+        case 'critical': return 'bg-red-200 text-red-900';
+        case 'normal': return 'bg-blue-100 text-blue-800';
+        case 'low': return 'bg-gray-100 text-gray-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
+};
+
+// Utils: Formatters
+const formatDate = (date: string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+const formatTime = (date: string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+};
+
+// Mock Component: DeclineReasonModal
+function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
+    const [reason, setReason] = useState('');
+    return (
+        <Transition appear show={isOpen} as={Fragment}>
+            <Dialog as="div" className="relative z-[60]" onClose={onClose}>
+                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+                        <Dialog.Title className="text-lg font-medium">Decline Requisition</Dialog.Title>
+                        <div className="mt-4">
+                            <textarea
+                                className="w-full border rounded p-2"
+                                rows={3}
+                                placeholder="Reason for rejection..."
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                            />
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={onClose} className="px-3 py-2 text-sm text-gray-600">Cancel</button>
+                            <button
+                                onClick={() => onConfirm(reason)}
+                                className="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                                Confirm Rejection
+                            </button>
+                        </div>
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
+        </Transition>
+    );
+}
+
+// Icons
+const PriorityIcons = {
+    high: <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>,
+    normal: <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>,
+    low: <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
+};
+
+// --- END MOCKS ---
 
 interface RequisitionDetailModalProps {
     requisition: any;
@@ -26,8 +105,7 @@ export default function RequisitionDetailModal({
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // --- 1. SAFE DATA NORMALIZATION (Prevents Crashes) ---
-    // We create safe variables that work regardless of capitalization
+    // --- 1. SAFE DATA NORMALIZATION ---
     const safeReq = requisition || {};
     const id = safeReq.id || safeReq.ID;
     const status = safeReq.status || safeReq.STATUS || 'pending';
@@ -38,9 +116,11 @@ export default function RequisitionDetailModal({
     const updated_at = safeReq.updated_at || safeReq.UPDATED_AT;
     const notes = safeReq.notes || safeReq.NOTES;
     const remarks = safeReq.remarks || safeReq.REMARKS;
-    const total_cost = safeReq.total_cost || safeReq.TOTAL_AMOUNT || 0;
 
-    // Combine Items and Services into one safe array
+    // GRAND TOTAL: As requested, strictly pull from the 'total_cost' column
+    const total_cost = safeReq.total_cost || 0;
+
+    // Combine Items and Services
     const rawItems = safeReq.items || safeReq.ITEMS || safeReq.services || safeReq.SERVICES || [];
 
     // --- 2. LOGIC VARIABLES ---
@@ -136,7 +216,7 @@ export default function RequisitionDetailModal({
                             >
                                 <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white dark:bg-sidebar text-left align-middle shadow-xl transition-all border border-sidebar-border flex flex-col max-h-[90vh]">
 
-                                    {/* Header - Sticky */}
+                                    {/* Header */}
                                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10 flex items-center justify-between">
                                         <Dialog.Title as="h3" className="text-xl font-bold text-gray-900 dark:text-white">
                                             Requisition #{id} Details
@@ -149,15 +229,13 @@ export default function RequisitionDetailModal({
                                         </button>
                                     </div>
 
-                                    {/* Content - Scrollable */}
+                                    {/* Content */}
                                     <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white dark:bg-sidebar">
                                         {/* Basic Info */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Type
-                                                    </label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
                                                     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
                                                         isServiceRequisition
                                                             ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
@@ -167,9 +245,7 @@ export default function RequisitionDetailModal({
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Status
-                                                    </label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                                                     <div className="flex items-center gap-2">
                                                         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
                                                             <RequisitionStatusIcon status={status} />
@@ -185,30 +261,21 @@ export default function RequisitionDetailModal({
                                                                 >
                                                                     Change Status
                                                                 </button>
-
                                                                 {showStatusDropdown && (
                                                                     <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
                                                                         <div className="p-3">
-                                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
-                                                                                Update Status
-                                                                            </div>
-                                                                            <div className="max-h-48 overflow-y-auto pr-1">
+                                                                            <div className="max-h-48 overflow-y-auto">
                                                                                 {statusOptions.map((opt) => (
                                                                                     <button
                                                                                         key={opt.value}
                                                                                         onClick={() => handleStatusChange(opt.value)}
-                                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
-                                                                                            status === opt.value
-                                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                                                                                                : 'border border-transparent'
+                                                                                        className={`w-full text-left px-3 py-2 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                                            status === opt.value ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                                                                                         }`}
                                                                                     >
-                                                                                        <div className={`w-3 h-3 mt-1 rounded-full flex-shrink-0 ${
-                                                                                            status === opt.value ? 'bg-blue-600' : 'bg-gray-300'
-                                                                                        }`} />
+                                                                                        <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${status === opt.value ? 'bg-blue-600' : 'bg-gray-300'}`} />
                                                                                         <div>
                                                                                             <div className="font-medium text-gray-900 dark:text-white">{opt.label}</div>
-                                                                                            <div className="text-xs text-gray-500">{opt.description}</div>
                                                                                         </div>
                                                                                     </button>
                                                                                 ))}
@@ -221,76 +288,43 @@ export default function RequisitionDetailModal({
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Priority
-                                                    </label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
                                                     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getPriorityColor(priority)}`}>
-                                                        {PriorityIcons[priority.toLowerCase() as keyof typeof PriorityIcons]}
+                                                        {PriorityIcons[priority.toLowerCase() as keyof typeof PriorityIcons] || PriorityIcons.normal}
                                                         {priority}
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Requested By
-                                                    </label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Requested By</label>
                                                     <p className="text-sm text-gray-900 dark:text-white">{requestor}</p>
                                                 </div>
                                             </div>
                                             <div className="space-y-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Total {isServiceRequisition ? 'Services' : 'Items'}
-                                                    </label>
-                                                    <p className="text-sm text-gray-900 dark:text-white">{totalItems}</p>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Created
-                                                    </label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
                                                     <p className="text-sm text-gray-900 dark:text-white">
                                                         {formatDate(created_at)} at {formatTime(created_at)}
                                                     </p>
                                                 </div>
-                                                {updated_at && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                            Last Updated
-                                                        </label>
-                                                        <p className="text-sm text-gray-900 dark:text-white">
-                                                            {formatDate(updated_at)} at {formatTime(updated_at)}
-                                                        </p>
-                                                    </div>
-                                                )}
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Total Cost
+                                                        Grand Total Cost
                                                     </label>
                                                     <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                        {/* USING total_cost COLUMN */}
                                                         ₱{Number(total_cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Notes & Remarks */}
-                                        <div className="space-y-4">
-                                            {notes && (
-                                                <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
-                                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                                                        Notes
-                                                    </label>
-                                                    <p className="text-sm text-gray-900 dark:text-gray-300">{notes}</p>
-                                                </div>
-                                            )}
-                                            {remarks && (
-                                                <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg border border-red-100 dark:border-red-900/20">
-                                                    <label className="block text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">
-                                                        Remarks / Reason
-                                                    </label>
-                                                    <p className="text-sm text-gray-900 dark:text-gray-300">{remarks}</p>
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* Notes */}
+                                        {notes && (
+                                            <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
+                                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Notes</label>
+                                                <p className="text-sm text-gray-900 dark:text-gray-300">{notes}</p>
+                                            </div>
+                                        )}
 
                                         {/* Items Table */}
                                         <div>
@@ -301,38 +335,32 @@ export default function RequisitionDetailModal({
                                                 <table className="w-full text-sm">
                                                     <thead className="bg-gray-50 dark:bg-sidebar border-b border-sidebar-border">
                                                     <tr>
-                                                        <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400 w-12">#</th>
-                                                        <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400 w-24">
-                                                            {isServiceRequisition ? 'Hours' : 'Qty'}
-                                                        </th>
-                                                        <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">
-                                                            {isServiceRequisition ? 'Service Name' : 'Item Name'}
-                                                        </th>
-                                                        {!isServiceRequisition && (
-                                                            <th className="py-3 px-4 text-left font-medium text-gray-500 dark:text-gray-400">Category</th>
-                                                        )}
-                                                        <th className="py-3 px-4 text-right font-medium text-gray-500 dark:text-gray-400 w-32">Unit Price</th>
-                                                        <th className="py-3 px-4 text-right font-medium text-gray-500 dark:text-gray-400 w-32">Total</th>
+                                                        <th className="py-3 px-4 text-left font-medium text-gray-500 w-12">#</th>
+                                                        <th className="py-3 px-4 text-left font-medium text-gray-500 w-24">Qty</th>
+                                                        <th className="py-3 px-4 text-left font-medium text-gray-500">Name</th>
+                                                        {!isServiceRequisition && <th className="py-3 px-4 text-left font-medium text-gray-500">Category</th>}
+                                                        <th className="py-3 px-4 text-right font-medium text-gray-500 w-32">Unit Price</th>
+                                                        <th className="py-3 px-4 text-right font-medium text-gray-500 w-32">Total</th>
                                                     </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-sidebar-border">
                                                     {rawItems.map((item: any, index: number) => {
-                                                        // Normalize Item Data (Handle Uppercase or Lowercase)
                                                         const iQty = item.quantity || item.QUANTITY || 0;
                                                         const iName = item.name || item.NAME || 'Unknown';
                                                         const iCat = item.category || item.CATEGORY || 'General';
+
+                                                        // 1. Get Unit Price
                                                         const iPrice = item.unit_price || item.UNIT_PRICE || 0;
-                                                        const iTotal = item.total_price || item.TOTAL || (iQty * iPrice);
+
+                                                        // 2. Force Calculation: Quantity * Unit Price
+                                                        const iTotal = iQty * iPrice;
 
                                                         return (
                                                             <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
                                                                 <td className="py-3 px-4 text-gray-500">{index + 1}</td>
-                                                                <td className="py-3 px-4 font-bold text-blue-600 dark:text-blue-400">{iQty}</td>
+                                                                <td className="py-3 px-4 font-bold text-blue-600">{iQty}</td>
                                                                 <td className="py-3 px-4 text-gray-900 dark:text-white">
                                                                     <div className="font-medium">{iName}</div>
-                                                                    {isServiceRequisition && item.description && (
-                                                                        <div className="text-xs text-gray-500">{item.description}</div>
-                                                                    )}
                                                                 </td>
                                                                 {!isServiceRequisition && (
                                                                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
@@ -352,9 +380,7 @@ export default function RequisitionDetailModal({
                                                     })}
                                                     {rawItems.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={6} className="py-4 text-center text-gray-500 italic">
-                                                                No items found.
-                                                            </td>
+                                                            <td colSpan={6} className="py-4 text-center text-gray-500 italic">No items found.</td>
                                                         </tr>
                                                     )}
                                                     </tbody>
@@ -373,41 +399,21 @@ export default function RequisitionDetailModal({
                                         </div>
                                     </div>
 
-                                    {/* Footer */}
+                                    {/* Footer Action Buttons */}
                                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                                         <div className="flex justify-between items-center">
-                                            <button
-                                                onClick={handleEdit}
-                                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
-                                            >
+                                            <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
                                                 Edit Requisition
                                             </button>
-
                                             <div className="flex gap-3">
                                                 {isPending && (
                                                     <>
-                                                        <button
-                                                            onClick={() => setShowDeclineModal(true)}
-                                                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
-                                                        >
-                                                            Decline
-                                                        </button>
-                                                        <button
-                                                            onClick={handleAccept}
-                                                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100"
-                                                        >
-                                                            Accept
-                                                        </button>
+                                                        <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">Decline</button>
+                                                        <button onClick={handleAccept} className="px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100">Accept</button>
                                                     </>
                                                 )}
-
                                                 {isApproved && (
-                                                    <button
-                                                        onClick={handleCreatePurchaseOrder}
-                                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100"
-                                                    >
-                                                        Create Purchase Order
-                                                    </button>
+                                                    <button onClick={handleCreatePurchaseOrder} className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100">Create Purchase Order</button>
                                                 )}
                                             </div>
                                         </div>
@@ -418,23 +424,14 @@ export default function RequisitionDetailModal({
                     </div>
                 </Dialog>
             </Transition>
-
-            {/* Decline Reason Modal */}
-            <DeclineReasonModal
-                isOpen={showDeclineModal}
-                onClose={() => setShowDeclineModal(false)}
-                onConfirm={handleDecline}
-            />
+            <DeclineReasonModal isOpen={showDeclineModal} onClose={() => setShowDeclineModal(false)} onConfirm={handleDecline} />
         </>
     );
 }
 
 // --- HELPER COMPONENTS & FUNCTIONS ---
-
 function RequisitionStatusIcon({ status }: { status: string }) {
-    // Safety check
     const safeStatus = (status || 'pending').toLowerCase();
-
     switch (safeStatus) {
         case 'pending': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
         case 'approved': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
@@ -442,27 +439,11 @@ function RequisitionStatusIcon({ status }: { status: string }) {
         default: return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
     }
 }
-
 function getStatusDisplayName(status: string): string {
-    if (!status) return 'Unknown';
-    const statusMap: { [key: string]: string } = {
-        'pending': 'Pending',
-        'approved': 'Approved',
-        'rejected': 'Rejected',
-        'partially_approved': 'Partially Approved',
-        'ordered': 'Ordered',
-        'delivered': 'Delivered',
-        'awaiting_pickup': 'Awaiting Pickup',
-        'received': 'Received'
-    };
-    return statusMap[status.toLowerCase()] || status;
+    const statusMap: { [key: string]: string } = { 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'partially_approved': 'Partially Approved', 'ordered': 'Ordered', 'delivered': 'Delivered', 'awaiting_pickup': 'Awaiting Pickup', 'received': 'Received' };
+    return statusMap[(status || '').toLowerCase()] || status;
 }
-
 function getTypeDisplayName(type: string): string {
-    if (!type) return 'Items';
-    const typeMap: { [key: string]: string } = {
-        'items': 'Items',
-        'services': 'Services'
-    };
-    return typeMap[type.toLowerCase()] || type;
+    const typeMap: { [key: string]: string } = { 'items': 'Items', 'services': 'Services' };
+    return typeMap[(type || '').toLowerCase()] || type;
 }
