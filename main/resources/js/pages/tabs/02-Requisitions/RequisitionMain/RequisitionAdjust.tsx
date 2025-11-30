@@ -2,306 +2,262 @@ import AppLayout from '@/layouts/app-layout';
 import { requisitions } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
-// Import components
-import RequestedItemAdjust from '../RequisitionForm/RequestedItemAdjust';
-import RequisitionPreviewModal from '../RequisitionForm/RequisitionPreviewModal';
-
-interface RequisitionEditProps {
+interface RequisitionAdjustProps {
     auth: any;
     requisitionId: number;
-    // Props from Controller
     serverRequisition: any;
     initialItems: RequisitionItem[];
-    initialServices: RequisitionService[];
 }
 
 interface RequisitionItem {
-    id: string;
-    category: string;
-    itemName: string;
-    quantity: string;
-    unit_price: string;
-    total: string;
-    isSaved: boolean;
+    id: string | number;
+    name: string;
+    category?: string;
+    quantity: number; // Original requested
+    approved_quantity: number | string;
+    unit_price: number;
+    total: number;
     itemId?: number;
-    originalItemId?: number;
-    approvedQuantity?: string;
-}
-
-interface RequisitionService {
-    id: string;
-    serviceId?: string;
-    serviceName: string;
-    description: string;
-    quantity: string;
-    unit_price: string;
-    total: string;
-    isSaved: boolean;
-    hourlyRate?: string;
-    originalServiceId?: number;
-}
-
-interface ValidationErrors {
-    requestor?: string;
-    items?: string;
-    services?: string;
-    [key: string]: string | undefined;
 }
 
 const breadcrumbs = (requisitionId: number): BreadcrumbItem[] => [
-    {
-        title: 'RequisitionMain',
-        href: requisitions().url,
-    },
-    {
-        title: `Adjust Requisition #${requisitionId}`,
-        href: `/requisitions/${requisitionId}/adjust`,
-    },
+    { title: 'RequisitionMain', href: requisitions().url },
+    { title: `Adjust Requisition #${requisitionId}`, href: `/requisitions/${requisitionId}/adjust` },
 ];
 
-export default function RequisitionEdit({
-                                            auth,
-                                            requisitionId,
-                                            serverRequisition,
-                                            initialItems,
-                                            initialServices
-                                        }: RequisitionEditProps) {
+export default function RequisitionAdjust({
+                                              auth,
+                                              requisitionId,
+                                              serverRequisition,
+                                              initialItems = []
+                                          }: RequisitionAdjustProps) {
 
     // --- STATE ---
-    const [items, setItems] = useState<RequisitionItem[]>([]);
-
-    const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-    const [showPreview, setShowPreview] = useState(false);
-    const [previewData, setPreviewData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    // --- INITIALIZE FORM WITH SERVER DATA ---
-    useEffect(() => {
-        if (serverRequisition) {
-            // Load Items from Controller Props with approvedQuantity
-            if (initialItems && initialItems.length > 0) {
-                const itemsWithApprovedQty = initialItems.map(item => ({
-                    ...item,
-                    approvedQuantity: item.approvedQuantity || item.quantity, // Default to original quantity if not set
-                    isSaved: true // All items start as saved in adjust mode
-                }));
-                setItems(itemsWithApprovedQty);
-            }
-
-            // Stop Loading
-            setIsLoading(false);
-        }
-    }, [serverRequisition, initialItems]);
-
-    // --- ITEM ACTIONS ---
-    const updateItemApprovedQuantity = (id: string, approvedQuantity: string) => {
-        setItems(prev => prev.map(item => {
-            if (item.id === id) {
-                return { ...item, approvedQuantity, isSaved: false }; // Mark as unsaved when editing
-            }
-            return item;
+    const [items, setItems] = useState<RequisitionItem[]>(() => {
+        return initialItems.map(item => ({
+            ...item,
+            approved_quantity: item.approved_quantity !== null && item.approved_quantity !== undefined
+                ? item.approved_quantity
+                : item.quantity
         }));
-        // Clear validation errors when user starts typing
-        if (approvedQuantity && validationErrors.items) {
-            setValidationErrors(prev => ({ ...prev, items: undefined }));
-        }
-    };
+    });
 
-    const saveItem = (id: string) => {
-        const itemToSave = items.find(item => item.id === id);
-        if (!itemToSave) return;
+    // STRICTLY fetching from 'remarks' column.
+    // If you see text here, your DB 'remarks' column is not empty.
+    const [remarks, setRemarks] = useState(serverRequisition.remarks || '');
 
-        if (!itemToSave.approvedQuantity || isNaN(parseFloat(itemToSave.approvedQuantity))) {
-            alert('Please enter a valid approved quantity before saving.');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // --- CALCULATIONS ---
+    const grandTotal = useMemo(() => {
+        return items.reduce((sum, item) => {
+            const qty = parseFloat(item.approved_quantity.toString()) || 0;
+            const price = parseFloat(item.unit_price.toString()) || 0;
+            return sum + (qty * price);
+        }, 0);
+    }, [items]);
+
+    const originalTotal = useMemo(() => {
+        return items.reduce((sum, item) => {
+            const qty = parseFloat(item.quantity.toString()) || 0;
+            const price = parseFloat(item.unit_price.toString()) || 0;
+            return sum + (qty * price);
+        }, 0);
+    }, [items]);
+
+    // --- HANDLERS ---
+    const updateApprovedQuantity = (id: string | number, value: string) => {
+        const currentItem = items.find(item => item.id === id);
+        if (!currentItem) return;
+
+        if (value === '') {
+            setItems(prev => prev.map(item => item.id === id ? { ...item, approved_quantity: '' } : item));
             return;
         }
 
-        setItems(prev => prev.map(item =>
-            item.id === id ? { ...item, isSaved: true } : item
-        ));
-    };
+        const numValue = parseFloat(value);
+        if (numValue < 0) return;
 
-    const editItem = (id: string) => {
-        setItems(prev => prev.map(item =>
-            item.id === id ? { ...item, isSaved: false } : item
-        ));
-    };
-
-    // --- SUBMISSION ---
-    const getTotalAmount = () => {
-        return items.reduce((sum, item) => {
-            const approvedQty = parseFloat(item.approvedQuantity || '0') || 0;
-            const unitPrice = parseFloat(item.unit_price) || 0;
-            return sum + (approvedQty * unitPrice);
-        }, 0);
-    };
-
-    const validateForm = () => {
-        const errors: ValidationErrors = {};
-
-        // Check if all items are saved
-        const unsavedItems = items.filter(item => !item.isSaved);
-        if (unsavedItems.length > 0) {
-            errors.items = 'Please save all items before submitting';
+        // 🛑 PREVENT EXCEEDING ORIGINAL QUANTITY
+        if (numValue > currentItem.quantity) {
+            // Simply do nothing if they try to go higher
+            return;
         }
 
-        // Validate that approved quantities are provided and are valid numbers
-        const invalidApprovedQuantities = items.filter(item =>
-            !item.approvedQuantity ||
-            isNaN(parseFloat(item.approvedQuantity)) ||
-            parseFloat(item.approvedQuantity) < 0
-        );
-
-        if (invalidApprovedQuantities.length > 0) {
-            errors.items = 'Please enter valid approved quantities for all items';
-        }
-
-        setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
+        setItems(prev => prev.map(item => item.id === id ? { ...item, approved_quantity: value } : item));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validateForm()) return;
+        setIsSubmitting(true);
 
-        const formData = {
-            requisitionId,
-            requestor: serverRequisition.requestor || auth.user.fullname,
-            priority: serverRequisition.priority || 'normal',
-            type: 'items', // Only items for adjustment
-            notes: serverRequisition.notes || '',
+        const payload = {
             items: items.map(item => ({
-                ...item,
-                itemId: item.itemId || null,
-                originalItemId: item.originalItemId,
-                approvedQuantity: item.approvedQuantity
+                id: item.id,
+                approved_quantity: item.approved_quantity === '' ? 0 : item.approved_quantity
             })),
-            total_amount: getTotalAmount(),
-            us_id: serverRequisition.user_id || auth.user.id
+            remarks: remarks, // Saves to remarks column
+            total_amount: grandTotal
         };
 
-        setPreviewData(formData);
-        setShowPreview(true);
-    };
-
-    const handleConfirmSubmit = () => {
-        console.log("Updating with approved quantities:", previewData);
-        alert('Requisition updated with approved quantities (Mock)');
-        setShowPreview(false);
-        router.visit(requisitions().url);
-    };
-
-    const handleCancel = () => {
-        if (window.confirm('Discard changes?')) {
-            router.visit(requisitions().url);
-        }
-    };
-
-    const hasError = (id: string, field: string) => {
-        const item = items.find(item => item.id === id);
-        if (!item) return false;
-
-        if (validationErrors.items) {
-            if (field === 'quantity' && (!item.approvedQuantity || isNaN(parseFloat(item.approvedQuantity)))) {
-                return true;
+        router.put(`/requisitions/${requisitionId}/adjust`, payload, {
+            onSuccess: () => setIsSubmitting(false),
+            onError: () => {
+                setIsSubmitting(false);
+                alert("Failed to save adjustments.");
             }
-        }
-        return false;
+        });
     };
-
-    if (isLoading) {
-        return (
-            <AppLayout breadcrumbs={breadcrumbs(requisitionId)}>
-                <Head title="Adjust Requisition" />
-                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-2xl font-bold">Adjust Requisition</h1>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    </div>
-                </div>
-            </AppLayout>
-        );
-    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs(requisitionId)}>
             <Head title="Adjust Requisition" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
 
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold">Adjust Requisition</h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Adjusting Requisition #{requisitionId} - Set Approved Quantities
+                        <h1 className="text-2xl font-bold">Adjust Approved Quantities</h1>
+                        <p className="text-sm text-gray-500">
+                            Requisition #{serverRequisition.references_no || requisitionId} • Requestor: {serverRequisition.requestor}
                         </p>
                     </div>
-                    <Link
-                        href={requisitions().url}
-                        className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700"
-                    >
-                        Return to Requisitions
+                    <Link href={requisitions().url} className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700 transition">
+                        Cancel & Back
                     </Link>
                 </div>
 
                 <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-white dark:bg-[oklch(0.145_0_0)]">
-                    <div className="h-full overflow-y-auto">
-                        <div className="min-h-full flex items-start justify-center p-6">
-                            <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                {/* Header */}
-                                <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                        Adjust Requisition #{requisitionId}
-                                    </h2>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Set approved quantities for requested items
+                    <div className="h-full overflow-y-auto p-6">
+                        <div className="w-full max-w-6xl mx-auto bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg overflow-hidden">
+
+                            {/* Summary Banner */}
+                            <div className="p-6 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-b border-sidebar-border/70 flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-lg font-bold text-cyan-900 dark:text-cyan-100">Adjustment Mode</h2>
+                                    <p className="text-sm text-cyan-700 dark:text-cyan-300">
+                                        Modify the quantities below. Max limit is the requested quantity.
                                     </p>
                                 </div>
-
-                                <form onSubmit={handleSubmit} className="p-6">
-                                    <div className="grid grid-cols-1 gap-6 mb-8">
-                                        <RequestedItemAdjust
-                                            items={items}
-                                            validationErrors={validationErrors}
-                                            updateItemApprovedQuantity={updateItemApprovedQuantity}
-                                            hasError={hasError}
-                                            saveItem={saveItem}
-                                            editItem={editItem}
-                                        />
+                                <div className="text-right">
+                                    <div className="text-xs text-gray-500 uppercase">Original Total</div>
+                                    <div className="text-lg font-semibold text-gray-500 line-through decoration-red-500">
+                                        ₱{originalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
-
-                                    <div className="sticky bottom-0 bg-white dark:bg-background pt-4 pb-2 border-t border-sidebar-border/70 -mx-6 px-6">
-                                        <div className="flex gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={handleCancel}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold"
-                                            >
-                                                Update Approved Quantities
-                                            </button>
-                                        </div>
+                                    <div className="text-xs text-green-600 uppercase mt-1 font-bold">New Approved Total</div>
+                                    <div className="text-2xl font-bold text-green-600">
+                                        ₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
-                                </form>
+                                </div>
                             </div>
+
+                            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+
+                                {/* 1. READ-ONLY NOTES (From 'notes' column) */}
+                                {serverRequisition.notes && (
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                            Original Request Notes
+                                        </label>
+                                        <p className="text-gray-800 dark:text-gray-200 text-sm">
+                                            {serverRequisition.notes}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* 2. ITEMS TABLE */}
+                                <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold uppercase text-xs">
+                                        <tr>
+                                            <th className="px-4 py-3">Item Name</th>
+                                            <th className="px-4 py-3">Category</th>
+                                            <th className="px-4 py-3 text-right text-gray-500">Requested Qty</th>
+                                            <th className="px-4 py-3 text-right bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300 w-40">
+                                                Approved Qty
+                                            </th>
+                                            <th className="px-4 py-3 text-right">Unit Price</th>
+                                            <th className="px-4 py-3 text-right">Approved Total</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                                        {items.map((item) => {
+                                            const rowTotal = (parseFloat(item.approved_quantity.toString()) || 0) * item.unit_price;
+                                            const isModified = item.approved_quantity != item.quantity;
+
+                                            return (
+                                                <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                                        {item.name}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
+                                                        {item.category || 'Service'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-gray-500">
+                                                        {item.quantity}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-right bg-green-50/50 dark:bg-green-900/5">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max={item.quantity}
+                                                            step="0.01"
+                                                            value={item.approved_quantity}
+                                                            onChange={(e) => updateApprovedQuantity(item.id, e.target.value)}
+                                                            className={`w-full text-right rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 focus:ring-green-500 focus:border-green-500 text-sm font-bold ${
+                                                                isModified ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'
+                                                            }`}
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">
+                                                        ₱{Number(item.unit_price).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
+                                                        ₱{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* 3. ADJUSTMENT REMARKS (Editable, maps to 'remarks') */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Adjustment Remarks <span className="text-gray-400 font-normal">(Why are you adjusting this?)</span>
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        value={remarks}
+                                        onChange={(e) => setRemarks(e.target.value)}
+                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="e.g., Only 5 units in stock, approved partial amount."
+                                    />
+                                </div>
+
+                                {/* Actions */}
+                                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => window.history.back()}
+                                        className="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 focus:ring-4 focus:ring-green-500/30 transition disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {isSubmitting ? 'Saving...' : 'Confirm Adjustments'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-
-                <RequisitionPreviewModal
-                    isOpen={showPreview}
-                    onClose={() => setShowPreview(false)}
-                    onConfirm={handleConfirmSubmit}
-                    formData={previewData}
-                />
             </div>
         </AppLayout>
     );

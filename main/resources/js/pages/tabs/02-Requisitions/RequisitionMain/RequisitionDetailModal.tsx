@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { router } from '@inertiajs/react'; // ACTIVATED: Now using real router
+import { router } from '@inertiajs/react';
 import { Dialog, Transition } from '@headlessui/react';
 import { X } from 'lucide-react';
 
@@ -8,10 +8,10 @@ const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
         case 'approved':
             return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800';
+        case 'partially_approved':
+            return 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 border border-teal-200 dark:border-teal-800';
         case 'pending':
             return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
-        case 'draft':
-            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
         case 'declined':
         case 'rejected':
             return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800';
@@ -53,21 +53,23 @@ function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; o
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 <div className="fixed inset-0 flex items-center justify-center p-4">
                     <Dialog.Panel className="w-full max-w-md rounded-lg bg-white dark:bg-sidebar  p-6 shadow-xl">
-                        <Dialog.Title className="text-lg font-medium">Decline Requisition</Dialog.Title>
+                        <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">Decline Requisition</Dialog.Title>
                         <div className="mt-4">
+                            <p className="text-sm text-gray-500 mb-2">Please provide a reason for rejecting this request:</p>
                             <textarea
-                                className="w-full border rounded p-2"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-red-500 focus:border-red-500"
                                 rows={3}
-                                placeholder="Reason for rejection..."
+                                placeholder="e.g., Item out of stock, Budget exceeded..."
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                             />
                         </div>
                         <div className="mt-4 flex justify-end gap-2">
-                            <button onClick={onClose} className="px-3 py-2 text-sm text-gray-600">Cancel</button>
+                            <button onClick={onClose} className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
                             <button
                                 onClick={() => onConfirm(reason)}
-                                className="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                                disabled={!reason.trim()}
+                                className="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Confirm Rejection
                             </button>
@@ -107,7 +109,6 @@ export default function RequisitionDetailModal({
     // --- 1. SAFE DATA NORMALIZATION ---
     const safeReq = requisition || {};
     const id = safeReq.id || safeReq.ID;
-    // EXTRACT REFERENCE NUMBER (Fallback to ID if missing)
     const references_no = safeReq.references_no || safeReq.REFERENCES_NO || `REQ-#${id}`;
 
     const status = safeReq.status || safeReq.STATUS || 'pending';
@@ -118,19 +119,34 @@ export default function RequisitionDetailModal({
     const notes = safeReq.notes || safeReq.NOTES;
     const remarks = safeReq.remarks || safeReq.REMARKS;
 
-    // GRAND TOTAL
-    const total_cost = safeReq.total_cost || 0;
-
     // Combine Items and Services
     const rawItems = safeReq.items || safeReq.ITEMS || safeReq.services || safeReq.SERVICES || [];
-
-    // --- 2. LOGIC VARIABLES ---
-    const isServiceRequisition = type.toLowerCase() === 'services';
     const totalItems = rawItems.length;
-    const isPending = status.toLowerCase() === 'pending';
-    const isApproved = status.toLowerCase() === 'approved';
 
-    // --- 3. HANDLERS ---
+    // --- LOGIC: Only show Approved Column if at least one item has approved_qty > 0 ---
+    const hasApprovedQuantities = rawItems.some((item: any) => {
+        const appQty = parseFloat(item.approved_qty ?? item.APPROVED_QTY ?? item.approved_quantity ?? 0);
+        return appQty > 0;
+    });
+
+    // --- LOGIC: Calculate Display Total ---
+    // Rule: If Approved > 0, use Approved. Else use Requested.
+    const displayTotalCost = rawItems.reduce((acc: number, item: any) => {
+        const reqQty = parseFloat(item.quantity ?? 0);
+        const appQty = parseFloat(item.approved_qty ?? 0);
+
+        // Use approved if > 0, otherwise fallback to requested
+        const finalQty = appQty > 0 ? appQty : reqQty;
+        const price = parseFloat(item.unit_price ?? 0);
+
+        return acc + (finalQty * price);
+    }, 0);
+
+    const isServiceRequisition = type.toLowerCase() === 'services';
+    const isPending = status.toLowerCase() === 'pending';
+    const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved';
+
+    // --- HANDLERS ---
     const handleStatusChange = (newStatus: string) => {
         if (newStatus === 'rejected') {
             setShowDeclineModal(true);
@@ -142,41 +158,49 @@ export default function RequisitionDetailModal({
     };
 
     const handleAccept = () => {
-        onStatusUpdate(id, 'approved');
+        let targetStatus = 'approved';
+
+        if (hasApprovedQuantities) {
+            // Check if any valid approved qty (>0) is different from requested qty
+            const isModified = rawItems.some((item: any) => {
+                const reqQty = parseFloat(item.quantity ?? 0);
+                const appQty = parseFloat(item.approved_qty ?? 0);
+                // Only counts as modified if approved is set (>0) AND different
+                return appQty > 0 && appQty !== reqQty;
+            });
+
+            // If we found active adjustments, it's partially approved.
+            if (isModified) {
+                targetStatus = 'partially_approved';
+            }
+        }
+
+        onStatusUpdate(id, targetStatus);
         onClose();
     };
 
     const handleDecline = (reason: string) => {
         onStatusUpdate(id, 'rejected', reason);
-        onClose();
         setShowDeclineModal(false);
+        onClose();
     };
 
     const handleEdit = () => {
-        // Updated to use real Inertia router.
-        // Matches web.php route: 'requisitions/{id}/edit'
         router.get(`/requisitions/${id}/edit`);
-        // We do not need onClose() here necessarily as Inertia will navigate away,
-        // but keeping it ensures modal state is clean if you use preserveState
         onClose();
     };
 
     const handleAdjust = () => {
-        // Updated to use real Inertia router.
-        // Matches web.php route: 'requisitions/{id}/edit'
         router.get(`/requisitions/${id}/adjust`);
-        // We do not need onClose() here necessarily as Inertia will navigate away,
-        // but keeping it ensures modal state is clean if you use preserveState
         onClose();
     };
 
     const handleCreatePurchaseOrder = () => {
-        // Matches web.php route: 'purchases/create'
         router.get('/purchases/create');
         onClose();
     };
 
-    // Close dropdown when clicking outside
+    // Close dropdown
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -192,14 +216,14 @@ export default function RequisitionDetailModal({
     if (!requisition || !isOpen) return null;
 
     const statusOptions = [
-        { value: 'pending', label: 'Pending', description: 'Requisition is created and waiting for approval' },
-        { value: 'approved', label: 'Approved', description: 'Requisition has been fully approved' },
-        { value: 'rejected', label: 'Rejected', description: 'Requisition has been rejected' },
-        { value: 'partially_approved', label: 'Partially Approved', description: 'Approved but PO is edited' },
-        { value: 'ordered', label: 'Ordered', description: 'Purchase Order is issued' },
-        { value: 'delivered', label: 'Delivered', description: 'Delivery is created' },
-        { value: 'awaiting_pickup', label: 'Awaiting Pickup', description: 'Items are ready' },
-        { value: 'received', label: 'Received', description: 'Encoder marks it as received' }
+        { value: 'pending', label: 'Pending' },
+        { value: 'approved', label: 'Approved' },
+        { value: 'rejected', label: 'Rejected' },
+        { value: 'partially_approved', label: 'Partially Approved' },
+        { value: 'ordered', label: 'Ordered' },
+        { value: 'delivered', label: 'Delivered' },
+        { value: 'awaiting_pickup', label: 'Awaiting Pickup' },
+        { value: 'received', label: 'Received' }
     ];
 
     return (
@@ -236,17 +260,13 @@ export default function RequisitionDetailModal({
                                         <Dialog.Title as="h3" className="text-xl font-bold text-gray-900 dark:text-white">
                                             {references_no} | Details
                                         </Dialog.Title>
-                                        <button
-                                            onClick={onClose}
-                                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
-                                        >
+                                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent">
                                             <X className="w-6 h-6" />
                                         </button>
                                     </div>
 
                                     {/* Content */}
                                     <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white dark:bg-sidebar">
-                                        {/* Basic Info */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-4">
                                                 <div>
@@ -267,7 +287,6 @@ export default function RequisitionDetailModal({
                                                             {getStatusDisplayName(status)}
                                                         </div>
 
-                                                        {/* Status Dropdown */}
                                                         {!isPending && (
                                                             <div className="relative" ref={dropdownRef}>
                                                                 <button
@@ -289,9 +308,7 @@ export default function RequisitionDetailModal({
                                                                                         }`}
                                                                                     >
                                                                                         <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${status === opt.value ? 'bg-blue-600' : 'bg-gray-300'}`} />
-                                                                                        <div>
-                                                                                            <div className="font-medium text-gray-900 dark:text-white">{opt.label}</div>
-                                                                                        </div>
+                                                                                        <div>{opt.label}</div>
                                                                                     </button>
                                                                                 ))}
                                                                             </div>
@@ -324,15 +341,16 @@ export default function RequisitionDetailModal({
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                         Grand Total Cost
+                                                        {hasApprovedQuantities && <span className="ml-2 text-xs text-gray-500 font-normal">(Approved)</span>}
                                                     </label>
                                                     <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                                        ₱{Number(total_cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        ₱{Number(displayTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* NOTES AND REMARKS SECTION */}
+                                        {/* NOTES / REMARKS */}
                                         <div className="space-y-4">
                                             {notes && (
                                                 <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
@@ -349,7 +367,7 @@ export default function RequisitionDetailModal({
                                             )}
                                         </div>
 
-                                        {/* Items Table */}
+                                        {/* TABLE */}
                                         <div>
                                             <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
                                                 Requested {isServiceRequisition ? 'Services' : 'Items'} ({totalItems})
@@ -360,6 +378,11 @@ export default function RequisitionDetailModal({
                                                     <tr>
                                                         <th className="py-3 px-4 text-left font-medium text-gray-500 w-12">#</th>
                                                         <th className="py-3 px-4 text-left font-medium text-gray-500 w-24">Qty</th>
+                                                        {hasApprovedQuantities && (
+                                                            <th className="py-3 px-4 text-left font-medium text-teal-600 dark:text-teal-400 w-28 bg-teal-50 dark:bg-teal-900/10">
+                                                                Approved
+                                                            </th>
+                                                        )}
                                                         <th className="py-3 px-4 text-left font-medium text-gray-500">Name</th>
                                                         {!isServiceRequisition && <th className="py-3 px-4 text-left font-medium text-gray-500">Category</th>}
                                                         <th className="py-3 px-4 text-right font-medium text-gray-500 w-32">Unit Price</th>
@@ -368,16 +391,30 @@ export default function RequisitionDetailModal({
                                                     </thead>
                                                     <tbody className="divide-y divide-sidebar-border">
                                                     {rawItems.map((item: any, index: number) => {
-                                                        const iQty = item.quantity || item.QUANTITY || 0;
+                                                        const reqQty = parseFloat(item.quantity ?? 0);
+                                                        const appQty = parseFloat(item.approved_qty ?? 0);
                                                         const iName = item.name || item.NAME || 'Unknown';
                                                         const iCat = item.category || item.CATEGORY || 'General';
                                                         const iPrice = item.unit_price || item.UNIT_PRICE || 0;
-                                                        const iTotal = iQty * iPrice;
+
+                                                        // LOGIC: Use Approved if > 0, else Requested
+                                                        const finalQty = appQty > 0 ? appQty : reqQty;
+                                                        const iTotal = finalQty * iPrice;
+
+                                                        // Valid modification: approved exists (>0) AND different from requested
+                                                        const isModified = appQty > 0 && appQty !== reqQty;
 
                                                         return (
                                                             <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
                                                                 <td className="py-3 px-4 text-gray-500">{index + 1}</td>
-                                                                <td className="py-3 px-4 font-bold text-blue-600">{iQty}</td>
+                                                                <td className={`py-3 px-4 font-bold ${isModified ? 'text-gray-400 line-through decoration-red-400' : 'text-blue-600'}`}>
+                                                                    {reqQty}
+                                                                </td>
+                                                                {hasApprovedQuantities && (
+                                                                    <td className="py-3 px-4 font-bold text-teal-600 bg-teal-50/50 dark:bg-teal-900/5">
+                                                                        {appQty > 0 ? appQty : '-'}
+                                                                    </td>
+                                                                )}
                                                                 <td className="py-3 px-4 text-gray-900 dark:text-white">
                                                                     <div className="font-medium">{iName}</div>
                                                                 </td>
@@ -399,17 +436,17 @@ export default function RequisitionDetailModal({
                                                     })}
                                                     {rawItems.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={6} className="py-4 text-center text-gray-500 italic">No items found.</td>
+                                                            <td colSpan={hasApprovedQuantities ? 7 : 6} className="py-4 text-center text-gray-500 italic">No items found.</td>
                                                         </tr>
                                                     )}
                                                     </tbody>
                                                     <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
                                                     <tr>
-                                                        <td colSpan={isServiceRequisition ? 4 : 4} className="py-3 px-4 text-left font-medium text-gray-900 dark:text-white">
-                                                            Grand Total:
+                                                        <td colSpan={hasApprovedQuantities ? (isServiceRequisition ? 5 : 5) : (isServiceRequisition ? 4 : 4)} className="py-3 px-4 text-left font-medium text-gray-900 dark:text-white">
+                                                            Grand Total {hasApprovedQuantities ? '(Approved)' : '(Requested)'}:
                                                         </td>
                                                         <td colSpan={2} className="py-3 px-4 text-right text-lg font-bold text-green-600 dark:text-green-400">
-                                                            ₱{Number(total_cost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                            ₱{Number(displayTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                         </td>
                                                     </tr>
                                                     </tfoot>
@@ -418,23 +455,14 @@ export default function RequisitionDetailModal({
                                         </div>
                                     </div>
 
-                                    {/* Footer Action Buttons */}
-                                    {/* Footer Action Buttons */}
+                                    {/* Footer */}
                                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                                         <div className="flex justify-between items-center">
-                                            {/* LEFT SIDE BUTTONS */}
                                             <div className="flex gap-3">
-                                                {/* EDIT BUTTON */}
-                                                <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
-                                                    Edit Requisition
-                                                </button>
-                                                {/* ADJUST REQUISITION BUTTON */}
-                                                <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">
-                                                    Adjust Requisition
-                                                </button>
+                                                <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">Edit Requisition</button>
+                                                <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">Adjust Requisition</button>
                                             </div>
 
-                                            {/* RIGHT SIDE BUTTONS */}
                                             <div className="flex gap-3">
                                                 {isPending && (
                                                     <>
@@ -464,15 +492,19 @@ function RequisitionStatusIcon({ status }: { status: string }) {
     const safeStatus = (status || 'pending').toLowerCase();
     switch (safeStatus) {
         case 'pending': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-        case 'approved': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        case 'approved':
+        case 'partially_approved':
+            return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
         case 'rejected': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
         default: return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
     }
 }
+
 function getStatusDisplayName(status: string): string {
     const statusMap: { [key: string]: string } = { 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'partially_approved': 'Partially Approved', 'ordered': 'Ordered', 'delivered': 'Delivered', 'awaiting_pickup': 'Awaiting Pickup', 'received': 'Received' };
     return statusMap[(status || '').toLowerCase()] || status;
 }
+
 function getTypeDisplayName(type: string): string {
     const typeMap: { [key: string]: string } = { 'items': 'Items', 'services': 'Services' };
     return typeMap[(type || '').toLowerCase()] || type;
