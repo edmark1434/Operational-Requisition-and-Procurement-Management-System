@@ -1,39 +1,46 @@
+import { useState, useEffect } from 'react';
 import { Edit3, Save, Trash2, Plus, Check } from 'lucide-react';
-import items from '../../../datasets/items';
-import categories from '../../../datasets/category';
+
+// --- Interfaces ---
+interface DatabaseCategory {
+    id: number;
+    name: string;
+}
+
+interface DatabaseItem {
+    id: number;
+    name: string;
+    unit_price: number;
+    current_stock: number;
+}
 
 interface RequisitionItem {
     id: string;
     category: string;
+    categoryId?: number; // Needed to fetch specific items
     itemName: string;
+    itemId?: number;     // Needed for backend storage
     quantity: string;
     unit_price: string;
     total: string;
     isSaved: boolean;
-    itemId?: number;
 }
 
 interface RequestedItemsProps {
     items: RequisitionItem[];
-    setItems: (items: RequisitionItem[]) => void;
     validationErrors: any;
-    setValidationErrors: (errors: any) => void;
-    categories: any[];
-    systemItems: any[];
-    getTotalAmount: () => number;
-    updateItem: (id: string, field: keyof RequisitionItem, value: string) => void;
+    // We don't need to pass categories/items from parent anymore, we fetch them here
+    updateItem: (id: string, field: keyof RequisitionItem, value: string | number) => void;
     saveItem: (id: string) => void;
     removeItem: (id: string) => void;
     addNewItem: () => void;
     hasError: (itemId: string, field: 'quantity' | 'category' | 'itemName') => boolean;
-    getItemSuggestions: (itemName: string) => any[];
     editItem: (id: string) => void;
 }
 
 export default function RequestedItems({
                                            items: requisitionItems,
                                            validationErrors,
-                                           categories: propCategories,
                                            updateItem,
                                            saveItem,
                                            removeItem,
@@ -42,73 +49,125 @@ export default function RequestedItems({
                                            editItem
                                        }: RequestedItemsProps) {
 
-    // Use propCategories if available, otherwise fallback to imported categories
-    const categoriesToUse = propCategories && propCategories.length > 0 ? propCategories : categories.map(cat => ({
-        id: cat.CAT_ID,
-        name: cat.NAME,
-        description: cat.DESCRIPTION
-    }));
+    // --- State for Data Fetching ---
+    const [fetchedCategories, setFetchedCategories] = useState<DatabaseCategory[]>([]);
+    // Cache items: { [categoryId]: [Item1, Item2, ...] } to prevent refetching
+    const [itemCache, setItemCache] = useState<Record<number, DatabaseItem[]>>({});
+    const [loadingItems, setLoadingItems] = useState<boolean>(false);
 
-    // Function to get filtered items based on selected category
-    const getFilteredItems = (categoryName: string) => {
-        if (!categoryName) return [];
+    // --- 1. Fetch Categories on Mount ---
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch('/requisition/api/categories');
+                if (response.ok) {
+                    const data = await response.json();
+                    setFetchedCategories(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch categories:", error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
-        // Find the category ID from the category name
-        const selectedCategory = categoriesToUse.find(cat => cat.name === categoryName);
-        if (!selectedCategory) return [];
+    // --- 2. Function to fetch Items by Category ID ---
+    const fetchItemsForCategory = async (categoryId: number) => {
+        // If we already have this category's items in cache, don't fetch again
+        if (itemCache[categoryId]) return;
 
-        // Filter items by category ID
-        return items.filter(item => {
-            const category = categoriesToUse.find(cat => cat.name === categoryName);
-            return category && item.CATEGORY_ID === category.id;
-        });
+        setLoadingItems(true);
+        try {
+            const response = await fetch(`/requisition/api/items/${categoryId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setItemCache(prev => ({ ...prev, [categoryId]: data }));
+            }
+        } catch (error) {
+            console.error("Failed to fetch items:", error);
+        } finally {
+            setLoadingItems(false);
+        }
     };
 
-    // Handle item name selection - ONLY update itemName and unit_price, DO NOT recalculate total
-    const handleItemNameChange = (itemId: string, selectedItemName: string, categoryName: string) => {
-        if (!selectedItemName) {
-            // Clear itemName and unit_price if empty
-            updateItem(itemId, 'itemName', '');
-            updateItem(itemId, 'unit_price', '');
-            updateItem(itemId, 'total', '');
+    // --- Handlers ---
+
+    // When Category Changes
+    const handleCategoryChange = async (rowId: string, categoryName: string) => {
+        const selectedCat = fetchedCategories.find(c => c.name === categoryName);
+
+        // Update the visual category
+        updateItem(rowId, 'category', categoryName);
+
+        // Reset item fields because the category changed
+        updateItem(rowId, 'itemName', '');
+        updateItem(rowId, 'itemId', ''); // Reset ID
+        updateItem(rowId, 'unit_price', '');
+        updateItem(rowId, 'total', '');
+
+        if (selectedCat) {
+            // Save the Category ID (hidden) so we can fetch items
+            updateItem(rowId, 'categoryId', selectedCat.id);
+            // Fetch the items for this new category
+            await fetchItemsForCategory(selectedCat.id);
+        }
+    };
+
+    // When Item Name Changes
+// RequestedItems.tsx
+
+// Inside RequestedItems.tsx
+
+// Change the name of the function to be clearer
+    const handleItemSelection = (rowId: string, selectedId: string, categoryId?: number) => {
+        // 1. If user selected the placeholder "Select Item", clear everything
+        if (!selectedId || !categoryId) {
+            updateItem(rowId, 'itemId', ''); // Clear ID
+            updateItem(rowId, 'itemName', '');
+            updateItem(rowId, 'unit_price', '');
+            updateItem(rowId, 'total', '');
             return;
         }
 
-        // Find the selected item from filtered items
-        const filteredItems = getFilteredItems(categoryName);
-        const selectedItem = filteredItems.find(item => item.NAME === selectedItemName);
+        // 2. Get the list of items for this category
+        const availableItems = itemCache[categoryId] || [];
+
+        // 3. Find the item using the ID (Safe and Accurate!)
+        // We convert .toString() to ensure we compare string-to-string
+        const selectedItem = availableItems.find(item => item.id.toString() === selectedId.toString());
 
         if (selectedItem) {
-            // Only update itemName and unit_price, do NOT recalculate total
-            updateItem(itemId, 'itemName', selectedItemName);
-            updateItem(itemId, 'unit_price', selectedItem.UNIT_PRICE.toString());
-            // Total will be calculated only when quantity is manually inputted
+            // FOUND IT! Save the ID and the Name
+            updateItem(rowId, 'itemId', selectedItem.id.toString());
+            updateItem(rowId, 'itemName', selectedItem.name); // We save the name for display
+            updateItem(rowId, 'unit_price', selectedItem.unit_price.toString());
+
+            // Optional: Recalculate total if quantity exists
+            // (You can add that logic here if you want)
+        } else {
+            console.error("Critical Error: Selected ID exists in dropdown but not in cache.");
         }
     };
 
-    // Handle quantity change - recalculate total when quantity is manually changed
+    // When Quantity Changes
     const handleQuantityChange = (itemId: string, quantityValue: string) => {
-        const item = requisitionItems.find(item => item.id === itemId);
+        const item = requisitionItems.find(i => i.id === itemId);
         if (!item) return;
 
-        // Update quantity
         updateItem(itemId, 'quantity', quantityValue);
 
-        // Only calculate total if we have both quantity and unit price
         if (quantityValue && item.unit_price) {
             const quantity = parseFloat(quantityValue) || 0;
             const unitPrice = parseFloat(item.unit_price) || 0;
             const total = (quantity * unitPrice).toFixed(2);
             updateItem(itemId, 'total', total);
         } else {
-            // Clear total if no quantity or unit price
             updateItem(itemId, 'total', '');
         }
     };
 
     return (
         <div className="lg:col-span-2 flex flex-col">
-            {/* Requested Items Card */}
             <div className="p-4 border border-gray-200 dark:border-sidebar-border rounded-lg bg-gray-50 dark:bg-sidebar flex-1">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -130,10 +189,10 @@ export default function RequestedItems({
                     </div>
                 )}
 
-                {/* Items container with dynamic height */}
                 <div className={`space-y-3 overflow-y-auto pr-2 ${requisitionItems.length > 2 ? 'max-h-96' : ''}`}>
                     {requisitionItems.map((item, index) => {
-                        const filteredItems = getFilteredItems(item.category);
+                        // Get items specifically for this row's category ID
+                        const dropdownItems = item.categoryId ? (itemCache[item.categoryId] || []) : [];
 
                         return (
                             <div
@@ -141,131 +200,97 @@ export default function RequestedItems({
                                 className={`p-3 border-2 rounded-lg transition-all duration-300 ${
                                     item.isSaved
                                         ? 'border-green-600 bg-white dark:bg-sidebar-accent'
-                                        : validationErrors.items && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
+                                        : validationErrors.items && (!item.itemName || !item.quantity || !item.category)
                                             ? 'border-red-300 dark:border-red-500 bg-white dark:bg-sidebar-accent'
                                             : 'border-gray-200 dark:border-sidebar-border bg-white dark:bg-sidebar-accent'
                                 }`}
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <h4 className={`font-medium text-sm ${
-                                        item.isSaved
-                                            ? 'text-green-700 dark:text-green-300'
-                                            : validationErrors.items && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
-                                                ? 'text-red-700 dark:text-red-300'
-                                                : 'text-gray-900 dark:text-white'
-                                    }`}>
-                                        Item {requisitionItems.length - index} {item.isSaved && (
-                                        <Check className="w-3 h-3 inline ml-1" />
-                                    )}
+                                    <h4 className="font-medium text-sm text-gray-900 dark:text-white">
+                                        Item {requisitionItems.length - index}
+                                        {item.isSaved && <Check className="w-3 h-3 inline ml-1 text-green-600" />}
                                     </h4>
                                     <div className="flex items-center gap-2">
                                         {item.isSaved ? (
-                                            // Edit button for saved items
                                             <button
                                                 type="button"
                                                 onClick={() => editItem(item.id)}
-                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-input dark:border-sidebar-border dark:text-gray-300 border border-blue-200 rounded-lg transition duration-150 ease-in-out group"
-                                                title="Edit item"
+                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
                                             >
-                                                <Edit3 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                                                Edit
+                                                <Edit3 className="w-3.5 h-3.5" /> Edit
                                             </button>
                                         ) : (
-                                            // Save button for unsaved items
                                             <button
                                                 type="button"
                                                 onClick={() => saveItem(item.id)}
-                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-800 dark:hover:bg-green-700 rounded-lg transition duration-150 ease-in-out group"
-                                                title="Save item"
+                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
                                             >
-                                                <Save className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                                                Save
+                                                <Save className="w-3.5 h-3.5" /> Save
                                             </button>
                                         )}
                                         {requisitionItems.length > 1 && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeItem(item.id)}
-                                                className="flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition duration-150 ease-in-out group"
-                                                title="Remove item"
+                                                className="flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-50 rounded-lg"
                                             >
-                                                <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         )}
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-2">
-                                    {/* Category Select */}
+                                    {/* 1. Category Select (Fetched from DB) */}
                                     <div>
                                         <select
                                             value={item.category}
-                                            onChange={(e) => {
-                                                updateItem(item.id, 'category', e.target.value);
-                                                // Clear the item name when category changes
-                                                updateItem(item.id, 'itemName', '');
-                                                updateItem(item.id, 'unit_price', '');
-                                                updateItem(item.id, 'total', '');
-                                            }}
-                                            className={`w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                                item.isSaved
-                                                    ? 'bg-white dark:bg-gray-700 border-green-300 dark:border-green-600 text-gray-900 dark:text-white'
-                                                    : hasError(item.id, 'category')
-                                                        ? 'border-red-500 dark:border-red-500 bg-white dark:bg-gray-600 text-gray-900 dark:text-white'
-                                                        : 'bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white'
-                                            }`}
+                                            onChange={(e) => handleCategoryChange(item.id, e.target.value)}
+                                            className="w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white"
                                             required
                                             disabled={item.isSaved}
                                         >
                                             <option value="">Select Category</option>
-                                            {categoriesToUse.map(category => (
-                                                <option key={category.id} value={category.name}>
-                                                    {category.name}
+                                            {fetchedCategories.map(cat => (
+                                                <option key={cat.id} value={cat.name}>
+                                                    {cat.name}
                                                 </option>
                                             ))}
                                         </select>
                                     </div>
 
-                                    {/* Item Name Dropdown - Filtered by selected category */}
+                                    {/* 2. Item Select (Dynamic based on Category) */}
                                     <div>
                                         <select
-                                            value={item.itemName}
-                                            onChange={(e) => handleItemNameChange(item.id, e.target.value, item.category)}
-                                            className={`w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                                item.isSaved
-                                                    ? 'bg-white dark:bg-gray-700 border-green-300 dark:border-green-600 text-gray-900 dark:text-white'
-                                                    : hasError(item.id, 'itemName')
-                                                        ? 'border-red-500 dark:border-red-500 bg-white dark:bg-gray-600 text-gray-900 dark:text-white'
-                                                        : 'bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white'
-                                            }`}
+                                            // Use itemId as the value. If it's empty, show placeholder
+                                            value={item.itemId || ""}
+                                            // Pass the ID (e.target.value) to our new function
+                                            onChange={(e) => handleItemSelection(item.id, e.target.value, item.categoryId)}
+                                            className="w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white"
                                             required
                                             disabled={item.isSaved || !item.category}
                                         >
                                             <option value="">
                                                 {item.category ? 'Select Item Name' : 'Select category first'}
                                             </option>
-                                            {filteredItems.map(itemData => (
-                                                <option key={itemData.ITEM_ID} value={itemData.NAME}>
-                                                    {itemData.NAME}
+
+                                            {dropdownItems.map(itemData => (
+                                                // KEY CHANGE: Value is now the ID, not the Name
+                                                <option key={itemData.id} value={itemData.id}>
+                                                    {itemData.name}
                                                 </option>
                                             ))}
                                         </select>
                                     </div>
 
-                                    {/* Quantity Input */}
+                                    {/* 3. Quantity Input */}
                                     <div>
                                         <input
                                             type="number"
                                             value={item.quantity}
                                             onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                                             min="1"
-                                            className={`w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                                item.isSaved
-                                                    ? 'bg-white dark:bg-gray-700 border-green-300 dark:border-green-600 text-gray-900 dark:text-white'
-                                                    : hasError(item.id, 'quantity')
-                                                        ? 'border-red-500 dark:border-red-500 bg-white dark:bg-gray-600 text-gray-900 dark:text-white'
-                                                        : 'bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white'
-                                            }`}
+                                            className="w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white"
                                             placeholder="Enter quantity"
                                             required
                                             disabled={item.isSaved}

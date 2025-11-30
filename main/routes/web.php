@@ -18,6 +18,8 @@ use App\Http\Controllers\WebPages\Contact;
 use App\Http\Controllers\WebPages\Services;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+// Import the Model for the fix
+use App\Models\Requisition;
 
 Route::get('/', function () {
     return Inertia::render('welcome', []);
@@ -26,17 +28,18 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard',[Dashboard::class,'index'])->name('dashboard');
 
-// REQUISITION PART
-    Route::get('requisitions',[RequisitionController::class,'index'])->name('requisitions');
-    //    --------------------------------------------------------------------- REQUISITION FORM
-    Route::get('requisitionform',[RequisitionController::class,'requisitionForm'])->name('requisitionform');
+    // --- REQUISITION ROUTES ---
+    Route::get('requisitions', [RequisitionController::class, 'index'])->name('requisitions');
+    Route::post('/requisitions', [RequisitionController::class, 'store'])->name('requisitions.store');
+    Route::get('requisitionform', [RequisitionController::class, 'requisitionForm'])->name('requisitionform');
+    Route::post('/requisition/store', [RequisitionController::class, 'store'])->name('requisition.store');
+    Route::get('requisitions/{id}/edit', [RequisitionController::class, 'requisitionEdit'])->name('requisitionedit');
 
-    Route::post('requisitionform', [RequisitionController::class, 'store'])->name('requisition.store');
+    // API Routes for Dropdowns
+    Route::get('/requisition/api/categories', [RequisitionController::class, 'getCategories']);
+    Route::get('/requisition/api/items/{categoryId}', [RequisitionController::class, 'getItemsByCategory']);
 
-    //    --------------------------------------------------------------------- REQUISITION EDIT
-    Route::get('requisitions/{id}/edit',[RequisitionController::class,'requisitionEdit'])->name('requisitionedit');
-
-    // INVENTORY PART (Main / Add / Edit)
+    // INVENTORY
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
     Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');
     Route::post('inventory/add',[Inventory::class,"create"])->name('inventoryCreate');
@@ -45,33 +48,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('inventory/{id}/delete',[Inventory::class,"delete"])->name('inventoryDelete');
     Route::delete('inventory/{id}/deleteModal',[Inventory::class,"deleteModal"])->name('inventoryDeleteModal');
 
-    // PURCHASES PART (Main / Add / Edit)
+    // PURCHASES
     Route::get('purchases',[Purchasing::class,'index'])->name('purchases');
     Route::get('purchases/create',[Purchasing::class,"create"])->name('PurchaseOrderForm');
     Route::get('purchases/{purchaseId}/edit',[Purchasing::class,"edit"])->name('PurchaseOrderEdit');
 
+    // SUPPLIERS
     Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
     Route::get('suppliers/add',[SupplierController::class,"store"])->name('supplieradd');
     Route::get('suppliers/{id}/edit',[SupplierController::class,"edit"])->name('supplieredit');
 
+    // DELIVERIES
     Route::get('deliveries',[Deliveries::class,'index'])->name('delivery');
     Route::get('deliveries/add',[Deliveries::class,"store"])->name('deliveryadd');
     Route::get('deliveries/{id}/edit',[Deliveries::class,"edit"])->name('deliveryedit');
 
+    // RETURNS
     Route::get('returns',[Returns::class,'index'])->name('returns');
     Route::get('returns/add',[Returns::class,"store"])->name('returnsadd');
     Route::get('returns/{id}/edit',[Returns::class,"edit"])->name('returnsedit');
 
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
+    // USERS (Fixed Syntax Errors: ${id} -> {id})
     Route::get('users',[Users::class,'index'])->name('users');
     Route::get('users/add',[Users::class,"store"])->name('useradd');
     Route::get('users/{id}/edit',[Users::class,"edit"])->name('useredit');
-    Route::put('/users/${id}/edit/status',[Users::class,"editStatus"])->name('usereditStatus');
-    Route::put('/users/${id}/update',[Users::class,"updateUser"])->name('userUpdate');
+    Route::put('/users/{id}/edit/status',[Users::class,"editStatus"])->name('usereditStatus');
+    Route::put('/users/{id}/update',[Users::class,"updateUser"])->name('userUpdate');
     Route::post('/users/create',[Users::class,"createUser"])->name('userCreate');
-    Route::delete('/users/${id}/delete',[Users::class,"deleteUser"])->name('userDelete');
+    Route::delete('/users/{id}/delete',[Users::class,"deleteUser"])->name('userDelete');
 
+    // ROLES
     Route::get('roles',[Roles::class,'index'])->name('roles');
     Route::get('roles/add',[Roles::class,"store"])->name('roleadd');
     Route::post('roles/added',[Roles::class,"roleAdd"])->name('roleAdded');
@@ -79,6 +87,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('roles/{id}/update',[Roles::class,"update"])->name('roleUpdate');
     Route::delete('roles/{id}/delete',[Roles::class,"delete"])->name('roleDelete');
 
+    // MAKES & CATEGORIES
     Route::get('makes-categories',[MakesAndCategories::class,'index'])->name('makesandcategories');
     Route::get('makes-categories/category/add',[MakesAndCategories::class,"store_category"])->name('categoryadd');
     Route::post('makes-categories/category/add',[MakesAndCategories::class,"create_category"])->name('categoryCreate');
@@ -93,18 +102,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('makes-categories/make/{id}/Delete',[MakesAndCategories::class,"delete"])->name('makeDelete');
     Route::delete('makes-categories/make/{id}/DeleteModel',[MakesAndCategories::class,"deleteModel"])->name('makedeleteModel');
 
+    // SERVICES
     Route::get('services',[Services::class,'index'])->name('services');
     Route::get('services/add',[Services::class,"store"])->name('servicesadd');
     Route::get('services/{id}/edit',[Services::class,"edit"])->name('servicesedit');
-
     Route::post('services/add',[ServiceController::class,"post"])->name('servicepost');
     Route::put('services/{id}/edit',[ServiceController::class,"put"])->name('serviceput');
     Route::delete('services/{id}/delete',[ServiceController::class,"delete"])->name('servicedelete');
 
+    // REWORKS
     Route::get('reworks',[Reworks::class,'index'])->name('reworks');
     Route::get('reworks/add',[Reworks::class,"store"])->name('reworksadd');
     Route::get('reworks/{id}/edit',[Reworks::class,"edit"])->name('reworksedit');
 
+    // CONTACTS
     Route::get('contacts',[Contact::class,'index'])->name('contacts');
     Route::get('contacts/add',[Contact::class,"store"])->name('contactsadd');
     Route::get('contacts/{id}/edit',[Contact::class,"edit"])->name('contactsedit');
@@ -114,6 +125,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('notifications/markAsAllRead',[Notifications::class,'markAsAllRead'])->name('notificationsMarkAsAllRead');
 
 });
+
+// --- TEMPORARY FIX ROUTE (RUN ONCE THEN DELETE) ---
+Route::get('/fix-references', function () {
+    $items = Requisition::whereNull('references_no')->orWhere('references_no', '')->get();
+
+    foreach ($items as $item) {
+        $item->references_no = 'REQ-' . str_pad($item->id, 6, '0', STR_PAD_LEFT);
+        $item->saveQuietly();
+    }
+
+    return "SUCCESS: Fixed " . $items->count() . " records. You may now delete this route from web.php.";
+});
+// --------------------------------------------------
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

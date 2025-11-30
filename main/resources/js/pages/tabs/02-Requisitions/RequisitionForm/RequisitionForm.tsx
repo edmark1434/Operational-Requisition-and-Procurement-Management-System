@@ -1,15 +1,14 @@
-// RequisitionForm.tsx
 import AppLayout from '@/layouts/app-layout';
 import { requisitions, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react'; // <--- Added useMemo
 
 // Import your datasets
 import itemsData from "@/pages/datasets/items";
 import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
-import serviceData from '@/pages/datasets/service'; // ADD THIS IMPORT
+import serviceData from '@/pages/datasets/service';
 
 // Import components
 import RequestorInformation from './RequestorInformation';
@@ -34,6 +33,7 @@ interface RequisitionItem {
     total: string;
     isSaved: boolean;
     itemId?: number;
+    categoryId?: number; // Ensure this is here for dropdowns
 }
 
 interface RequisitionService {
@@ -45,7 +45,7 @@ interface RequisitionService {
     unit_price: string;
     total: string;
     isSaved: boolean;
-    hourlyRate?: string; // ADD THIS
+    hourlyRate?: string;
 }
 
 interface ValidationErrors {
@@ -83,7 +83,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             unit_price: '',
             total: '',
             isSaved: false,
-            hourlyRate: '' // ADD THIS
+            hourlyRate: ''
         }
     ]);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -114,13 +114,28 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         barcode: item.BARCODE
     }));
 
-    // Use actual services from dataset - ADD THIS
+    // Use actual services from dataset
     const systemServices = serviceData;
+
+    // --- GRAND TOTAL CALCULATION (NEW) ---
+    const grandTotal = useMemo(() => {
+        if (type === 'items') {
+            return items.reduce((sum, item) => {
+                // Parse the total string, default to 0 if empty
+                const itemTotal = parseFloat(item.total) || 0;
+                return sum + itemTotal;
+            }, 0);
+        } else {
+            return services.reduce((sum, service) => {
+                const serviceTotal = parseFloat(service.total) || 0;
+                return sum + serviceTotal;
+            }, 0);
+        }
+    }, [items, services, type]);
 
     // Reset items/services when type changes
     const handleTypeChange = (newType: string) => {
         setType(newType);
-        // Clear validation errors when switching types
         setValidationErrors(prev => ({ ...prev, items: undefined, services: undefined }));
     };
 
@@ -145,21 +160,27 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         }
     };
 
-    const updateItem = (id: string, field: keyof RequisitionItem, value: string) => {
+    const updateItem = (id: string, field: keyof RequisitionItem, value: string | number) => {
         setItems(prev => prev.map(item => {
             if (item.id === id) {
+                // Ensure value is treated correctly (string vs number)
+                const stringValue = value.toString();
                 const updatedItem = { ...item, [field]: value, isSaved: false };
 
                 // Only calculate total when quantity OR unit_price is manually changed
-                // Not when itemName is selected
                 if (field === 'quantity' && item.unit_price) {
-                    const quantity = parseFloat(value) || 0;
+                    const quantity = parseFloat(stringValue) || 0;
                     const unitPrice = parseFloat(item.unit_price) || 0;
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
-                } else if (field === 'unit_price' && item.quantity) {
+                }
+                else if (field === 'unit_price' && item.quantity) {
                     const quantity = parseFloat(item.quantity) || 0;
-                    const unitPrice = parseFloat(value) || 0;
+                    const unitPrice = parseFloat(stringValue) || 0;
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
+                }
+                // Special case for 'total' being passed directly (from RequestedItems component)
+                else if (field === 'total') {
+                    updatedItem.total = stringValue;
                 }
 
                 return updatedItem;
@@ -176,42 +197,21 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         const itemToSave = items.find(item => item.id === id);
         if (!itemToSave) return;
 
-        // Validate required fields
         if (!itemToSave.itemName.trim() || !itemToSave.quantity.trim() || !itemToSave.category.trim()) {
-            alert('Please fill in category, item name and quantity before saving the item.');
+            alert('Please fill in category, item name and quantity before saving.');
             return;
         }
 
-        // Link to actual item if it exists in the system
-        const matchedSystemItem = systemItems.find(sysItem =>
-            sysItem.name.toLowerCase() === itemToSave.itemName.toLowerCase()
-        );
+        if (!itemToSave.itemId) {
+            alert("System Error: Item ID is missing. Please re-select the item from the dropdown.");
+            return;
+        }
 
-        setItems(prev => {
-            const updatedItems = prev.map(item =>
-                item.id === id ? {
-                    ...item,
-                    isSaved: true,
-                    itemId: matchedSystemItem?.id
-                } : item
-            );
-
-            const savedItem = updatedItems.find(item => item.id === id);
-            if (savedItem) {
-                const filteredItems = updatedItems.filter(item => item.id !== id);
-                return [...filteredItems, savedItem];
-            }
-
-            return updatedItems;
-        });
+        setItems(prev => prev.map(item => item.id === id ? { ...item, isSaved: true } : item));
     };
 
     const editItem = (id: string) => {
-        setItems(prev => prev.map(item =>
-            item.id === id
-                ? { ...item, isSaved: false }
-                : item
-        ));
+        setItems(prev => prev.map(item => item.id === id ? { ...item, isSaved: false } : item));
     };
 
     // Services functions
@@ -224,7 +224,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             unit_price: '',
             total: '',
             isSaved: false,
-            hourlyRate: '' // ADD THIS
+            hourlyRate: ''
         };
         setServices(prev => [newService, ...prev]);
         setValidationErrors(prev => ({ ...prev, services: undefined }));
@@ -241,7 +241,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             if (service.id === id) {
                 const updatedService = { ...service, [field]: value, isSaved: false };
 
-                // Calculate total when quantity OR unit_price is changed
                 if (field === 'quantity' && service.unit_price) {
                     const quantity = parseFloat(value) || 0;
                     const unitPrice = parseFloat(service.unit_price) || 0;
@@ -266,88 +265,50 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         const serviceToSave = services.find(service => service.id === id);
         if (!serviceToSave) return;
 
-        // Validate required fields
         if (!serviceToSave.serviceName.trim() || !serviceToSave.quantity.trim()) {
             alert('Please fill in service name and quantity before saving the service.');
             return;
         }
 
         setServices(prev => {
-            const updatedServices = prev.map(service =>
-                service.id === id ? {
-                    ...service,
-                    isSaved: true
-                } : service
-            );
-
+            const updatedServices = prev.map(service => service.id === id ? { ...service, isSaved: true } : service);
             const savedService = updatedServices.find(service => service.id === id);
             if (savedService) {
                 const filteredServices = updatedServices.filter(service => service.id !== id);
                 return [...filteredServices, savedService];
             }
-
             return updatedServices;
         });
     };
 
     const editService = (id: string) => {
-        setServices(prev => prev.map(service =>
-            service.id === id
-                ? { ...service, isSaved: false }
-                : service
-        ));
+        setServices(prev => prev.map(service => service.id === id ? { ...service, isSaved: false } : service));
     };
 
-    const getTotalAmount = () => {
-        if (type === 'items') {
-            return items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
-        } else {
-            return services.reduce((sum, service) => sum + (parseFloat(service.total) || 0), 0);
-        }
-    };
+    // Helper for submission payload
+    const getTotalAmount = () => grandTotal;
 
     const validateForm = () => {
         const errors: ValidationErrors = {};
 
-        // Validate requestor
         if (requestorType === 'other' && !otherRequestor.trim() && !selectedUser) {
             errors.requestor = 'Please select or enter a requestor name';
         }
 
         if (type === 'items') {
-            // Validate items
             const unsavedItems = items.filter(item => !item.isSaved);
-            if (unsavedItems.length > 0) {
-                errors.items = 'Please save all items before submitting';
-            }
+            if (unsavedItems.length > 0) errors.items = 'Please save all items before submitting';
+            if (items.length === 0) errors.items = 'Please add at least one item';
 
-            if (items.length === 0) {
-                errors.items = 'Please add at least one item';
-            }
-
-            const invalidItems = items.filter(item =>
-                !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
-            );
-            if (invalidItems.length > 0) {
-                errors.items = 'All items must have category, item name and quantity filled out before saving';
-            }
+            const invalidItems = items.filter(item => !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim()));
+            if (invalidItems.length > 0) errors.items = 'All items must have category, item name and quantity filled out before saving';
         } else {
-            // Validate services
             const unsavedServices = services.filter(service => !service.isSaved);
-            if (unsavedServices.length > 0) {
-                errors.services = 'Please save all services before submitting';
-            }
+            if (unsavedServices.length > 0) errors.services = 'Please save all services before submitting';
+            if (services.length === 0) errors.services = 'Please add at least one service';
 
-            if (services.length === 0) {
-                errors.services = 'Please add at least one service';
-            }
-
-            const invalidServices = services.filter(service =>
-                !service.isSaved && (!service.serviceName.trim() || !service.quantity.trim())
-            );
-            if (invalidServices.length > 0) {
-                errors.services = 'All services must have service name and quantity filled out before saving';
-            }
+            const invalidServices = services.filter(service => !service.isSaved && (!service.serviceName.trim() || !service.quantity.trim()));
+            if (invalidServices.length > 0) errors.services = 'All services must have service name and quantity filled out before saving';
         }
 
         setValidationErrors(errors);
@@ -356,42 +317,35 @@ export default function RequisitionForm({ auth }: { auth: any }) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateForm()) return;
 
-        if (!validateForm()) {
-            return;
-        }
-
-        const finalRequestor = requestorType === 'self'
-            ? auth.user.fullname
-            : selectedUser || otherRequestor;
+        const finalRequestor = requestorType === 'self' ? auth.user.fullname : selectedUser || otherRequestor;
 
         const formData = {
             requestor: finalRequestor,
             priority,
             type,
             notes,
-            items: type === 'items' ? items.map(item => ({
-                ...item,
-                itemId: item.itemId || null
-            })) : [],
-            services: type === 'services' ? services.map(service => ({
-                ...service
-            })) : [],
+            items: type === 'items' ? items.map(item => ({ ...item, itemId: item.itemId || null })) : [],
+            services: type === 'services' ? services.map(service => ({ ...service })) : [],
             total_amount: getTotalAmount(),
-            us_id: requestorType === 'self' ? auth.user.id :
-                selectedUser ? parseInt(selectedUser) : null
+            us_id: requestorType === 'self' ? auth.user.id : selectedUser ? parseInt(selectedUser) : null
         };
 
-        // Show preview instead of submitting directly
         setPreviewData(formData);
         setShowPreview(true);
     };
 
     const handleConfirmSubmit = () => {
-        // TODO: Add submission logic when backend is ready
-        alert('Requisition submitted successfully! (Demo mode)');
-        setShowPreview(false);
-        router.visit('/requisitions');
+        router.post('/requisitions', previewData, {
+            onSuccess: () => setShowPreview(false),
+            onError: (errors) => {
+                console.error('Backend Errors:', errors);
+                setShowPreview(false);
+                setValidationErrors(errors);
+                alert('Please check the form for errors.');
+            }
+        });
     };
 
     const clearForm = () => {
@@ -418,7 +372,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             unit_price: '',
             total: '',
             isSaved: false,
-            hourlyRate: '' // ADD THIS
+            hourlyRate: ''
         }]);
         setValidationErrors({});
     };
@@ -427,7 +381,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         if (type === 'items') {
             const item = items.find(item => item.id === id);
             if (!item || item.isSaved) return false;
-
             if (validationErrors.items) {
                 if (field === 'quantity' && !item.quantity.trim()) return true;
                 if (field === 'category' && !item.category.trim()) return true;
@@ -437,7 +390,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         } else {
             const service = services.find(service => service.id === id);
             if (!service || service.isSaved) return false;
-
             if (validationErrors.services) {
                 if (field === 'quantity' && !service.quantity.trim()) return true;
                 if (field === 'serviceName' && !service.serviceName.trim()) return true;
@@ -450,14 +402,13 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         if (!itemName.trim()) return [];
         return systemItems.filter(item =>
             item.name.toLowerCase().includes(itemName.toLowerCase())
-        ).slice(0, 5); // Show max 5 suggestions
+        ).slice(0, 5);
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Requisition Form" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold">Requisition Form</h1>
                     <Link
@@ -472,7 +423,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                {/* Header Section */}
                                 <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20">
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                         New Requisition Form
@@ -483,9 +433,7 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6">
-                                    {/* Requisition Info */}
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                                        {/* Left Column - Smaller */}
                                         <div className="space-y-6 lg:col-span-1">
                                             <RequestorInformation
                                                 requestorType={requestorType}
@@ -509,25 +457,22 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                                 setType={handleTypeChange}
                                                 notes={notes}
                                                 setNotes={setNotes}
+                                                totalAmount={grandTotal} // <--- PASSING THE CALCULATED TOTAL
                                             />
                                         </div>
 
-                                        {/* Right Column - Items/Services Section (Wider) */}
                                         {type === 'items' ? (
                                             <RequestedItems
                                                 items={items}
-                                                setItems={setItems}
+                                                // items state is managed by parent, no setItems needed for child
                                                 validationErrors={validationErrors}
-                                                setValidationErrors={setValidationErrors}
-                                                categories={categories}
-                                                systemItems={systemItems}
-                                                getTotalAmount={getTotalAmount}
+                                                // categories/systemItems props removed as RequestedItems fetches internally now
+                                                // but keeping these props if you revert to old version doesn't hurt
                                                 updateItem={updateItem}
                                                 saveItem={saveItem}
                                                 removeItem={removeItem}
                                                 addNewItem={addNewItem}
                                                 hasError={hasError}
-                                                getItemSuggestions={getItemSuggestions}
                                                 editItem={editItem}
                                             />
                                         ) : (
@@ -543,12 +488,11 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                                 addNewService={addNewService}
                                                 hasError={hasError}
                                                 editService={editService}
-                                                systemServices={systemServices} // ADD THIS PROP
+                                                systemServices={systemServices}
                                             />
                                         )}
                                     </div>
 
-                                    {/* Action Buttons */}
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-4 pb-2 border-t border-sidebar-border/70 -mx-6 px-6">
                                         <div className="flex gap-3">
                                             <button
@@ -572,7 +516,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                     </div>
                 </div>
 
-                {/* Preview Modal */}
                 <RequisitionPreviewModal
                     isOpen={showPreview}
                     onClose={() => setShowPreview(false)}

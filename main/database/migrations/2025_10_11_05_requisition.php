@@ -15,13 +15,15 @@ return new class extends Migration
     {
         Schema::create('requisition', function (Blueprint $table) {
             $table->id();
+            $table->string('references_no')->unique();
             $table->enum('type',Requisition::TYPES);
             $table->timestamps();
             $table->enum('status',Requisition::STATUS)->default('Pending');
             $table->string('remarks')->nullable();
             $table->string('requestor')->nullable();
             $table->string('notes')->nullable();
-            $table->enum('priority', ['Normal','Low','High'])->default('Normal');
+            $table->string('total_cost')->nullable();
+            $table->enum('priority',Requisition::PRIORITY);
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
         });
 

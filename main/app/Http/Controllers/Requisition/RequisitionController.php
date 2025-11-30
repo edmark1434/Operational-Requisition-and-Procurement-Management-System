@@ -5,62 +5,179 @@ namespace App\Http\Controllers\Requisition;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Models\Requisition;
+use App\Models\RequisitionItem;
+use App\Models\Category;
+use App\Models\Item;
 
 class RequisitionController extends Controller
 {
-    protected $base_path = "tabs/02-Requisitions"; ## NAA SA resources/pages/tabs/etc
+    protected $base_path = "tabs/02-Requisitions";
+
     public function index()
     {
-        return Inertia::render($this->base_path .'/RequisitionMain/Requisitions');
+        // 1. Fetch Requisitions
+        $requisitions = Requisition::with(['requisition_items.item.category'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($req) {
+
+                // Build Category List
+                $categoryList = [];
+                if ($req->type === 'Items') {
+                    $categoryList = $req->requisition_items
+                        ->map(fn($ri) => $ri->item->category->name ?? 'Uncategorized')
+                        ->unique()
+                        ->values()
+                        ->toArray();
+                } else {
+                    $categoryList = ['Services'];
+                }
+
+                // --- BUILD ITEMS LIST (FIXED PRICE LOGIC) ---
+                $itemsList = $req->requisition_items->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->item->name ?? $item->item_name ?? $item->service_name ?? 'Unknown Item',
+                        'quantity' => $item->quantity,
+
+                        // ✅ FIX: Look at Master Item table first ($item->item->unit_price)
+                        // If that fails, look at pivot table, else 0.
+                        'unit_price' => $item->item->unit_price ?? $item->unit_price ?? 0,
+
+                        'total_price' => $item->total_price ?? 0,
+                        'category' => $item->item->category->name ?? $item->category ?? 'General',
+                    ];
+                });
+
+                return [
+                    'id' => $req->id,
+                    'references_no' => $req->references_no,
+                    'requestor' => $req->requestor,
+                    'priority' => $req->priority,
+                    'type' => $req->type,
+                    'status' => $req->status,
+                    'notes' => $req->notes,
+                    'remarks' => $req->remarks,
+                    'created_at' => $req->created_at,
+                    'total_cost' => $req->total_cost,
+                    'categories' => $categoryList,
+                    'items' => $itemsList, // Passing the fixed list
+                ];
+            });
+
+        // 2. Fetch Categories for Dropdown
+        $dbCategories = Category::where('is_active', true)
+            ->where('type', 'Items')
+            ->orderBy('name')
+            ->pluck('name');
+
+        return Inertia::render($this->base_path .'/RequisitionMain/Requisitions', [
+            'requisitions' => $requisitions,
+            'dbCategories' => $dbCategories
+        ]);
     }
+
     public function requisitionForm()
     {
         return Inertia::render($this->base_path .'/RequisitionForm/RequisitionForm');
     }
+
     public function requisitionEdit($id)
     {
         return Inertia::render($this->base_path .'/RequisitionForm/RequisitionEdit', [
             'requisitionId' => (int)$id
         ]);
-
     }
+
+    // --- API Methods ---
+
+    public function getCategories()
+    {
+        $categories = Category::where('is_active', true)
+            ->has('items')
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json($categories);
+    }
+
+    public function getItemsByCategory($categoryId)
+    {
+        $items = Item::where('category_id', $categoryId)
+            ->where('is_active', true)
+            ->select('id', 'name', 'unit_price', 'current_stock')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json($items);
+    }
+
+    // --- Store Logic ---
+
     public function store(Request $request)
     {
-        $request->validate([
-            'requestor' => 'required|string|max:255',
-            'priority' => 'required|string|in:normal,high,urgent',
-            'notes' => 'nullable|string|max:1000',
-            'items' => 'required|array|min:1',
-            'items.*.quantity' => 'required|numeric|min:1',
-            'items.*.category' => 'required|string|max:100',
-            'items.*.description' => 'required|string|max:255',
-            'items.*.unit_price' => 'required|numeric|min:0',
+        // 1. Validate
+        $validated = $request->validate([
+            'requestor' => 'required|string',
+            'priority' => 'required|string',
+            'type' => 'required|in:items,services',
+            'total_amount' => 'required|numeric',
+            'us_id' => 'required',
+            'items' => 'required_if:type,items|array',
+            'services' => 'required_if:type,services|array',
         ]);
 
-        $requisition = Requisition::create([
-            'user_id' => Auth::id(),
-            'requestor' => $request->input('requestor'),
-            'remarks' => null, // Assuming remarks is set later
-            'notes' => $request->input('notes'),
-            'status' => Requisition::STATUS[0],
-        ]);
+        try {
+            DB::beginTransaction();
 
-        foreach ($request->input('items') as $itemData) {
-            if (class_exists(RequisitionItem::class)) {
-                RequisitionItem::create([
-                    'requisition_id' => $requisition->id,
-                    'item_id' => $itemData['itemId'], // Can be null
-                    'quantity' => $itemData['quantity'],
-                    'category' => $itemData['category'],
-                    'description' => $itemData['description'],
-                    'unit_price' => $itemData['unit_price']
-                ]);
-            } else {
-                \Log::error('RequisitionItem model is missing. Cannot save line items.');
+            // 2. Create Parent
+            $requisition = Requisition::create([
+                'user_id' => $request->us_id,
+                'requestor' => $request->requestor,
+                'priority' => ucfirst($request->priority),
+                'type' => ucfirst($request->type),
+                'notes' => $request->notes,
+                'status' => 'Pending',
+                'total_cost' => $request->total_amount,
+            ]);
+
+            // 3. Create Children (Items)
+            if ($request->type === 'items') {
+                foreach ($request->items as $item) {
+                    if (empty($item['itemId'])) {
+                        DB::rollBack();
+                        return back()->withErrors(['items' => "Error: The item '{$item['itemName']}' was not found in the database. Please select it from the dropdown list."]);
+                    }
+
+                    $requisition->requisition_items()->create([
+                        'item_id' => $item['itemId'],
+                        'quantity' => $item['quantity'],
+                        'approved_qty' => 0,
+                    ]);
+                }
             }
-        }
+            // 4. Create Children (Services)
+            elseif ($request->type === 'services') {
+                foreach ($request->services as $service) {
+                    $requisition->requisition_services()->create([
+                        'service_id' => $service['serviceId'] ?? null,
+                        'service_name' => $service['serviceName'],
+                        'quantity' => $service['quantity'],
+                    ]);
+                }
+            }
 
-        return redirect()->route('requisitions')
-        ->with('success', 'Requisition submitted successfully!');
+            DB::commit();
+
+            return redirect()->route('requisitions')->with('success', 'Requisition created!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'System Error: ' . $e->getMessage()]);
+        }
     }
 }
