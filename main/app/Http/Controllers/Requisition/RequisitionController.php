@@ -229,6 +229,56 @@ class RequisitionController extends Controller
         }
     }
 
+    public function requisitionAdjust($id)
+    {
+        // 1. Fetch the Requisition with all necessary relationships
+        $requisition = Requisition::with([
+            'user',
+            'requisition_items.item.category',
+            'requisition_services'
+        ])->findOrFail($id);
+
+        // 2. Format Items for the React State
+        $formattedItems = $requisition->requisition_items->map(function($ri) {
+            return [
+                'id' => 'existing_' . $ri->id,
+                'itemId' => $ri->item_id,
+                'originalItemId' => $ri->item_id,
+                'category' => $ri->item->category->name ?? 'General',
+                'itemName' => $ri->item->name ?? 'Unknown',
+                'quantity' => (string)$ri->quantity,
+                // Use item price as fallback if pivot price is missing
+                'unit_price' => (string)($ri->item->unit_price ?? 0),
+                'total' => number_format($ri->quantity * ($ri->item->unit_price ?? 0), 2, '.', ''),
+                'isSaved' => true,
+            ];
+        });
+
+        // 3. Format Services for the React State
+        $formattedServices = $requisition->requisition_services->map(function($rs) {
+            return [
+                'id' => 'existing_' . $rs->id,
+                'serviceId' => (string)($rs->service_id ?? ''),
+                'originalServiceId' => $rs->service_id,
+                'serviceName' => $rs->service_name,
+                'description' => $rs->description ?? '',
+                'quantity' => (string)$rs->quantity,
+                'unit_price' => (string)($rs->unit_price ?? 0),
+                'total' => number_format($rs->quantity * ($rs->unit_price ?? 0), 2, '.', ''),
+                'isSaved' => true,
+            ];
+        });
+
+        // 4. Send everything to the view
+        return Inertia::render($this->base_path .'/RequisitionMain/RequisitionAdjust', [
+            'requisitionId' => (int)$id,
+            'serverRequisition' => $requisition,
+            'initialItems' => $formattedItems,
+            'initialServices' => $formattedServices,
+        ]);
+    }
+
+
     // --- API Methods ---
 
     public function getCategories()

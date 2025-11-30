@@ -36,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('requisitions/{id}/edit', [RequisitionController::class, 'requisitionEdit'])->name('requisitionedit');
 // Add this line under your existing requisition routes
     Route::put('/requisitions/{id}', [RequisitionController::class, 'update'])->name('requisitions.update');
+    Route::get('requisitions/{id}/adjust', [RequisitionController::class, 'requisitionAdjust'])->name('requisitionadjust');
 
     // API Routes for Dropdowns
     Route::get('/requisition/api/categories', [RequisitionController::class, 'getCategories']);
