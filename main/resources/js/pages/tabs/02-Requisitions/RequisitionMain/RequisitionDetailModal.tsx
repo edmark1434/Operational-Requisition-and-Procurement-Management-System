@@ -14,7 +14,7 @@ const router = {
 
 // Utils: Style Helpers
 const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
         case 'approved': return 'bg-green-100 text-green-800 border-green-200';
         case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
         case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -24,7 +24,7 @@ const getStatusColor = (status: string) => {
 };
 
 const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
+    switch (priority?.toLowerCase()) {
         case 'high': return 'bg-red-100 text-red-800';
         case 'critical': return 'bg-red-200 text-red-900';
         case 'normal': return 'bg-blue-100 text-blue-800';
@@ -108,6 +108,9 @@ export default function RequisitionDetailModal({
     // --- 1. SAFE DATA NORMALIZATION ---
     const safeReq = requisition || {};
     const id = safeReq.id || safeReq.ID;
+    // EXTRACT REFERENCE NUMBER (Fallback to ID if missing)
+    const references_no = safeReq.references_no || safeReq.REFERENCES_NO || `REQ-#${id}`;
+
     const status = safeReq.status || safeReq.STATUS || 'pending';
     const type = safeReq.type || safeReq.TYPE || 'items';
     const priority = safeReq.priority || safeReq.PRIORITY || 'normal';
@@ -117,7 +120,7 @@ export default function RequisitionDetailModal({
     const notes = safeReq.notes || safeReq.NOTES;
     const remarks = safeReq.remarks || safeReq.REMARKS;
 
-    // GRAND TOTAL: As requested, strictly pull from the 'total_cost' column
+    // GRAND TOTAL
     const total_cost = safeReq.total_cost || 0;
 
     // Combine Items and Services
@@ -216,10 +219,10 @@ export default function RequisitionDetailModal({
                             >
                                 <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white dark:bg-sidebar text-left align-middle shadow-xl transition-all border border-sidebar-border flex flex-col max-h-[90vh]">
 
-                                    {/* Header */}
+                                    {/* Header - NOW SHOWS REFERENCE NUMBER */}
                                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10 flex items-center justify-between">
                                         <Dialog.Title as="h3" className="text-xl font-bold text-gray-900 dark:text-white">
-                                            Requisition #{id} Details
+                                            {references_no} | Details
                                         </Dialog.Title>
                                         <button
                                             onClick={onClose}
@@ -318,13 +321,22 @@ export default function RequisitionDetailModal({
                                             </div>
                                         </div>
 
-                                        {/* Notes */}
-                                        {notes && (
-                                            <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
-                                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Notes</label>
-                                                <p className="text-sm text-gray-900 dark:text-gray-300">{notes}</p>
-                                            </div>
-                                        )}
+                                        {/* NOTES AND REMARKS SECTION (ADDED) */}
+                                        <div className="space-y-4">
+                                            {notes && (
+                                                <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
+                                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Notes</label>
+                                                    <p className="text-sm text-gray-900 dark:text-gray-300">{notes}</p>
+                                                </div>
+                                            )}
+
+                                            {remarks && (
+                                                <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg border border-red-100 dark:border-red-900/20">
+                                                    <label className="block text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">Remarks / Reason</label>
+                                                    <p className="text-sm text-gray-900 dark:text-gray-300">{remarks}</p>
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {/* Items Table */}
                                         <div>
