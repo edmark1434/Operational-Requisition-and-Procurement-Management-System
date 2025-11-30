@@ -15,21 +15,30 @@ const router = {
 // Utils: Style Helpers
 const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-        case 'approved': return 'bg-green-100 text-green-800 border-green-200';
-        case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
-        case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        case 'partially_approved': return 'bg-teal-100 text-teal-800 border-teal-200';
-        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        case 'approved':
+            return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800';
+        case 'pending':
+            return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+        case 'draft':
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
+        case 'declined':
+        case 'rejected':
+            return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800';
+        default:
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
     }
 };
 
 const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
-        case 'high': return 'bg-red-100 text-red-800';
-        case 'critical': return 'bg-red-200 text-red-900';
-        case 'normal': return 'bg-blue-100 text-blue-800';
-        case 'low': return 'bg-gray-100 text-gray-800';
-        default: return 'bg-gray-100 text-gray-800';
+        case 'high':
+            return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
+        case 'normal':
+            return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+        case 'low':
+            return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800';
+        default:
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
     }
 };
 
@@ -52,7 +61,7 @@ function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; o
             <Dialog as="div" className="relative z-[60]" onClose={onClose}>
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+                    <Dialog.Panel className="w-full max-w-md rounded-lg bg-white dark:bg-sidebar  p-6 shadow-xl">
                         <Dialog.Title className="text-lg font-medium">Decline Requisition</Dialog.Title>
                         <div className="mt-4">
                             <textarea
@@ -398,7 +407,7 @@ export default function RequisitionDetailModal({
                                                     </tbody>
                                                     <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
                                                     <tr>
-                                                        <td colSpan={isServiceRequisition ? 4 : 4} className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
+                                                        <td colSpan={isServiceRequisition ? 4 : 4} className="py-3 px-4 text-left font-medium text-gray-900 dark:text-white">
                                                             Grand Total:
                                                         </td>
                                                         <td colSpan={2} className="py-3 px-4 text-right text-lg font-bold text-green-600 dark:text-green-400">
@@ -414,18 +423,18 @@ export default function RequisitionDetailModal({
                                     {/* Footer Action Buttons */}
                                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                                         <div className="flex justify-between items-center">
-                                            <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                                            <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                                                 Edit Requisition
                                             </button>
                                             <div className="flex gap-3">
                                                 {isPending && (
                                                     <>
-                                                        <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">Decline</button>
-                                                        <button onClick={handleAccept} className="px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100">Accept</button>
+                                                        <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">Decline</button>
+                                                        <button onClick={handleAccept} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">Accept</button>
                                                     </>
                                                 )}
                                                 {isApproved && (
-                                                    <button onClick={handleCreatePurchaseOrder} className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100">Create Purchase Order</button>
+                                                    <button onClick={handleCreatePurchaseOrder} className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">Create Purchase Order</button>
                                                 )}
                                             </div>
                                         </div>
