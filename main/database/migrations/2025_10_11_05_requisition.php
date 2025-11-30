@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('remarks')->nullable();
             $table->string('requestor')->nullable();
             $table->string('notes')->nullable();
-            $table->string('priority', 15)->default('NORMAL');
+            $table->enum('priority', ['Normal','Low','High'])->default('Normal');
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
         });
 

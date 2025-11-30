@@ -115,8 +115,16 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
         </span>
     );
 };
+interface Prop{
+    requisitions: any[],
+    deliveries: any[],
+    purchaseOrdersData: any[],
+    returns: any[],
+    reworks: any[],
+    items: any[]
+}
 
-export default function Dashboard() {
+export default function Dashboard({requisitions,deliveries,returns,reworks,purchaseOrdersData,items}:Prop) {
     // Calculate statistics
     const totalUsers = users.length;
     const totalItems = items.length;

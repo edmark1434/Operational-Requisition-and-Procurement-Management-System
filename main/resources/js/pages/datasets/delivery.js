@@ -1,5 +1,5 @@
 // delivery.js
-const deliveries = [
+const   deliveries = [
     {
         ID: 1,
         DELIVERY_DATE: '2024-01-20T10:30:00Z',

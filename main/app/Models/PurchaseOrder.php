@@ -46,7 +46,7 @@ class PurchaseOrder extends Model
         return $this->belongsTo(Requisition::class, 'req_id');
     }
 
-    public function supplier()
+    public function vendor()
     {
         return $this->belongsTo(Vendor::class, 'vendor_id');
     }
