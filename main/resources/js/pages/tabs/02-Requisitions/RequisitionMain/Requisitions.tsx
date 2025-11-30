@@ -66,6 +66,8 @@ export default function Requisitions({
 
 
     // --- Filter Logic ---
+// In Requisitions.tsx
+
     const filteredRequisitions = useMemo(() => {
         return localRequisitions.filter(req => {
             const searchLower = searchTerm.toLowerCase();
@@ -76,7 +78,13 @@ export default function Requisitions({
                 req.id.toString().includes(searchLower) ||
                 (req.notes && req.notes.toLowerCase().includes(searchLower));
 
-            const matchesStatus = statusFilter === 'All' || req.status.toLowerCase() === statusFilter.toLowerCase();
+            // 👇 FIX IS HERE: Replace underscores with spaces for safe comparison
+            // This ensures "partially_approved" matches "Partially Approved"
+            const dbStatus = req.status.toLowerCase().replace(/_/g, ' ');
+            const filterStatus = statusFilter.toLowerCase().replace(/_/g, ' ');
+
+            const matchesStatus = statusFilter === 'All' || dbStatus === filterStatus;
+
             const matchesPriority = priorityFilter === 'All' || req.priority.toLowerCase() === priorityFilter.toLowerCase();
             const matchesCategory = categoryFilter === 'All' ||
                 (req.categories && req.categories.some(cat => cat.toLowerCase() === categoryFilter.toLowerCase()));
