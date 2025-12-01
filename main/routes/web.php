@@ -8,7 +8,8 @@ use App\Http\Controllers\WebPages\Dashboard;
 use App\Http\Controllers\WebPages\Inventory;
 use App\Http\Controllers\WebPages\Purchasing;
 use App\Http\Controllers\WebPages\Deliveries;
-use App\Http\Controllers\WebPages\Returns;
+use App\Http\Controllers\WebPages\Returns; // Keep for Index/Edit
+use App\Http\Controllers\ReturnsController; // <--- NEW: Logic Controller
 use App\Http\Controllers\WebPages\Users;
 use App\Http\Controllers\WebPages\Roles;
 use App\Http\Controllers\WebPages\MakesAndCategories;
@@ -18,7 +19,6 @@ use App\Http\Controllers\WebPages\Contact;
 use App\Http\Controllers\WebPages\Services;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-// Import the Model for the fix
 use App\Models\Requisition;
 
 Route::get('/', function () {
@@ -34,20 +34,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('requisitionform', [RequisitionController::class, 'requisitionForm'])->name('requisitionform');
     Route::post('/requisition/store', [RequisitionController::class, 'store'])->name('requisition.store');
     Route::get('requisitions/{id}/edit', [RequisitionController::class, 'requisitionEdit'])->name('requisitionedit');
-// Add this line under your existing requisition routes
     Route::put('/requisitions/{id}', [RequisitionController::class, 'update'])->name('requisitions.update');
-    Route::get('requisitions/{id}/adjust', [RequisitionController::class, 'requisitionAdjust'])->name('requisitionadjust');
-
-    Route::get('/requisitions/{id}/adjust', [RequisitionController::class, 'adjust'])->name('requisitions.adjust');
+    Route::get('requisitions/{id}/adjust', [RequisitionController::class, 'adjust'])->name('requisitions.adjust');
     Route::put('/requisitions/{id}/adjust', [RequisitionController::class, 'updateAdjust'])->name('requisitions.updateAdjust');
+
     // API Routes for Dropdowns
     Route::get('/requisition/api/categories', [RequisitionController::class, 'getCategories']);
     Route::get('/requisition/api/items/{categoryId}', [RequisitionController::class, 'getItemsByCategory']);
 
-
-    //Route::put('/requisitions/{id}/status', [RequisitionController::class, 'updateStatus'])->name('requisitions.updateStatus');
-    // In routes/web.php inside your auth group
     Route::put('/requisitions/{id}/status', [RequisitionController::class, 'updateStatus']);
+
     // INVENTORY
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
     Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');
@@ -76,14 +72,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('deliveries/add',[Deliveries::class,"store"])->name('deliveryadd');
     Route::get('deliveries/{id}/edit',[Deliveries::class,"edit"])->name('deliveryedit');
 
-    // RETURNS
-    Route::get('returns',[Returns::class,'index'])->name('returns');
-    Route::get('returns/add',[Returns::class,"store"])->name('returnsadd');
+    // --- RETURNS (UPDATED) ---
+    Route::get('returns',[Returns::class,'index'])->name('returns'); // List view
+
+    // Use ReturnController for Logic (Create form with data, Store, API)
+    Route::get('returns/add',[ReturnsController::class,"create"])->name('returnsadd'); // Loads the form with available deliveries
+    Route::post('returns',[ReturnsController::class,"store"])->name('returns.store'); // Saves the data
+    Route::get('/api/delivery/{id}/items', [ReturnsController::class, 'getDeliveryItems']); // API for dropdown
+
     Route::get('returns/{id}/edit',[Returns::class,"edit"])->name('returnsedit');
+    // -------------------------
 
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
-    // USERS (Fixed Syntax Errors: ${id} -> {id})
+    // USERS
     Route::get('users',[Users::class,'index'])->name('users');
     Route::get('users/add',[Users::class,"store"])->name('useradd');
     Route::get('users/{id}/edit',[Users::class,"edit"])->name('useredit');
@@ -140,10 +142,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('notifications',[Notifications::class,'index'])->name('notifications');
     Route::put('notifications/{id}/editIsRead',[Notifications::class,'editIsRead'])->name('notificationsIsRead');
     Route::put('notifications/markAsAllRead',[Notifications::class,'markAsAllRead'])->name('notificationsMarkAsAllRead');
-
 });
 
-// --- TEMPORARY FIX ROUTE (RUN ONCE THEN DELETE) ---
+// --- TEMPORARY FIX ROUTE ---
 Route::get('/fix-references', function () {
     $items = Requisition::whereNull('references_no')->orWhere('references_no', '')->get();
 
@@ -154,7 +155,6 @@ Route::get('/fix-references', function () {
 
     return "SUCCESS: Fixed " . $items->count() . " records. You may now delete this route from web.php.";
 });
-// --------------------------------------------------
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
