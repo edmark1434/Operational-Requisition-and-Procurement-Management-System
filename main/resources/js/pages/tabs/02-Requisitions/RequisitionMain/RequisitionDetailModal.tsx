@@ -15,6 +15,13 @@ const getStatusColor = (status: string) => {
         case 'declined':
         case 'rejected':
             return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800';
+        case 'awaiting_pickup':
+        case 'awaiting pickup':
+            return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
+        case 'ordered':
+            return 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800';
+        case 'completed':
+            return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800';
         default:
             return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
     }
@@ -76,7 +83,7 @@ function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; o
                         <div className="mt-4">
                             <p className="text-sm text-gray-500 mb-2">Please provide a reason for rejecting this request:</p>
                             <textarea
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-red-500 focus:border-red-500"
+                                className="w-full border border-gray-300 dark:border-sidebar-border rounded p-2 bg-white dark:bg-input text-gray-900 dark:text-white focus:ring-red-500 focus:border-red-500"
                                 rows={3}
                                 placeholder="e.g., Item out of stock, Budget exceeded..."
                                 value={reason}
@@ -106,7 +113,6 @@ const PriorityIcons = {
     normal: <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>,
     low: <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
 };
-
 
 interface RequisitionDetailModalProps {
     requisition: any;
@@ -172,8 +178,6 @@ export default function RequisitionDetailModal({
 
         const reqQty = parseFloat(item.quantity ?? 0);
         const appQty = parseFloat(item.approved_qty ?? 0);
-
-        // Use approved if > 0, otherwise fallback to requested
         const finalQty = appQty > 0 ? appQty : reqQty;
         const price = parseFloat(item.unit_price || item.item?.unit_price || 0);
 
@@ -185,6 +189,8 @@ export default function RequisitionDetailModal({
 
     const isPending = status.toLowerCase() === 'pending';
     const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved';
+    const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup' || status.toLowerCase() === 'awaiting pickup';
+    const isReceived = status.toLowerCase() === 'completed';
 
     // --- HANDLERS ---
     const handleStatusChange = (newStatus: string) => {
@@ -204,7 +210,6 @@ export default function RequisitionDetailModal({
             // If we have variances displayed, it's partially approved
             targetStatus = 'partially_approved';
         }
-
         onStatusUpdate(id, targetStatus);
         onClose();
     };
@@ -227,6 +232,29 @@ export default function RequisitionDetailModal({
 
     const handleCreatePurchaseOrder = () => {
         router.get('/purchases/create');
+        onClose();
+    };
+
+    const handleReleaseForPickup = () => {
+        onStatusUpdate(id, 'awaiting_pickup');
+        onClose();
+    };
+
+    const handleMarkItemAsReceived = () => {
+        onStatusUpdate(id, 'completed');
+        onClose();
+    };
+
+    const handleMarkServiceAsReceived = () => {
+        onStatusUpdate(id, 'completed');
+        onClose();
+    };
+
+    const handleMarkAsReceived = () => {
+        // For Items: Awaiting Pickup -> Ordered
+        // For Services: Approved -> completed
+        const newStatus = isServiceRequisition ? 'completed' : 'ordered';
+        onStatusUpdate(id, newStatus);
         onClose();
     };
 
@@ -253,8 +281,90 @@ export default function RequisitionDetailModal({
         { value: 'ordered', label: 'Ordered' },
         { value: 'delivered', label: 'Delivered' },
         { value: 'awaiting_pickup', label: 'Awaiting Pickup' },
-        { value: 'received', label: 'Received' }
+        { value: 'completed', label: 'Completed' }
     ];
+
+    // --- BUTTON LOGIC ---
+    const renderLeftButtons = () => {
+        // ITEM TYPE LOGIC
+        if (!isServiceRequisition) {
+            if (isPending) {
+                return (
+                    <>
+                        <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                            Edit Requisition
+                        </button>
+                        <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">
+                            Adjust Requisition
+                        </button>
+                    </>
+                );
+            }
+            if (isApproved) {
+                return (
+                    <button onClick={handleReleaseForPickup} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                        Release for Pickup
+                    </button>
+                );
+            }
+
+            if (isAwaitingPickup) {
+                return (
+                    <button onClick={handleMarkItemAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                        Mark as Completed
+                    </button>
+                );
+            }
+        }
+
+        // SERVICE TYPE LOGIC
+        if (isServiceRequisition) {
+            if (isPending) {
+                return (
+                    <>
+                        <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                            Edit Requisition
+                        </button>
+                        <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">
+                            Adjust Requisition
+                        </button>
+                    </>
+                );
+            }
+            if (isApproved) {
+                return (
+                    <button onClick={handleMarkServiceAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                        Mark as Completed
+                    </button>
+                );
+            }
+        }
+
+        return null;
+    };
+
+    const renderRightButtons = () => {
+        if (isPending) {
+            return (
+                <>
+                    <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                        Decline
+                    </button>
+                    <button onClick={handleAccept} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                        Accept
+                    </button>
+                </>
+            );
+        }
+        if (isApproved && !isServiceRequisition) {
+            return (
+                <button onClick={handleCreatePurchaseOrder} className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+                    Create Purchase Order
+                </button>
+            );
+        }
+        return null;
+    };
 
     return (
         <>
@@ -297,6 +407,7 @@ export default function RequisitionDetailModal({
 
                                     {/* Content */}
                                     <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white dark:bg-sidebar">
+                                        {/* ... (content remains exactly the same) ... */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-4">
                                                 <div>
@@ -553,15 +664,7 @@ export default function RequisitionDetailModal({
                                             </div>
 
                                             <div className="flex gap-3">
-                                                {isPending && (
-                                                    <>
-                                                        <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">Decline</button>
-                                                        <button onClick={handleAccept} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">Accept</button>
-                                                    </>
-                                                )}
-                                                {isApproved && (
-                                                    <button onClick={handleCreatePurchaseOrder} className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">Create Purchase Order</button>
-                                                )}
+                                                {renderRightButtons()}
                                             </div>
                                         </div>
                                     </div>
@@ -585,12 +688,15 @@ function RequisitionStatusIcon({ status }: { status: string }) {
         case 'partially_approved':
             return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
         case 'rejected': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+        case 'awaiting_pickup': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+        case 'ordered': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>;
+        case 'completed': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>;
         default: return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
     }
 }
 
 function getStatusDisplayName(status: string): string {
-    const statusMap: { [key: string]: string } = { 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'partially_approved': 'Partially Approved', 'ordered': 'Ordered', 'delivered': 'Delivered', 'awaiting_pickup': 'Awaiting Pickup', 'received': 'Received' };
+    const statusMap: { [key: string]: string } = { 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'partially_approved': 'Partially Approved', 'ordered': 'Ordered', 'delivered': 'Delivered', 'awaiting_pickup': 'Awaiting Pickup', 'completed': 'Completed' };
     return statusMap[(status || '').toLowerCase()] || status;
 }
 
