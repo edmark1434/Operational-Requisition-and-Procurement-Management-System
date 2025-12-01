@@ -13,7 +13,7 @@ class VendorContact extends Model
     protected $fillable = ['name', 'position', 'email', 'contact_number', 'vendor_id', 'is_active'];
 
     public function vendor(){
-        $this->belongsTo(Vendor::class, 'vendor_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
     public $timestamps = false;
 }

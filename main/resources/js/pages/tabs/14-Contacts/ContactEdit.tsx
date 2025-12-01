@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { contacts } from '@/routes';
+import { contacts, contactsdelete, contactsupdate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -9,6 +9,8 @@ import contactData from "@/pages/datasets/contact";
 interface ContactEditProps {
     auth: any;
     contactId: number;
+    contactDetails: any;
+    SUPPLIER_OPTIONS:any[]
 }
 
 const breadcrumbs = (contactId: number): BreadcrumbItem[] => [
@@ -22,7 +24,7 @@ const breadcrumbs = (contactId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function ContactEdit({ auth, contactId }: ContactEditProps) {
+export default function ContactEdit({ auth, contactId,contactDetails,SUPPLIER_OPTIONS }: ContactEditProps) {
     const [formData, setFormData] = useState({
         NAME: '',
         POSITION: '',
@@ -38,44 +40,10 @@ export default function ContactEdit({ auth, contactId }: ContactEditProps) {
 
     // Load contact data on component mount
     useEffect(() => {
-        loadContactData();
+        setFormData(contactDetails);
+        setIsLoading(false);
+        console.log(contactDetails);
     }, [contactId]);
-
-    const loadContactData = () => {
-        setIsLoading(true);
-
-        try {
-            // Find the contact to edit
-            const contact = contactData.find(contact => contact.ID === contactId);
-
-            if (!contact) {
-                console.error(`Contact #${contactId} not found`);
-                alert('Contact not found!');
-                router.visit(contacts().url);
-                return;
-            }
-
-            // Transform contact data to match form structure
-            const vendor = SUPPLIER_OPTIONS.find(sup => sup.ID === contact.VENDOR_ID);
-
-            setFormData({
-                NAME: contact.NAME || '',
-                POSITION: contact.POSITION || '',
-                EMAIL: contact.EMAIL || '',
-                CONTACT_NUMBER: contact.CONTACT_NUMBER || '',
-                VENDOR_ID: contact.VENDOR_ID?.toString() || '',
-                VENDOR_NAME: vendor?.NAME || '',
-                VENDOR_EMAIL: vendor?.EMAIL || '',
-                IS_ACTIVE: contact.IS_ACTIVE || true
-            });
-        } catch (error) {
-            console.error('Error loading contact data:', error);
-            alert('Error loading contact data!');
-            router.visit(contacts().url);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleVendorChange = (vendorId: string) => {
         const selectedVendor = SUPPLIER_OPTIONS.find(s => s.ID.toString() === vendorId);
@@ -96,17 +64,9 @@ export default function ContactEdit({ auth, contactId }: ContactEditProps) {
         const updatedContactData = {
             ...formData,
             VENDOR_ID: parseInt(formData.VENDOR_ID),
-            CONTACT_INFO: `${formData.EMAIL} | ${formData.CONTACT_NUMBER}`,
-            UPDATED_AT: new Date().toISOString()
         };
 
-        console.log('Updated Contact Data:', updatedContactData);
-
-        // In real application, you would send PATCH request to backend
-        alert('Contact updated successfully!');
-
-        // Redirect back to contacts list
-        router.visit(contacts().url);
+        router.put(contactsupdate(contactId), updatedContactData);
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -117,14 +77,10 @@ export default function ContactEdit({ auth, contactId }: ContactEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting contact:', contactId);
-
-        // In real application, you would send DELETE request to backend
-        alert('Contact deleted successfully!');
+        router.delete(contactsdelete(contactId));
         setShowDeleteConfirm(false);
 
-        // Redirect back to contacts list
-        router.visit(contacts().url);
+        
     };
 
     const handleCancel = () => {
@@ -310,7 +266,7 @@ export default function ContactEdit({ auth, contactId }: ContactEditProps) {
                                                                     Company Contact
                                                                 </label>
                                                                 <p className="text-sm text-gray-900 dark:text-white">
-                                                                    {SUPPLIER_OPTIONS.find(v => v.ID.toString() === formData.VENDOR_ID)?.CONTACT_NUMBER}
+                                                                    {SUPPLIER_OPTIONS.find(v => v.ID.toString() === formData.VENDOR_ID)?.CONTACT_NUMBER ?? contactDetails.VENDOR_CONTACT}
                                                                 </p>
                                                             </div>
                                                         </div>

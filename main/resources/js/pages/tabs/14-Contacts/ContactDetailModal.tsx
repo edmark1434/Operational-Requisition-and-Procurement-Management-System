@@ -3,6 +3,9 @@ import { ContactStatusIcons } from './utils/icons';
 import { getContactStatusColor, getVendorColor } from './utils/styleUtils';
 import { formatPhoneNumber, formatDate } from './utils/formatters';
 import { Mail, Phone, Building, Calendar } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { contacts, contactsdeleteModal, suppliers } from '@/routes';
+import { toast } from 'sonner';
 
 interface ContactDetailModalProps {
     contact: any;
@@ -25,9 +28,12 @@ export default function ContactDetailModal({
     const statusText = contact?.IS_ACTIVE ? 'Active' : 'Inactive';
 
     const handleDelete = () => {
-        if (contact) {
-            onDelete(contact.ID);
-        }
+        router.delete(contactsdeleteModal(contact.ID), {
+            onSuccess: () => {
+                toast('Contact deleted successfully!');
+                router.visit(contacts().url);
+            }
+        })
         setShowDeleteConfirm(false);
     };
 
@@ -125,36 +131,7 @@ export default function ContactDetailModal({
                                 </div>
                             </div>
 
-                            {/* Additional Details */}
-                            <div className="space-y-4 border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Additional Details
-                                </h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Date Added
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-gray-400" />
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                {contact?.CREATED_AT ? formatDate(contact.CREATED_AT) : 'N/A'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Last Updated
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-gray-400" />
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                {contact?.UPDATED_AT ? formatDate(contact.UPDATED_AT) : 'N/A'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            
                         </div>
                     </div>
 

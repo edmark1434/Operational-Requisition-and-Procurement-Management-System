@@ -8,9 +8,9 @@ export const useSupplierFilters = (
     const filteredSuppliers = useMemo(() => {
         return suppliers.filter(supplier => {
             const matchesSearch = searchTerm === '' ||
-                supplier.NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                supplier.EMAIL.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                supplier.CONTACT_NUMBER.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                supplier?.NAME?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                supplier?.EMAIL?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                supplier?.CONTACT_NUMBER?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 supplier.CATEGORIES.some((category: string) =>
                     category.toLowerCase().includes(searchTerm.toLowerCase())
                 );

@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { contacts } from '@/routes';
+import { contacts, contactscreate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -78,26 +78,12 @@ export default function ContactAdd({ auth }: { auth: any }) {
         e.preventDefault();
 
         if (validateForm()) {
-            // Generate new contact ID
-            const newContactId = Math.max(...contactData.map(contact => contact.ID), 0) + 1;
-
-            // Prepare contact data
             const contactDataToAdd = {
-                ID: newContactId,
                 ...formData,
                 VENDOR_ID: parseInt(formData.VENDOR_ID),
-                CONTACT_INFO: `${formData.EMAIL} | ${formData.CONTACT_NUMBER}`,
-                CREATED_AT: new Date().toISOString(),
-                UPDATED_AT: new Date().toISOString()
             };
 
-            console.log('New Contact Data:', contactDataToAdd);
-
-            // In real application, you would send POST request to backend
-            alert('Contact added successfully!');
-
-            // Redirect back to contacts list
-            router.visit(contacts().url);
+            router.post(contactscreate(), contactDataToAdd);
         }
     };
 

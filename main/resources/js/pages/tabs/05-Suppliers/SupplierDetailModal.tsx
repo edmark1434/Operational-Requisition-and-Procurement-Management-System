@@ -13,6 +13,9 @@ import {
     Tag
 } from 'lucide-react';
 import { formatCurrency } from './utils/formatters';
+import { router } from '@inertiajs/react';
+import { supplierdelete, supplierdeleteModal, suppliers } from '@/routes';
+import { toast, Toaster } from 'sonner';
 
 interface SupplierDetailModalProps {
     supplier: any;
@@ -32,9 +35,13 @@ export default function SupplierDetailModal({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const handleDelete = () => {
-        if (supplier) {
-            onDelete(supplier.ID);
-        }
+        router.delete(supplierdeleteModal(supplier.ID), {
+            onSuccess: () => {
+                setShowDeleteConfirm(false);
+                toast('Vendor deleted successfully');
+                router.visit(suppliers().url)
+            }
+        });
         setShowDeleteConfirm(false);
     };
 
@@ -255,6 +262,7 @@ export default function SupplierDetailModal({
                             </button>
                         </div>
                     </div>
+                    <Toaster/>
                 </div>
             )}
         </>
