@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -17,6 +17,7 @@ import SupplierDetailModal from './SupplierDetailModal';
 
 // Import utilities
 import { useSupplierFilters } from './hooks';
+import { toast, Toaster } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -25,13 +26,28 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Suppliers() {
+interface Prop{
+    suppliersData: any[],
+    itemsData: any[],
+    categorySuppliersData: any[],
+    categoriesData: any[],
+    success: boolean,
+    message:string
+}
+
+export default function Suppliers({suppliersData,itemsData,categorySuppliersData,categoriesData,success,message}:Prop) {
     const [searchTerm, setSearchTerm] = useState('');
     const [paymentFilter, setPaymentFilter] = useState('All');
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [suppliers, setSuppliers] = useState(suppliersData);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
+
+    useEffect(() => {
+        if (success) {
+            toast(message)
+        }
+    },[])
 
     // Transform supplier data with additional info
     const transformedSuppliers = suppliers.map(supplier => {
@@ -124,6 +140,7 @@ export default function Suppliers() {
                     />
                 )}
             </div>
+        <Toaster/>
         </AppLayout>
     );
 }

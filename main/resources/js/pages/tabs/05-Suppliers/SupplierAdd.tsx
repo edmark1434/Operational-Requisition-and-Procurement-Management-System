@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { suppliers } from '@/routes';
+import { suppliercreate, suppliers } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -26,8 +26,13 @@ interface FormData {
     ALLOWS_STORE_CREDIT: boolean;
     CATEGORIES: number[];
 }
+interface Prop{
+    auth: any,
+    suppliersData: any[],
+    categoriesData: any[]
+}
 
-export default function SupplierAdd({ auth }: { auth: any }) {
+export default function SupplierAdd({auth,suppliersData,categoriesData}:Prop) {
     const [formData, setFormData] = useState<FormData>({
         NAME: '',
         EMAIL: '',
@@ -53,6 +58,9 @@ export default function SupplierAdd({ auth }: { auth: any }) {
         if (!formData.CONTACT_NUMBER.trim()) {
             newErrors.CONTACT_NUMBER = 'Contact number is required';
         }
+        if (formData.CATEGORIES.length === 0) {
+            newErrors.CATEGORY = 'At least one category is required';
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -72,22 +80,14 @@ export default function SupplierAdd({ auth }: { auth: any }) {
 
         if (validateForm()) {
             // Generate new supplier ID
-            const newSupplierId = Math.max(...suppliersData.map(s => s.ID), 0) + 1;
 
             // Prepare supplier data
             const supplierData = {
-                ID: newSupplierId,
                 ...formData,
-                CONTACT_INFO: `${formData.EMAIL} | ${formData.CONTACT_NUMBER}`,
-                CREATED_AT: new Date().toISOString(),
-                UPDATED_AT: new Date().toISOString()
+                
             };
-
-            console.log('New Supplier Data:', supplierData);
-
-            // In real application, send POST request to backend
-            alert('Supplier added successfully!');
-            router.visit(suppliers().url);
+            console.log(supplierData);
+            router.post(suppliercreate(), supplierData);
         }
     };
 
@@ -252,6 +252,9 @@ export default function SupplierAdd({ auth }: { auth: any }) {
                                                     </label>
                                                 ))}
                                             </div>
+                                            {errors.CATEGORY && (
+                                                        <p className="text-red-500 text-xs mt-1">{errors.CATEGORY}</p>
+                                                    )}
                                         </div>
 
                                         {/* Payment Options */}
