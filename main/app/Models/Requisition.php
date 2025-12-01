@@ -27,7 +27,7 @@ class Requisition extends Model
 
     // Constants
     public const TYPES = ['Items','Services'];
-    public const STATUS = ['Pending', 'Rejected', 'Approved', 'Partially Approved', 'Ordered','Delivered','Awaiting Pickup', 'Çompleted'];
+    public const STATUS = ['Pending', 'Rejected', 'Approved', 'Partially Approved', 'Ordered','Delivered','Awaiting Pickup', 'Received'];
     public const PRIORITY = ['Low', 'Normal', 'High'];
 
     /**
