@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { userDelete, users, userUpdate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
 // Import datasets
@@ -46,6 +46,8 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showPreview, setShowPreview] = useState(false);
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
 
     // Load user data on component mount
     useEffect(() => {
@@ -60,7 +62,7 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
 
             // Find the user to edit
             const transformedUsers = usersList.map(user => {
-    
+
                 return {
                     id: user.id,
                     fullname: user.fullname,
@@ -131,7 +133,7 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
                 PERMISSIONS: userPermissions // ADDED: Load existing permissions
             });
 
-            console.log('Successfully loaded user data for editing:', {
+            console.log(' ', {
                 userId,
                 username: user.username,
                 fullname: user.fullname,
@@ -454,7 +456,7 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
                                                         </select>
                                                     </div>
                                                 </div>
-
+                                                { !permissionsList.includes('Update User Password') &&
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -494,9 +496,12 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
                                                         )}
                                                     </div>
                                                 </div>
+                                                }
                                             </div>
 
+
                                             {/* Role Information - ADDED Permissions Section */}
+                                            { permissionsList.includes('Update User Permissions') &&
                                             <div className="space-y-6">
                                                 {/* ADDED: Permissions Dropdown - Match Add component */}
                                                 <div>
@@ -539,11 +544,14 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
                                                     </p>
                                                 </div>
                                             </div>
+                                            }
                                         </div>
 
                                         {/* Action Buttons */}
+
                                         <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
                                             <div className="flex justify-between items-center">
+                                                { permissionsList.includes('Remove User') &&
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowDeleteConfirm(true)}
@@ -554,6 +562,7 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
                                                     </svg>
                                                     Delete User
                                                 </button>
+                                                }
                                                 <div className="flex gap-3">
                                                     <button
                                                         type="button"
@@ -572,6 +581,7 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
                                                 </div>
                                             </div>
                                         </div>
+
                                     </form>
                                 </div>
                             </div>
