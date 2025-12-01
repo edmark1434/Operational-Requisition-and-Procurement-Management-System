@@ -22,9 +22,7 @@ return new class extends Migration
             $table->enum('payment_type', PurchaseOrder::PAYMENT_TYPE);
             $table->enum('status',PurchaseOrder::STATUS)->default('Pending');
             $table->text('remarks')->nullable();
-            $table->unsignedBigInteger('req_id')->nullable();
             $table->unsignedBigInteger('vendor_id')->nullable();
-            $table->foreign('req_id')->references('id')->on('requisition')->onDelete('set null');
             $table->foreign('vendor_id')->references('id')->on('vendor')->onDelete('set null');
         });
     }

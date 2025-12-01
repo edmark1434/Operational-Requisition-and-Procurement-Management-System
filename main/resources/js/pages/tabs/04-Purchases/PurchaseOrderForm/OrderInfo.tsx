@@ -1,10 +1,12 @@
+import {Vendor} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+
 interface OrderInfoProps {
     formData: {
         REFERENCE_NO: string;
         PAYMENT_TYPE: string;
         ORDER_TYPE?: string;
     };
-    selectedSupplier: any;
+    selectedSupplier: Vendor | null;
     errors: { [key: string]: string };
     onInputChange: (field: string, value: any) => void;
     isEditMode: boolean;
@@ -62,8 +64,8 @@ export default function OrderInfo({
                     }`}
                 >
                     <option value="">Select order type</option>
-                    <option value="items">Items</option>
-                    <option value="services">Services</option>
+                    <option value="Items">Items</option>
+                    <option value="Services">Services</option>
                 </select>
                 {errors.ORDER_TYPE && (
                     <p className="text-red-500 text-xs mt-1">{errors.ORDER_TYPE}</p>
@@ -87,9 +89,9 @@ export default function OrderInfo({
                     disabled={!selectedSupplier}
                 >
                     <option value="">Select payment type</option>
-                    {selectedSupplier?.ALLOWS_CASH && <option value="cash">Cash</option>}
-                    {selectedSupplier?.ALLOWS_DISBURSEMENT && <option value="disbursement">Disbursement</option>}
-                    {selectedSupplier?.ALLOWS_STORE_CREDIT && <option value="store_credit">Store Credit</option>}
+                    {selectedSupplier?.allows_cash && <option value="Cash">Cash</option>}
+                    {selectedSupplier?.allows_disbursement && <option value="Disbursement">Disbursement</option>}
+                    {selectedSupplier?.allows_store_credit && <option value="Store Credit">Store Credit</option>}
                 </select>
                 {errors.PAYMENT_TYPE && (
                     <p className="text-red-500 text-xs mt-1">{errors.PAYMENT_TYPE}</p>

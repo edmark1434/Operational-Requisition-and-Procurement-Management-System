@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('po_id')->constrained('purchase_order')->cascadeOnUpdate();
             $table->foreignId('service_id')->constrained('services')->cascadeOnUpdate();
-            $table->foreignId('item_id')->nullable()->constrained('item')->cascadeOnUpdate();
         });
     }
 
