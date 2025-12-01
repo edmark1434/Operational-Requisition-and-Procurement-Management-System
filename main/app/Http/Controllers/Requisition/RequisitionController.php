@@ -88,7 +88,7 @@ class RequisitionController extends Controller
 
                 return [
                     'id' => $req->id,
-                    'references_no' => $req->references_no,
+                    'ref_no' => $req->ref_no,
                     'requestor' => $req->requestor,
                     'priority' => $req->priority,
                     'type' => $req->type,

@@ -1,12 +1,16 @@
+import {Category, Requisition, RequisitionItem, RequisitionService} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+
 interface OrderItemsProps {
     formData: {
         ITEMS: any[];
     };
-    selectedRequisition: any;
+    selectedRequisition: Requisition[];
     originalQuantities: { [key: number]: number };
     errors: { [key: string]: string };
     onToggleItemSelection: (itemId: number) => void;
     onUpdateItemQuantity: (itemId: number, quantity: number) => void;
+    requisitionItems: RequisitionItem[];
+    categories: Category[];
 }
 
 export default function OrderItems({
@@ -15,7 +19,9 @@ export default function OrderItems({
                                        originalQuantities,
                                        errors,
                                        onToggleItemSelection,
-                                       onUpdateItemQuantity
+                                       onUpdateItemQuantity,
+                                       requisitionItems,
+                                       categories
                                    }: OrderItemsProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -26,19 +32,17 @@ export default function OrderItems({
     };
 
     const getSelectedItems = () => {
-        return formData.ITEMS.filter((item: any) => item.SELECTED);
+        return formData.ITEMS;
     };
 
     const calculateSubtotal = () => {
         return formData.ITEMS
-            .filter((item: any) => item.SELECTED)
-            .reduce((total: number, item: any) => total + (item.QUANTITY * item.UNIT_PRICE), 0);
+            .reduce((total: number, item: any) => total + (item.quantity * item.item.unit_price), 0);
     };
 
     const calculateTotalItems = () => {
         return formData.ITEMS
-            .filter((item: any) => item.SELECTED)
-            .reduce((total: number, item: any) => total + item.QUANTITY, 0);
+            .reduce((total: number, item: any) => total + item.quantity, 0);
     };
 
     if (!selectedRequisition) {
@@ -49,6 +53,10 @@ export default function OrderItems({
     const subtotal = calculateSubtotal();
     const totalItems = calculateTotalItems();
 
+    const reqItemtoFormItem = (reqItem: RequisitionItem) => {
+        return formData.ITEMS.find(item => item.id === reqItem.id) || {}
+    }
+
     return (
         <div className="space-y-4">
             {/* Header */}
@@ -57,7 +65,7 @@ export default function OrderItems({
                     Order Items
                 </h3>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedItems.length} of {formData.ITEMS.length} items selected • {totalItems} total quantity
+                    {selectedItems.length} of {requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length} item{requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length > 1 ? 's' : ''} selected • {totalItems} total quantity
                 </div>
             </div>
 
@@ -72,10 +80,10 @@ export default function OrderItems({
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border">
                     <div className="col-span-1 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        Select
+
                     </div>
                     <div className="col-span-4 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        Item Details
+                        Item Name
                     </div>
                     <div className="col-span-1 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider text-center">
                         Category
@@ -93,16 +101,16 @@ export default function OrderItems({
 
                 {/* Table Body */}
                 <div className="divide-y divide-sidebar-border max-h-96 overflow-y-auto">
-                    {formData.ITEMS.map((item) => {
-                        const originalQty = originalQuantities[item.ID] || item.QUANTITY;
-                        const isIncreased = item.QUANTITY > originalQty;
-                        const itemTotal = item.QUANTITY * item.UNIT_PRICE;
+                    {requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).map((item) => {
+                        const originalQty = originalQuantities[item.id] || item.quantity;
+                        const isIncreased = formData.ITEMS.find(i => i.id === item.id)?.quantity > originalQty;
+                        const itemTotal = (reqItemtoFormItem(item).quantity || item.quantity) * item.item.unit_price;
 
                         return (
                             <div
-                                key={item.ID}
+                                key={item.id}
                                 className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors ${
-                                    item.SELECTED
+                                    formData.ITEMS.some(i => i.id === item.id)
                                         ? 'bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100 dark:hover:bg-blue-900/20'
                                         : 'hover:bg-gray-50 dark:hover:bg-sidebar'
                                 }`}
@@ -111,8 +119,8 @@ export default function OrderItems({
                                 <div className="col-span-1">
                                     <input
                                         type="checkbox"
-                                        checked={item.SELECTED || false}
-                                        onChange={() => onToggleItemSelection(item.ID)}
+                                        checked={formData.ITEMS.some(i => i.id === item.id) || false}
+                                        onChange={() => onToggleItemSelection(item.id)}
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                     />
                                 </div>
@@ -120,7 +128,7 @@ export default function OrderItems({
                                 {/* Item Details */}
                                 <div className="col-span-4">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {item.NAME}
+                                        {item.item.name}
                                     </p>
                                     {isIncreased && (
                                         <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
@@ -132,14 +140,14 @@ export default function OrderItems({
                                 {/* Category */}
                                 <div className="col-span-1 text-center">
                                     <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-sidebar text-gray-600 dark:text-gray-400">
-                                        {item.CATEGORY}
+                                        {categories.find(c => c.id === item.item.category_id)?.name || 'N/A'}
                                     </span>
                                 </div>
 
                                 {/* Unit Price */}
                                 <div className="col-span-2 text-right">
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {formatCurrency(item.UNIT_PRICE)}
+                                        {formatCurrency(item.item.unit_price)}
                                     </p>
                                 </div>
 
@@ -148,16 +156,16 @@ export default function OrderItems({
                                     <div className="flex items-center justify-center space-x-2">
                                         <button
                                             type="button"
-                                            onClick={() => onUpdateItemQuantity(item.ID, item.QUANTITY - 1)}
-                                            disabled={item.QUANTITY <= originalQty}
+                                            onClick={() => onUpdateItemQuantity(item.id, reqItemtoFormItem(item).quantity - 1)}
+                                            disabled={reqItemtoFormItem(item).quantity <= originalQty}
                                             className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                            title={item.QUANTITY <= originalQty ? "Cannot decrease below requisition quantity" : "Decrease quantity"}
+                                            title={item.quantity <= originalQty ? "Cannot decrease below requisition quantity" : "Decrease quantity"}
                                         >
                                             -
                                         </button>
                                         <div className="text-center min-w-12">
                                             <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {item.QUANTITY}
+                                                {reqItemtoFormItem(item).quantity || item.quantity}
                                             </span>
                                             {isIncreased && (
                                                 <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -167,7 +175,7 @@ export default function OrderItems({
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => onUpdateItemQuantity(item.ID, item.QUANTITY + 1)}
+                                            onClick={() => onUpdateItemQuantity(item.id, reqItemtoFormItem(item).quantity + 1)}
                                             className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
                                             title="Increase quantity"
                                         >
@@ -182,7 +190,7 @@ export default function OrderItems({
                                         {formatCurrency(itemTotal)}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {item.QUANTITY} × {formatCurrency(item.UNIT_PRICE)}
+                                        {reqItemtoFormItem(item).quantity || item.quantity} × {formatCurrency(item.item.unit_price)}
                                     </p>
                                 </div>
                             </div>
@@ -193,30 +201,6 @@ export default function OrderItems({
                 {/* Summary Section */}
                 {selectedItems.length > 0 && (
                     <>
-                        {/* Subtotal Row */}
-                        <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
-                            <div className="col-span-8 text-right">
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Subtotal ({selectedItems.length} items):</p>
-                            </div>
-                            <div className="col-span-4 text-right">
-                                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                    {formatCurrency(subtotal)}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/*/!* Tax Row (if applicable) *!/*/}
-                        {/*<div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">*/}
-                        {/*    <div className="col-span-8 text-right">*/}
-                        {/*        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tax (0%):</p>*/}
-                        {/*    </div>*/}
-                        {/*    <div className="col-span-4 text-right">*/}
-                        {/*        <p className="text-sm text-gray-600 dark:text-gray-400">*/}
-                        {/*            {formatCurrency(0)}*/}
-                        {/*        </p>*/}
-                        {/*    </div>*/}
-                        {/*</div>*/}
-
                         {/* Grand Total Row */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-green-50 dark:bg-green-900/20 border-t border-sidebar-border">
                             <div className="col-span-8 text-right">
@@ -234,11 +218,8 @@ export default function OrderItems({
                             <div className="col-span-12">
                                 <div className="flex justify-between items-center text-sm">
                                     <div className="text-gray-600 dark:text-gray-400">
-                                        <span className="font-medium">{selectedItems.length}</span> items selected •
+                                        <span className="font-medium">{selectedItems.length}</span> item{selectedItems.length > 1 ? 's' : ''} selected •
                                         <span className="font-medium"> {totalItems}</span> total quantity
-                                    </div>
-                                    <div className="text-gray-600 dark:text-gray-400">
-                                        Average per item: {formatCurrency(selectedItems.length > 0 ? subtotal / selectedItems.length : 0)}
                                     </div>
                                 </div>
                             </div>
@@ -247,7 +228,7 @@ export default function OrderItems({
                 )}
 
                 {/* Empty State */}
-                {formData.ITEMS.length === 0 && (
+                {requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length === 0 && (
                     <div className="px-4 py-8 text-center">
                         <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m8-8V4a1 1 0 00-1-1h-2a1 1 0 00-1 1v1M9 7h6" />

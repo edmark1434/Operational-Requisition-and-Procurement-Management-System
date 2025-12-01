@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
+import requisitionItems from "@/pages/datasets/requisition_item";
+import {Category, Requisition, RequisitionItem, RequisitionService} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
 
 interface SelectApprovedRequisitionProps {
     formData: {
         REQUISITION_IDS: string[];
         ORDER_TYPE?: string;
     };
-    selectedRequisitions: any[];
-    approvedRequisitions: any[];
+    selectedRequisitions: Requisition[];
+    approvedRequisitions: Requisition[];
     errors: { [key: string]: string };
     onRequisitionSelect: (requisitionId: string) => void;
     onRequisitionRemove: (requisitionId: string) => void;
     isEditMode: boolean;
+    requisitionItems: RequisitionItem[];
+    requisitionServices: RequisitionService[];
+    categories: Category[];
 }
 
 export default function SelectApprovedRequisition({
@@ -21,7 +26,10 @@ export default function SelectApprovedRequisition({
                                                       errors,
                                                       onRequisitionSelect,
                                                       onRequisitionRemove,
-                                                      isEditMode
+                                                      isEditMode,
+                                                      requisitionItems,
+                                                      requisitionServices,
+                                                      categories
                                                   }: SelectApprovedRequisitionProps) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -42,29 +50,29 @@ export default function SelectApprovedRequisition({
     // Filter requisitions based on order type and search term
     const filteredRequisitions = approvedRequisitions.filter(requisition => {
         // Filter by order type - only show requisitions that match the selected order type
-        const typeMatch = formData.ORDER_TYPE ? requisition.TYPE === formData.ORDER_TYPE : false;
+        const typeMatch = formData.ORDER_TYPE ? requisition.type === formData.ORDER_TYPE : false;
 
         // Filter by search term
         const searchMatch = !searchTerm ||
-            requisition.ID.toString().includes(searchTerm) ||
-            requisition.REQUESTOR.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            requisition.NOTES?.toLowerCase().includes(searchTerm.toLowerCase());
+            requisition.ref_no.toString().includes(searchTerm) ||
+            requisition.requestor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            requisition.notes?.toLowerCase().includes(searchTerm.toLowerCase());
 
         return typeMatch && searchMatch;
     });
 
     const getRequisitionTypeLabel = (type: string) => {
         switch (type) {
-            case 'items': return 'Items';
-            case 'services': return 'Services';
+            case 'Items': return 'item';
+            case 'Services': return 'service';
             default: return type;
         }
     };
 
     const getTypeColor = (type: string) => {
         switch (type) {
-            case 'items': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-            case 'services': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+            case 'Items': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+            case 'Services': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
             default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
         }
     };
@@ -105,15 +113,27 @@ export default function SelectApprovedRequisition({
     useEffect(() => {
         if (formData.ORDER_TYPE && selectedRequisitions.length > 0) {
             const mismatchedRequisitions = selectedRequisitions.filter(
-                req => req.TYPE !== formData.ORDER_TYPE
+                req => req.type !== formData.ORDER_TYPE
             );
             if (mismatchedRequisitions.length > 0) {
                 mismatchedRequisitions.forEach(req => {
-                    onRequisitionRemove(req.ID.toString());
+                    onRequisitionRemove(req.id.toString());
                 });
             }
         }
     }, [formData.ORDER_TYPE]);
+
+    const getRequisitionCategories = (requisition: Requisition) => {
+        const categoryIds = new Set([
+            ...requisitionItems
+                .filter(ri => ri.req_id === requisition.id)
+                .map(ri => ri.item.category_id),
+            ...requisitionServices
+                .filter(rs => rs.req_id === requisition.id)
+                .map(rs => rs.service.category_id)
+        ]);
+        return categories.filter(cat => categoryIds.has(cat.id));
+    };
 
     return (
         <div className="space-y-4">
@@ -163,22 +183,24 @@ export default function SelectApprovedRequisition({
                     <div className="flex flex-wrap gap-2">
                         {selectedRequisitions.map((requisition) => (
                             <div
-                                key={requisition.ID}
+                                key={requisition.id}
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg text-sm border border-blue-200 dark:border-blue-700"
                             >
-                                <span className="font-medium">Req #{requisition.ID}</span>
+                                <span className="font-medium">{requisition.ref_no}</span>
                                 <span className="text-blue-600 dark:text-blue-400">•</span>
-                                <span>{requisition.REQUESTOR}</span>
+                                {getRequisitionCategories(requisition).map(category => (
+                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getTypeColor(requisition.type)}`}>
+                                    {category.name}
+                                    </span>
+                                ))}
                                 <span className="text-blue-600 dark:text-blue-400">•</span>
-                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getTypeColor(requisition.TYPE)}`}>
-                                    {getRequisitionTypeLabel(requisition.TYPE)}
+                                <span>{requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0} {getRequisitionTypeLabel(formData.ORDER_TYPE ?? '')}
+                                    {requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0 > 1 ? 's' : ''}
                                 </span>
-                                <span className="text-blue-600 dark:text-blue-400">•</span>
-                                <span>{requisition.ITEMS?.length || requisition.SERVICES?.length || 0} items</span>
                                 {!isEditMode && (
                                     <button
                                         type="button"
-                                        onClick={() => onRequisitionRemove(requisition.ID.toString())}
+                                        onClick={() => onRequisitionRemove(requisition.id.toString())}
                                         className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
                                     >
                                         <X className="w-4 h-4" />
@@ -224,7 +246,6 @@ export default function SelectApprovedRequisition({
                                 autoFocus
                             />
                         </div>
-
                         {/* Requisitions List */}
                         <div className="max-h-64 overflow-y-auto">
                             {filteredRequisitions.length === 0 ? (
@@ -233,11 +254,11 @@ export default function SelectApprovedRequisition({
                                 </div>
                             ) : (
                                 filteredRequisitions.map((requisition) => {
-                                    const isSelected = selectedRequisitions.some(req => req.ID === requisition.ID);
+                                    const isSelected = selectedRequisitions.some(req => req.id === requisition.id);
                                     return (
                                         <div
-                                            key={requisition.ID}
-                                            onClick={() => !isSelected && handleRequisitionClick(requisition.ID.toString())}
+                                            key={requisition.id}
+                                            onClick={() => !isSelected && handleRequisitionClick(requisition.id.toString())}
                                             className={`p-3 border-b border-sidebar-border last:border-b-0 cursor-pointer transition-colors ${
                                                 isSelected
                                                     ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
@@ -246,10 +267,12 @@ export default function SelectApprovedRequisition({
                                         >
                                             <div className="flex justify-between items-start mb-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-medium text-sm">Req #{requisition.ID}</span>
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getTypeColor(requisition.TYPE)}`}>
-                                                        {getRequisitionTypeLabel(requisition.TYPE)}
-                                                    </span>
+                                                    <span className="font-medium text-sm">{requisition.ref_no}</span>
+                                                    {getRequisitionCategories(requisition).map(category => (
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getTypeColor(requisition.type)}`}>
+                                                            {category.name}
+                                                        </span>
+                                                    ))}
                                                 </div>
                                                 {isSelected && (
                                                     <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -257,29 +280,29 @@ export default function SelectApprovedRequisition({
                                             </div>
                                             <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                                                 <div className="flex justify-between">
-                                                    <span>Requestor: {requisition.REQUESTOR}</span>
-                                                    <span>{formatDate(requisition.CREATED_AT)}</span>
+                                                    <span>Requestor: {requisition.requestor}</span>
+                                                    <span>{formatDate(requisition.created_at)}</span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span>Priority:
                                                         <span className={`ml-1 px-1 rounded text-xs ${
-                                                            requisition.PRIORITY === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                                requisition.PRIORITY === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                            requisition.priority === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                requisition.priority === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                                                                     'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                                                         }`}>
-                                                            {requisition.PRIORITY}
+                                                            {requisition.priority}
                                                         </span>
                                                     </span>
                                                     <span>
-                                                        {requisition.TYPE === 'items'
-                                                            ? `${requisition.ITEMS?.length || 0} items`
-                                                            : `${requisition.SERVICES?.length || 0} services`
+                                                        {requisition.type === 'Items'
+                                                            ? `${requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || 0} items`
+                                                            : `${requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0} services`
                                                         }
                                                     </span>
                                                 </div>
-                                                {requisition.NOTES && (
+                                                {requisition.notes && (
                                                     <p className="text-gray-500 dark:text-gray-400 truncate">
-                                                        {requisition.NOTES}
+                                                        Notes: {requisition.notes}
                                                     </p>
                                                 )}
                                             </div>
@@ -297,7 +320,7 @@ export default function SelectApprovedRequisition({
             </div>
 
             {/* No Requisitions Message */}
-            {formData.ORDER_TYPE && approvedRequisitions.filter(req => req.TYPE === formData.ORDER_TYPE).length === 0 && (
+            {formData.ORDER_TYPE && approvedRequisitions.filter(req => req.type === formData.ORDER_TYPE).length === 0 && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <div className="flex items-center">
                         <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

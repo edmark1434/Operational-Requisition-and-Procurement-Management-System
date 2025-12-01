@@ -12,8 +12,10 @@ const formatCurrency = (amount: number) => {
 
 export default function PurchaseStats({ purchases }: PurchaseStatsProps) {
     const totalOrders = purchases.length;
-    const totalValue = purchases.reduce((sum, purchase) => sum + purchase.TOTAL_COST, 0);
-
+const totalValue = purchases.reduce(
+    (sum, purchase) => sum + Number(purchase.TOTAL_COST),
+    0
+);    console.log(totalValue);
     // Separate counts for each status
     const pendingOrders = purchases.filter(p => p.STATUS === 'pending').length;
     const issuedOrders = purchases.filter(p => p.STATUS === 'issued').length;

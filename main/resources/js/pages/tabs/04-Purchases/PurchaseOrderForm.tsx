@@ -4,7 +4,6 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
 // Import datasets
-import requisitionsData from '@/pages/datasets/requisition';
 import requisitionItemsData from '@/pages/datasets/requisition_item';
 import requisitionServiceData from '@/pages/datasets/requisition_service';
 import serviceData from '@/pages/datasets/service';
@@ -14,7 +13,7 @@ import suppliersData from '@/pages/datasets/supplier';
 import { purchaseOrdersData } from '@/pages/datasets/purchase_order';
 
 // Import supplier suggestions - UPDATED IMPORT
-import { getSuggestedSuppliers, getBestSupplier, type SuggestedSupplier } from './utils/supplierSuggestions';
+import {getSuggestedSuppliers, SuggestedVendor} from './utils/supplierSuggestions';
 
 // Import modular components
 import OrderInfo from './PurchaseOrderForm/OrderInfo';
@@ -27,6 +26,7 @@ import PreviewModal from './PurchaseOrderForm/PreviewModal';
 
 // Import UI components
 import { Button } from '@/components/ui/button';
+import {orderpost, servicepost} from "@/routes";
 
 interface PageProps {
     purchaseId?: number;
@@ -44,47 +44,185 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+export interface Item {
+    id: number;
+    barcode: string | null;
+    name: string;
+    dimensions: string | null;
+    unit_price: number;
+    current_stock: number;
+    is_active: boolean;
+    make_id: number | null;
+    category_id: number;
+    vendor_id: number | null;
+}
+
+export interface Category {
+    id: number;
+    name: string;
+    description: string | null;
+    type: "Items" | "Services";
+    is_active: boolean;
+}
+
+export interface Service {
+    id: number;
+    name: string;
+    description: string;
+    hourly_rate: number;
+    is_active: boolean;
+    category_id: number;
+    vendor_id: number | null;
+}
+
+export type Requisition = {
+    id: number;
+    ref_no: string;
+    type: 'Items' | 'Services'; // Requisition::TYPES
+    status: string; // based on Requisition::STATUS
+    remarks: string | null;
+    requestor: string | null;
+    notes: string | null;
+    total_cost: string | null;
+    priority: string; // based on Requisition::PRIORITY
+    user_id: number;
+    created_at: string;
+    updated_at: string;
+};
+
+export interface RequisitionItem {
+    id: number;
+    req_id: number;
+    item_id: number;
+    item: Item;
+    quantity: number;
+    approved_qty: number | null;
+}
+
+export interface RequisitionService {
+    id: number;
+    req_id: number;
+    service_id: number;
+    service: Service;
+}
+
+export type Vendor = {
+    id: number;
+    name: string;
+    email: string;
+    contact_number: string | null;
+    allows_cash: boolean;
+    allows_disbursement: boolean;
+    allows_store_credit: boolean;
+    is_active: boolean;
+};
+
+export type CategoryVendor = {
+    id: number;
+    category_id: number;
+    category: Category;
+    vendor_id: number;
+    vendor: Vendor;
+};
+
+export interface PurchaseOrder {
+    id: number;
+    ref_no: string;
+    type: string; // from PurchaseOrder::TYPES (string enum)
+    created_at: string; // timestamp
+    total_cost: number;
+    payment_type: string; // from PurchaseOrder::PAYMENT_TYPE
+    status: string; // from PurchaseOrder::STATUS
+    remarks: string | null;
+    vendor_id: number | null;
+}
+
+export interface OrderItem {
+    id: number;
+    po_id: number;
+    item_id: number;
+    item: Item;
+    quantity: number;
+}
+
+export interface OrderService {
+    id: number;
+    po_id: number;
+    service_id: number;
+    service: Service;
+    item_id: number | null;
+    item: Item | null;
+}
+
+export interface RequisitionOrderItem {
+    id: number;
+    req_item_id: number;
+    req_item: RequisitionItem;
+    po_item_id: number;
+    po_item: OrderItem;
+}
+
+export interface RequisitionOrderService {
+    id: number;
+    req_service_id: number;
+    req_service: RequisitionService;
+    po_service_id: number;
+    po_service: OrderService;
+}
+
 export default function PurchaseOrderForm() {
+    const { requisitions, requisitionItems, requisitionServices, vendors, vendorCategories, purchaseOrders, orderItems, orderServices, requisitionOrderItems, requisitionOrderServices, categories } = usePage<{
+        requisitions: Requisition[];
+        requisitionItems: RequisitionItem[];
+        requisitionServices: RequisitionService[];
+        vendors: Vendor[];
+        vendorCategories: CategoryVendor[];
+        purchaseOrders: PurchaseOrder[];
+        orderItems: OrderItem[];
+        orderServices: OrderService[];
+        requisitionOrderItems: RequisitionOrderItem[];
+        requisitionOrderServices: RequisitionOrderService[];
+        categories: Category[];
+    }>().props;
+
     const { props } = usePage();
     const { purchaseId, mode = 'create' } = props as PageProps;
 
     const isEditMode = mode === 'edit';
-    const currentPurchase = isEditMode ? purchaseOrdersData.find(po => po.ID === purchaseId) : null;
+    const currentPurchase = isEditMode ? purchaseOrders.find(po => po.id === purchaseId) : null;
 
     const [formData, setFormData] = useState({
         REFERENCE_NO: '',
         REQUISITION_IDS: [] as string[],
         SUPPLIER_ID: '',
-        PAYMENT_TYPE: 'cash',
+        PAYMENT_TYPE: 'Cash',
         REMARKS: '',
         ORDER_TYPE: '', // Add order type to form data
-        ITEMS: [] as any[],
-        SERVICES: [] as any[] // Add services array
+        ITEMS: [] as RequisitionItem[],
+        SERVICES: [] as RequisitionService[] // Add services array
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
-    const [selectedRequisitions, setSelectedRequisitions] = useState<any[]>([]);
-    const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-    const [approvedRequisitions, setApprovedRequisitions] = useState<any[]>([]);
-    const [suggestedSuppliers, setSuggestedSuppliers] = useState<SuggestedSupplier[]>([]);
-    const [bestSupplier, setBestSupplier] = useState<SuggestedSupplier | null>(null);
+    const [selectedRequisitions, setSelectedRequisitions] = useState<Requisition[]>([]);
+    const [selectedSupplier, setSelectedSupplier] = useState<Vendor | null>(null);
+    const [approvedRequisitions, setApprovedRequisitions] = useState<Requisition[]>(requisitions);
+    const [suggestedSuppliers, setSuggestedSuppliers] = useState<SuggestedVendor[]>([]);
+    const [bestSupplier, setBestSupplier] = useState<SuggestedVendor | null>(null);
     const [originalQuantities, setOriginalQuantities] = useState<{[key: number]: number}>({});
     const [showPreview, setShowPreview] = useState(false);
 
     // Load data based on mode
     useEffect(() => {
-        loadApprovedRequisitions();
-
         if (isEditMode && currentPurchase) {
             // Pre-fill form with existing purchase order data
             setFormData({
-                REFERENCE_NO: currentPurchase.REFERENCE_NO,
-                REQUISITION_IDS: [currentPurchase.REQUISITION_ID.toString()],
-                SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
-                PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
-                REMARKS: currentPurchase.REMARKS,
-                ORDER_TYPE: currentPurchase.ORDER_TYPE || 'items',
-                ITEMS: currentPurchase.ITEMS || [],
-                SERVICES: currentPurchase.SERVICES || []
+                REFERENCE_NO: currentPurchase.ref_no,
+                REQUISITION_IDS: orderToReqIds(currentPurchase),
+                SUPPLIER_ID: currentPurchase.vendor_id?.toString() || '',
+                PAYMENT_TYPE: currentPurchase.payment_type,
+                REMARKS: currentPurchase.remarks || '',
+                ORDER_TYPE: currentPurchase.type,
+                ITEMS: orderToReqItems(currentPurchase) || [],
+                SERVICES: orderToReqServices(currentPurchase) || []
             });
         } else {
             generateReferenceNumber();
@@ -93,27 +231,26 @@ export default function PurchaseOrderForm() {
 
     // Update supplier suggestions when items/services change - UPDATED USE EFFECT
     useEffect(() => {
-        const selectedItems = formData.ITEMS.filter((item: any) => item.SELECTED);
-        const selectedServices = formData.SERVICES.filter((service: any) => service.SELECTED);
+        const selectedItems = formData.ITEMS;
+        const selectedServices = formData.SERVICES;
 
         if (selectedItems.length > 0 || selectedServices.length > 0) {
             // UPDATED: Pass both items, services, and order type to the suggestion function
             const suggestions = getSuggestedSuppliers(
                 selectedItems,
                 selectedServices,
-                formData.ORDER_TYPE
+                vendors,
+                categories,
+                vendorCategories,
+                formData.ORDER_TYPE,
             );
-            const best = getBestSupplier(
-                selectedItems,
-                selectedServices,
-                formData.ORDER_TYPE
-            );
+            const best = suggestions[0];
             setSuggestedSuppliers(suggestions);
             setBestSupplier(best);
 
             // Auto-select best supplier if no supplier is selected yet
             if (!formData.SUPPLIER_ID && best) {
-                handleSupplierChange(best.supplier.ID.toString());
+                handleSupplierChange(best.vendor.id.toString());
             }
         } else {
             setSuggestedSuppliers([]);
@@ -125,18 +262,18 @@ export default function PurchaseOrderForm() {
     useEffect(() => {
         if (selectedRequisitions.length > 0) {
             const originalQty: {[key: number]: number} = {};
-            selectedRequisitions.forEach(requisition => {
-                if (requisition.ITEMS) {
-                    requisition.ITEMS.forEach((item: any) => {
-                        originalQty[item.ID] = item.QUANTITY;
-                    });
-                }
-                if (requisition.SERVICES) {
-                    requisition.SERVICES.forEach((service: any) => {
-                        originalQty[service.ID] = service.QUANTITY;
-                    });
-                }
-            });
+            const reqItems = requisitionItems.filter(ri => selectedRequisitions.map(req => req.id).includes(ri.req_id));
+            const reqServices = requisitionServices.filter(rs => selectedRequisitions.map(req => req.id).includes(rs.req_id));
+            if (reqItems) {
+                reqItems.forEach((item: any) => {
+                    originalQty[item.id] = item.quantity;
+                });
+            }
+            if (reqServices) {
+                reqServices.forEach((service: any) => {
+                    originalQty[service.id] = service.quantity;
+                });
+            }
             setOriginalQuantities(originalQty);
         }
     }, [selectedRequisitions]);
@@ -144,111 +281,44 @@ export default function PurchaseOrderForm() {
     // Update selected supplier when formData.SUPPLIER_ID changes
     useEffect(() => {
         if (formData.SUPPLIER_ID) {
-            const supplier = suppliersData.find(sup => sup.ID.toString() === formData.SUPPLIER_ID);
-            setSelectedSupplier(supplier);
+            setSelectedSupplier(vendors.find(v => String(v.id) === formData.SUPPLIER_ID) || null);
         } else {
             setSelectedSupplier(null);
         }
     }, [formData.SUPPLIER_ID]);
 
-    const loadApprovedRequisitions = () => {
-        const transformedRequisitions = requisitionsData
-            .filter(req => req.STATUS === 'Approved')
-            .map(requisition => {
-                if (requisition.TYPE === 'items') {
-                    // Handle item requisitions
-                    const requisitionItems = requisitionItemsData.filter(item => item.REQ_ID === requisition.ID);
-
-                    const itemsWithDetails = requisitionItems.map(reqItem => {
-                        const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
-                        const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
-                        return {
-                            ID: reqItem.REQT_ID,
-                            ITEM_ID: reqItem.ITEM_ID,
-                            NAME: itemDetails?.NAME || 'Unknown Item',
-                            QUANTITY: reqItem.QUANTITY,
-                            CATEGORY: category?.NAME || reqItem.CATEGORY,
-                            CATEGORY_ID: category?.CAT_ID,
-                            UNIT_PRICE: itemDetails?.UNIT_PRICE || 0,
-                            SELECTED: true,
-                            REQUISITION_ID: requisition.ID
-                        };
-                    });
-
-                    const categories = [...new Set(itemsWithDetails.map(item => item.CATEGORY))];
-
-                    return {
-                        ID: requisition.ID,
-                        TYPE: requisition.TYPE,
-                        CREATED_AT: requisition.CREATED_AT,
-                        UPDATED_AT: requisition.UPDATED_AT,
-                        STATUS: requisition.STATUS,
-                        REMARKS: requisition.REMARKS || '',
-                        USER_ID: requisition.USER_ID,
-                        REQUESTOR: requisition.REQUESTOR,
-                        PRIORITY: requisition.PRIORITY,
-                        NOTES: requisition.NOTES,
-                        ITEMS: itemsWithDetails,
-                        SERVICES: [],
-                        CATEGORIES: categories,
-                    };
-                } else if (requisition.TYPE === 'services') {
-                    // Handle service requisitions - FIXED VERSION
-                    const requisitionServices = requisitionServiceData.filter(service => service.REQ_ID === requisition.ID);
-
-                    console.log(`Processing service requisition ${requisition.ID}:`, {
-                        requisitionServices,
-                        allRequisitionServices: requisitionServiceData
-                    });
-
-                    const servicesWithDetails = requisitionServices.map(reqService => {
-                        const serviceDetails = serviceData.find(service => service.ID === reqService.SERVICE_ID);
-
-                        // UPDATED: Add CATEGORY_ID to services for supplier matching
-                        return {
-                            ID: reqService.ID, // Use the requisition_service ID
-                            SERVICE_ID: reqService.SERVICE_ID,
-                            NAME: serviceDetails?.NAME || 'Unknown Service',
-                            DESCRIPTION: serviceDetails?.DESCRIPTION || '',
-                            QUANTITY: reqService.QUANTITY,
-                            UNIT_PRICE: reqService.UNIT_PRICE || serviceDetails?.HOURLY_RATE || 0,
-                            CATEGORY_ID: serviceDetails?.CATEGORY_ID, // ADDED: This is crucial for supplier matching
-                            SELECTED: true,
-                            REQUISITION_ID: requisition.ID
-                        };
-                    });
-
-                    console.log(`Transformed services for requisition ${requisition.ID}:`, servicesWithDetails);
-
-                    return {
-                        ID: requisition.ID,
-                        TYPE: requisition.TYPE,
-                        CREATED_AT: requisition.CREATED_AT,
-                        UPDATED_AT: requisition.UPDATED_AT,
-                        STATUS: requisition.STATUS,
-                        REMARKS: requisition.REMARKS || '',
-                        USER_ID: requisition.USER_ID,
-                        REQUESTOR: requisition.REQUESTOR,
-                        PRIORITY: requisition.PRIORITY,
-                        NOTES: requisition.NOTES,
-                        ITEMS: [],
-                        SERVICES: servicesWithDetails,
-                        CATEGORIES: ['Services'],
-                    };
-                }
-
-                return null;
-            })
-            .filter(Boolean); // Remove null values
-
-        console.log('Transformed approved requisitions:', transformedRequisitions);
-        setApprovedRequisitions(transformedRequisitions);
-    };
+    const orderToReqItems = (order: PurchaseOrder) => {
+        const poItemIds = orderItems.filter(oi => oi.po_id === order.id).map(oi => oi.id);
+        const reqItems = requisitionOrderItems.filter(roi => poItemIds.includes(roi.po_item_id)).map(roi => roi.req_item);
+        return [...new Set(reqItems)];
+    }
+    const orderToReqServices = (order: PurchaseOrder) => {
+        const poServiceIds = orderServices.filter(os => os.po_id === order.id).map(os => os.id);
+        const reqServices = requisitionOrderServices.filter(ros => poServiceIds.includes(ros.po_service_id)).map(ros => ros.req_service);
+        return [...new Set(reqServices)];
+    }
+    const orderToReqIds = (order: PurchaseOrder) => {
+        const poItemIds = orderItems.filter(oi => oi.po_id === order.id).map(oi => oi.id);
+        const poServiceIds = orderServices.filter(os => os.po_id === order.id).map(os => os.id);
+        const reqItems = requisitionOrderItems.filter(roi => poItemIds.includes(roi.po_item_id)).map(roi => roi.req_item);
+        const reqServices = requisitionOrderServices.filter(ros => poServiceIds.includes(ros.po_service_id)).map(ros => ros.req_service);
+        const reqIds = [...reqItems.map(ri => ri.req_id.toString()), ...reqServices.map(rs => rs.req_id.toString())];
+        return [...new Set(reqIds)];
+    }
 
     const generateReferenceNumber = () => {
-        const timestamp = new Date().getTime();
-        const random = Math.floor(Math.random() * 1000);
-        const reference = `PO-${new Date().getFullYear()}-${timestamp.toString().slice(-6)}${random}`;
+        let unique = false;
+        let reference = '';
+
+        while (!unique) {
+            const random = Math.floor(100000 + Math.random() * 900000); // 6 digits
+            reference = `PO-${random}`;
+
+            // Check DB if it exists
+            const exists = purchaseOrders.some(po => po.ref_no === reference);
+            if (!exists) unique = true;
+        }
+
         setFormData(prev => ({ ...prev, REFERENCE_NO: reference }));
     };
 
@@ -288,23 +358,23 @@ export default function PurchaseOrderForm() {
             newErrors.PAYMENT_TYPE = 'Please select a payment type';
         }
 
-        if (formData.ORDER_TYPE === 'items' && formData.ITEMS.length === 0) {
+        if (formData.ORDER_TYPE === 'Items' && formData.ITEMS.length === 0) {
             newErrors.ITEMS = 'No items selected for purchase';
         }
 
-        if (formData.ORDER_TYPE === 'services' && formData.SERVICES.length === 0) {
+        if (formData.ORDER_TYPE === 'Services' && formData.SERVICES.length === 0) {
             newErrors.SERVICES = 'No services selected for purchase';
         }
 
         // Validate supplier payment method compatibility
         if (selectedSupplier) {
-            if (formData.PAYMENT_TYPE === 'cash' && !selectedSupplier.ALLOWS_CASH) {
+            if (formData.PAYMENT_TYPE === 'Cash' && !selectedSupplier.allows_cash) {
                 newErrors.PAYMENT_TYPE = 'Selected supplier does not accept cash payments';
             }
-            if (formData.PAYMENT_TYPE === 'disbursement' && !selectedSupplier.ALLOWS_DISBURSEMENT) {
+            if (formData.PAYMENT_TYPE === 'Disbursement' && !selectedSupplier.allows_disbursement) {
                 newErrors.PAYMENT_TYPE = 'Selected supplier does not accept disbursement payments';
             }
-            if (formData.PAYMENT_TYPE === 'store_credit' && !selectedSupplier.ALLOWS_STORE_CREDIT) {
+            if (formData.PAYMENT_TYPE === 'Store Credit' && !selectedSupplier.allows_store_credit) {
                 newErrors.PAYMENT_TYPE = 'Selected supplier does not accept store credit';
             }
         }
@@ -314,28 +384,16 @@ export default function PurchaseOrderForm() {
     };
 
     const handleRequisitionSelect = (requisitionId: string) => {
-        const requisition = approvedRequisitions.find(req => req.ID.toString() === requisitionId);
+        const requisition = requisitions.find(req => req.id.toString() === requisitionId);
 
         if (requisition && !formData.REQUISITION_IDS.includes(requisitionId)) {
             // Add requisition
             const newRequisitionIds = [...formData.REQUISITION_IDS, requisitionId];
             const newSelectedRequisitions = [...selectedRequisitions, requisition];
 
-            // Add items/services from this requisition based on type
-            let newItems = [...formData.ITEMS];
-            let newServices = [...formData.SERVICES];
-
-            if (requisition.TYPE === 'items') {
-                newItems = [...newItems, ...requisition.ITEMS];
-            } else if (requisition.TYPE === 'services') {
-                newServices = [...newServices, ...requisition.SERVICES];
-            }
-
             setFormData(prev => ({
                 ...prev,
                 REQUISITION_IDS: newRequisitionIds,
-                ITEMS: newItems,
-                SERVICES: newServices
             }));
 
             setSelectedRequisitions(newSelectedRequisitions);
@@ -349,11 +407,11 @@ export default function PurchaseOrderForm() {
     const handleRemoveRequisition = (requisitionId: string) => {
         // Remove requisition
         const newRequisitionIds = formData.REQUISITION_IDS.filter(id => id !== requisitionId);
-        const newSelectedRequisitions = selectedRequisitions.filter(req => req.ID.toString() !== requisitionId);
+        const newSelectedRequisitions = selectedRequisitions.filter(req => req.id.toString() !== requisitionId);
 
         // Remove items/services from this requisition
-        const newItems = formData.ITEMS.filter(item => item.REQUISITION_ID !== parseInt(requisitionId));
-        const newServices = formData.SERVICES.filter(service => service.REQUISITION_ID !== parseInt(requisitionId));
+        const newItems = formData.ITEMS.filter(item => item.req_id !== parseInt(requisitionId));
+        const newServices = formData.SERVICES.filter(service => service.req_id !== parseInt(requisitionId));
 
         setFormData(prev => ({
             ...prev,
@@ -367,57 +425,69 @@ export default function PurchaseOrderForm() {
 
     const handleSupplierChange = (supplierId: string) => {
         // Toggle selection - if clicking the same supplier, deselect it
-        const newSupplierId = formData.SUPPLIER_ID === supplierId ? '' : supplierId;
-
-        const supplier = suppliersData.find(sup => sup.ID.toString() === newSupplierId);
-        setSelectedSupplier(supplier);
-
-        setFormData(prev => ({
-            ...prev,
-            SUPPLIER_ID: newSupplierId
-        }));
+        if (formData.SUPPLIER_ID === supplierId) {
+            setFormData(prev => ({ ...prev, SUPPLIER_ID: '' }));
+            setSelectedSupplier(null);
+        } else {
+            setFormData(prev => ({ ...prev, SUPPLIER_ID: supplierId }));
+            setSelectedSupplier(vendors.find(v => v.id.toString() === supplierId) || null);
+        }
 
         if (errors.SUPPLIER_ID) {
             setErrors(prev => ({ ...prev, SUPPLIER_ID: '' }));
         }
 
+        const vendor = vendors.find(v => v.id.toString() === supplierId) || null;
+
         // Reset payment type if incompatible with new supplier or if deselecting
-        if (supplier) {
-            if (formData.PAYMENT_TYPE === 'cash' && !supplier.ALLOWS_CASH) {
+        if (vendor) {
+            if (formData.PAYMENT_TYPE === 'Cash' && !vendor.allows_cash) {
                 setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
             }
-            if (formData.PAYMENT_TYPE === 'disbursement' && !supplier.ALLOWS_DISBURSEMENT) {
+            if (formData.PAYMENT_TYPE === 'Disbursement' && !vendor.allows_disbursement) {
                 setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
             }
-            if (formData.PAYMENT_TYPE === 'store_credit' && !supplier.ALLOWS_STORE_CREDIT) {
+            if (formData.PAYMENT_TYPE === 'Store Credit' && !vendor.allows_store_credit) {
                 setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
             }
         } else {
             // If deselecting supplier, reset payment type
-            setFormData(prev => ({ ...prev, PAYMENT_TYPE: 'cash' }));
+            setFormData(prev => ({ ...prev, PAYMENT_TYPE: 'Cash' }));
         }
     };
 
     const toggleItemSelection = (itemId: number) => {
-        setFormData(prev => ({
-            ...prev,
-            ITEMS: prev.ITEMS.map(item =>
-                item.ID === itemId
-                    ? { ...item, SELECTED: !item.SELECTED }
-                    : item
-            )
-        }));
+        if (formData.ITEMS.find(i => i.id === itemId)) {
+            setFormData(prev => ({
+                ...prev,
+                ITEMS: prev.ITEMS.filter(item => item.id !== itemId)
+            }));
+        }
+        else {
+            const item = requisitionItems.find(ri => ri.id === itemId);
+            if (!item) return;
+            setFormData(prev => ({
+                ...prev,
+                ITEMS: [...prev.ITEMS, item]
+            }));
+        }
     };
 
     const toggleServiceSelection = (serviceId: number) => {
-        setFormData(prev => ({
-            ...prev,
-            SERVICES: prev.SERVICES.map(service =>
-                service.ID === serviceId
-                    ? { ...service, SELECTED: !service.SELECTED }
-                    : service
-            )
-        }));
+        if (formData.SERVICES.find(s => s.id === serviceId)) {
+            setFormData(prev => ({
+                ...prev,
+                SERVICES: prev.SERVICES.filter(service => service.id !== serviceId)
+            }));
+        }
+        else {
+            const service = requisitionServices.find(rs => rs.id === serviceId);
+            if (!service) return;
+            setFormData(prev => ({
+                ...prev,
+                SERVICES: [...prev.SERVICES, service]
+            }));
+        }
     };
 
     const updateItemQuantity = (itemId: number, quantity: number) => {
@@ -434,52 +504,29 @@ export default function PurchaseOrderForm() {
         setFormData(prev => ({
             ...prev,
             ITEMS: prev.ITEMS.map(item =>
-                item.ID === itemId
-                    ? { ...item, QUANTITY: quantity }
+                item.id === itemId
+                    ? { ...item, quantity: quantity }
                     : item
-            )
-        }));
-    };
-
-    const updateServiceQuantity = (serviceId: number, quantity: number) => {
-        if (quantity < 1) return;
-
-        // Get the original quantity from requisition
-        const originalQty = originalQuantities[serviceId] || 1;
-
-        // Don't allow decreasing below original requisition quantity
-        if (quantity < originalQty) {
-            return;
-        }
-
-        setFormData(prev => ({
-            ...prev,
-            SERVICES: prev.SERVICES.map(service =>
-                service.ID === serviceId
-                    ? { ...service, QUANTITY: quantity }
-                    : service
             )
         }));
     };
 
     const calculateTotal = () => {
         const itemsTotal = formData.ITEMS
-            .filter((item: any) => item.SELECTED)
-            .reduce((total: number, item: any) => total + (item.QUANTITY * item.UNIT_PRICE), 0);
+            .reduce((total: number, item: RequisitionItem) => total + (item.quantity * item.item.unit_price), 0);
 
         const servicesTotal = formData.SERVICES
-            .filter((service: any) => service.SELECTED)
-            .reduce((total: number, service: any) => total + (service.QUANTITY * service.UNIT_PRICE), 0);
+            .reduce((total: number, service: RequisitionService) => total + (service.service.hourly_rate), 0);
 
         return itemsTotal + servicesTotal;
     };
 
     const getSelectedItems = () => {
-        return formData.ITEMS.filter((item: any) => item.SELECTED);
+        return formData.ITEMS;
     };
 
     const getSelectedServices = () => {
-        return formData.SERVICES.filter((service: any) => service.SELECTED);
+        return formData.SERVICES;
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -487,7 +534,8 @@ export default function PurchaseOrderForm() {
 
         if (validateForm()) {
             // Show preview instead of directly submitting
-            setShowPreview(true);
+            //  setShowPreview(true);
+            handleConfirmSubmit();
         }
     };
 
@@ -503,35 +551,31 @@ export default function PurchaseOrderForm() {
             PAYMENT_TYPE: formData.PAYMENT_TYPE,
             ORDER_TYPE: formData.ORDER_TYPE,
             TOTAL_COST: totalCost,
-            STATUS: isEditMode ? currentPurchase?.STATUS : 'pending_approval',
+            STATUS: isEditMode ? currentPurchase?.status : 'Pending',
             REMARKS: formData.REMARKS,
-            CREATED_AT: isEditMode ? currentPurchase?.CREATED_AT : new Date().toISOString(),
-            UPDATED_AT: new Date().toISOString(),
-            ITEMS: selectedItems.map(item => ({
-                ITEM_ID: item.ITEM_ID,
-                QUANTITY: item.QUANTITY,
-                UNIT_PRICE: item.UNIT_PRICE,
-                REQUISITION_ID: item.REQUISITION_ID
+            CREATED_AT: isEditMode ? currentPurchase?.created_at : new Date().toISOString(),
+            ITEMS: formData.ITEMS.map(item => ({
+                REQ_ITEM_ID: item.id,
+                ITEM_ID: item.item_id,
+                QUANTITY: item.quantity,
             })),
-            SERVICES: selectedServices.map(service => ({
-                SERVICE_ID: service.SERVICE_ID,
-                QUANTITY: service.QUANTITY,
-                UNIT_PRICE: service.UNIT_PRICE,
-                REQUISITION_ID: service.REQUISITION_ID
+            SERVICES: formData.SERVICES.map(service => ({
+                REQ_SERVICE_ID: service.id,
+                SERVICE_ID: service.service_id,
             }))
         };
 
-        console.log('Purchase Order Data:', purchaseOrderData);
-        console.log('Merged Requisitions:', formData.REQUISITION_IDS);
-
-        // In real application, you would send POST/PUT request to backend
-        alert(`Purchase order ${isEditMode ? 'updated' : 'created'} successfully! ${formData.REQUISITION_IDS.length > 1 ? `(Merged ${formData.REQUISITION_IDS.length} requisitions)` : ''}`);
-
-        // Close preview and redirect
-        setShowPreview(false);
-
-        // Redirect back to purchases list
-        router.visit('/purchases');
+        console.log(JSON.stringify(purchaseOrderData));
+        router.post(orderpost().url, purchaseOrderData, {
+            onSuccess: () => {
+                alert('Purchase order added successfully!');
+                setShowPreview(false);
+                router.visit('/purchases');
+            },
+            onError: (error: any) => {
+                console.log(error);
+            }
+        });
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -549,21 +593,21 @@ export default function PurchaseOrderForm() {
         if (isEditMode && currentPurchase) {
             // Reset to original values in edit mode
             setFormData({
-                REFERENCE_NO: currentPurchase.REFERENCE_NO,
-                REQUISITION_IDS: [currentPurchase.REQUISITION_ID.toString()],
-                SUPPLIER_ID: currentPurchase.SUPPLIER_ID.toString(),
-                PAYMENT_TYPE: currentPurchase.PAYMENT_TYPE,
-                REMARKS: currentPurchase.REMARKS,
-                ORDER_TYPE: currentPurchase.ORDER_TYPE || 'items',
-                ITEMS: currentPurchase.ITEMS || [],
-                SERVICES: currentPurchase.SERVICES || []
+                REFERENCE_NO: currentPurchase.ref_no,
+                REQUISITION_IDS: orderToReqIds(currentPurchase),
+                SUPPLIER_ID: currentPurchase.vendor_id?.toString() || '',
+                PAYMENT_TYPE: currentPurchase.payment_type,
+                REMARKS: currentPurchase.remarks || '',
+                ORDER_TYPE: currentPurchase.type || '',
+                ITEMS: orderToReqItems(currentPurchase) || [],
+                SERVICES: orderToReqServices(currentPurchase) || []
             });
         } else {
             setFormData({
                 REFERENCE_NO: '',
                 REQUISITION_IDS: [],
                 SUPPLIER_ID: '',
-                PAYMENT_TYPE: 'cash',
+                PAYMENT_TYPE: 'Cash',
                 REMARKS: '',
                 ORDER_TYPE: '',
                 ITEMS: [],
@@ -604,7 +648,7 @@ export default function PurchaseOrderForm() {
                         </h1>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {isEditMode
-                                ? `Editing ${currentPurchase?.REFERENCE_NO}`
+                                ? `Editing ${currentPurchase?.ref_no}`
                                 : 'Create a new purchase order from approved requisitions'
                             }
                         </p>
@@ -619,6 +663,7 @@ export default function PurchaseOrderForm() {
 
                 {/* Form Container */}
                 <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:bg-sidebar">
+                    {JSON.stringify(formData)}
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-7xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
@@ -629,7 +674,7 @@ export default function PurchaseOrderForm() {
                                     </h2>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
                                         {isEditMode
-                                            ? `Update purchase order ${currentPurchase?.REFERENCE_NO}`
+                                            ? `Update purchase order ${currentPurchase?.ref_no}`
                                             : 'Select order type, approved requisitions and supplier to create a purchase order'
                                         }
                                     </p>
@@ -664,9 +709,11 @@ export default function PurchaseOrderForm() {
                                                 formData={formData}
                                                 selectedSupplier={selectedSupplier}
                                                 suggestedSuppliers={suggestedSuppliers}
-                                                suppliersData={suppliersData}
+                                                suppliersData={vendors}
                                                 errors={errors}
                                                 onSupplierChange={handleSupplierChange}
+                                                categories={categories}
+                                                vendorCategories={vendorCategories}
                                             />
                                         </div>
 
@@ -681,10 +728,13 @@ export default function PurchaseOrderForm() {
                                                 onRequisitionSelect={handleRequisitionSelect}
                                                 onRequisitionRemove={handleRemoveRequisition}
                                                 isEditMode={isEditMode}
+                                                requisitionItems={requisitionItems}
+                                                requisitionServices={requisitionServices}
+                                                categories={categories}
                                             />
 
-                                            {/* Conditionally render Items or Services based on order type */}
-                                            {formData.ORDER_TYPE === 'items' && (
+                                            {/* Conditionally render Items   or Services based on order type */}
+                                            {formData.ORDER_TYPE === 'Items' && (
                                                 <OrderItems
                                                     formData={formData}
                                                     selectedRequisition={selectedRequisitions}
@@ -692,17 +742,20 @@ export default function PurchaseOrderForm() {
                                                     errors={errors}
                                                     onToggleItemSelection={toggleItemSelection}
                                                     onUpdateItemQuantity={updateItemQuantity}
+                                                    requisitionItems={requisitionItems}
+                                                    categories={categories}
                                                 />
                                             )}
 
-                                            {formData.ORDER_TYPE === 'services' && (
+                                            {formData.ORDER_TYPE === 'Services' && (
                                                 <OrderService
                                                     formData={formData}
                                                     selectedRequisition={selectedRequisitions}
                                                     originalQuantities={originalQuantities}
                                                     errors={errors}
                                                     onToggleServiceSelection={toggleServiceSelection}
-                                                    onUpdateServiceQuantity={updateServiceQuantity}
+                                                    requisitionServices={requisitionServices}
+                                                    categories={categories}
                                                 />
                                             )}
 
@@ -726,28 +779,28 @@ export default function PurchaseOrderForm() {
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
-                                                            <p className="font-bold text-lg text-blue-800 dark:text-blue-200">{selectedSupplier.NAME}</p>
+                                                            <p className="font-bold text-lg text-blue-800 dark:text-blue-200">{selectedSupplier.name}</p>
                                                             <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                                                                <strong>Email:</strong> {selectedSupplier.EMAIL}
+                                                                <strong>Email:</strong> {selectedSupplier.email}
                                                             </p>
                                                             <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                                <strong>Phone:</strong> {selectedSupplier.CONTACT_NUMBER}
+                                                                <strong>Phone:</strong> {selectedSupplier.contact_number}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Payment Methods:</p>
                                                             <div className="flex flex-wrap gap-1">
-                                                                {selectedSupplier.ALLOWS_CASH && (
+                                                                {selectedSupplier.allows_cash && (
                                                                     <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                                                         Cash
                                                                     </span>
                                                                 )}
-                                                                {selectedSupplier.ALLOWS_DISBURSEMENT && (
+                                                                {selectedSupplier.allows_disbursement && (
                                                                     <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                                                         Disbursement
                                                                     </span>
                                                                 )}
-                                                                {selectedSupplier.ALLOWS_STORE_CREDIT && (
+                                                                {selectedSupplier.allows_store_credit && (
                                                                     <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                                                                         Store Credit
                                                                     </span>
@@ -812,11 +865,7 @@ export default function PurchaseOrderForm() {
                                             >
                                                 {isEditMode
                                                     ? 'Update Purchase Order'
-                                                    : approvedRequisitions.length === 0
-                                                        ? 'No Approved Requisitions'
-                                                        : formData.REQUISITION_IDS.length > 1
-                                                            ? `Create Merged PO (${formData.REQUISITION_IDS.length})`
-                                                            : 'Create Purchase Order'
+                                                    : 'Create Purchase Order'
                                                 }
                                             </button>
                                         </div>
@@ -834,8 +883,8 @@ export default function PurchaseOrderForm() {
                     formData={formData}
                     selectedSupplier={selectedSupplier}
                     selectedRequisition={selectedRequisitions}
-                    selectedItems={formData.ORDER_TYPE === 'items' ? getSelectedItems() : []}
-                    selectedServices={formData.ORDER_TYPE === 'services' ? getSelectedServices() : []}
+                    selectedItems={formData.ORDER_TYPE === 'Items' ? getSelectedItems() : []}
+                    selectedServices={formData.ORDER_TYPE === 'Services' ? getSelectedServices() : []}
                     totalCost={calculateTotal()}
                     onConfirm={handleConfirmSubmit}
                     onCancel={() => setShowPreview(false)}
