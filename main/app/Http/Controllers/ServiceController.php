@@ -55,6 +55,12 @@ class ServiceController extends Controller
         ];
 
         Service::query()->findOrFail($id)->update($final);
+        AuditLog::query()->create([
+            'description' => 'Details of ' . $final['name'] . ' updated',
+            'user_id' => auth()->id(),
+            'type_id' => 20,
+        ]);
+
         return back();
     }
 
@@ -62,6 +68,13 @@ class ServiceController extends Controller
     {
         $service = Service::query()->findOrFail($id);
         $service->update(['is_active' => false]);
+
+        AuditLog::query()->create([
+            'description' => 'Service deleted: ' . $service->name,
+            'user_id' => auth()->id(),
+            'type_id' => 21,
+        ]);
+
         return back();
     }
 }

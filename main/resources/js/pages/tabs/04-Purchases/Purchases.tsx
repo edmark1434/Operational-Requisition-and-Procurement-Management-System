@@ -19,8 +19,10 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/purchases',
     },
 ];
-
-export default function Purchases() {
+interface Prop{
+    purchaseOrdersData:any[]
+}
+export default function Purchases({purchaseOrdersData}:Prop) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [supplierFilter, setSupplierFilter] = useState('All');

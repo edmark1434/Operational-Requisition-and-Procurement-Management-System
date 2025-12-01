@@ -11,16 +11,13 @@ class OrderService extends Model
 {
     /** @use HasFactory<\Database\Factories\OrderServiceFactory> */
     use HasFactory;
-    protected $fillable = ['po_id', 'service_id', 'item_id'];
+    protected $fillable = ['po_id', 'service_id'];
 
     public function purchase_order(){
         $this->belongsTo(PurchaseOrder::class, 'po_id');
     }
     public function service(){
         $this->belongsTo(Service::class, 'service_id');
-    }
-    public function item(){
-        $this->belongsTo(Item::class, 'item_id');
     }
     public $timestamps = false;
 }

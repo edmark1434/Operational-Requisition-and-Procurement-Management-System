@@ -1,9 +1,11 @@
+import {Requisition, RequisitionItem, RequisitionService, Vendor} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+
 interface PreviewModalProps {
     formData: any;
-    selectedSupplier: any;
-    selectedRequisition: any[];
-    selectedItems: any[];
-    selectedServices: any[];
+    selectedSupplier: Vendor | null;
+    selectedRequisition: Requisition[];
+    selectedItems: RequisitionItem[];
+    selectedServices: RequisitionService[];
     totalCost: number;
     onConfirm: () => void;
     onCancel: () => void;
@@ -58,7 +60,7 @@ export default function PreviewModal({
             return {
                 REQUESTOR: `${selectedRequisition.length} Requisitions`,
                 PRIORITY: 'Multiple',
-                CREATED_AT: selectedRequisition[0]?.CREATED_AT || new Date().toISOString(),
+                CREATED_AT: selectedRequisition[0]?.created_at || new Date().toISOString(),
                 ITEMS: selectedRequisition.flatMap(req => req.ITEMS || [])
             };
         }
