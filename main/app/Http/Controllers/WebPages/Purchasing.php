@@ -11,6 +11,7 @@ use App\Models\OrderService;
 use App\Models\Requisition;
 use App\Models\RequisitionItem;
 use App\Models\RequisitionOrderItem;
+use App\Models\RequisitionOrderService;
 use App\Models\RequisitionService;
 use App\Models\Vendor;
 use Inertia\Inertia;
@@ -98,7 +99,7 @@ class Purchasing extends Controller
             'orderItems' => OrderItem::with('item')->get(),
             'orderServices' => OrderService::with('service', 'item')->get(),
             'requisitionOrderItems' => RequisitionOrderItem::with('req_item', 'po_item')->get(),
-            'requisitionOrderServices' => RequisitionOrderItem::with('req_service', 'po_service')->get(),
+            'requisitionOrderServices' => RequisitionOrderService::with('req_service', 'po_service')->get(),
             'categories' => Category::all(),
         ]);
     }
