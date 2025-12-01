@@ -1,11 +1,10 @@
 // Users.tsx
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
-
 // Import components
 import UserStats from './UserStats';
 import UserSearchAndFilters from './UserSearchAndFilters';
@@ -49,7 +48,10 @@ export default function Users({usersList,permissions,rolesList,role_perm,success
     const [isLoading, setIsLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[]; 
 
+    console.log(permissionsList); // ["create_item", "edit_item", "delete_item"]
     // Load users on component mount
     useEffect(() => {
         loadUsers();
@@ -159,12 +161,13 @@ export default function Users({usersList,permissions,rolesList,role_perm,success
                 />
 
                 {/* Users List */}
-                <UsersList
-                    users={filteredUsers}
-                    isLoading={isLoading}
-                    onUserClick={openModal}
-                />
-
+                { permissionsList.includes('View Users') &&
+                    <UsersList
+                        users={filteredUsers}
+                        isLoading={isLoading}
+                        onUserClick={openModal}
+                    />
+                }
                 {/* User Detail Modal */}
                 {selectedUser && (
                     <UserDetailModal
