@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Dialog, Transition } from '@headlessui/react';
 import { X } from 'lucide-react';
 
@@ -69,6 +69,9 @@ const formatHourlyRate = (rate: number | string) => {
         minimumFractionDigits: 2
     }).format(value) + " / hr";
 };
+
+const { props } = usePage();
+const permissionsList = props.user_permission as string[];
 
 // Component: DeclineReasonModal
 function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
@@ -293,13 +296,14 @@ export default function RequisitionDetailModal({
             }
             if (isApproved || isPartiallyApproved) {
                 return (
+                    permissionsList.includes('Mark Requisition for Pickup') &&
                     <button onClick={handleReleaseForPickup} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                         Release for Pickup
                     </button>
                 );
             }
             if (isAwaitingPickup) {
-                return (
+                return (permissionsList.includes('Receive Requisition') &&
                     <button onClick={handleMarkAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
                         Mark as Received
                     </button>
@@ -330,7 +334,7 @@ export default function RequisitionDetailModal({
 
     const renderRightButtons = () => {
         if (isPending) {
-            return (
+            return (permissionsList.includes('Approve / Reject Requisition') &&
                 <>
                     <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
                         Decline
