@@ -4,10 +4,8 @@ import { inventory, inventoryCreate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import CATEGORY_OPTIONS from '@/pages/datasets/category';
 import SUPPLIER_OPTIONS from '@/pages/datasets/supplier';
 import itemsData from "@/pages/datasets/items";
-import categorySuppliers from '@/pages/datasets/category_supplier'; // Import the mapping
 import { toast, Toaster } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -22,9 +20,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 interface Prop{
     auth: any,
-    CATEGORY_OPTIONS:any[]
+    CATEGORY_OPTIONS: any[],
+    categorySuppliers: any[],
+    SUPPLIER_OPTIONS: any[],
+    itemsData: any[]
 }
-export default function ItemAdd({ auth,CATEGORY_OPTIONS }: Prop) {
+export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLIER_OPTIONS,itemsData }: Prop) {
     const [formData, setFormData] = useState({
         NAME: '',
         BARCODE: '',
@@ -40,9 +41,11 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS }: Prop) {
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [filteredSuppliers, setFilteredSuppliers] = useState(SUPPLIER_OPTIONS);
-
+    console.log(categorySuppliers);
+    console.log(CATEGORY_OPTIONS);
     // Filter suppliers based on selected category
     useEffect(() => {
+        console.log(formData.CATEGORY)
         if (formData.CATEGORY) {
             // Find the category ID from CATEGORY_OPTIONS
             const selectedCategory = CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY);
@@ -52,7 +55,6 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS }: Prop) {
                 const supplierIdsForCategory = categorySuppliers
                     .filter(cs => cs.CATEGORY_ID === selectedCategory.CAT_ID)
                     .map(cs => cs.SUPPLIER_ID);
-
                 // Filter suppliers based on the matched IDs
                 const filtered = SUPPLIER_OPTIONS.filter(supplier =>
                     supplierIdsForCategory.includes(supplier.ID)
