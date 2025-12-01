@@ -7,9 +7,7 @@ import axios from 'axios';
 
 // Import datasets
 import itemsData from "@/pages/datasets/items";
-import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
-import serviceData from "@/pages/datasets/service";
 
 // Import components
 import RequestorInformation from '../RequisitionForm/RequestorInformation';
@@ -25,7 +23,7 @@ interface RequisitionEditProps {
     initialItems: RequisitionItem[];
     initialServices: RequisitionService[];
     dbCategories: Array<{ id: number; name: string }>;
-    systemServices: any[]; // 👈 Add this
+    systemServices: any[];
 }
 
 interface RequisitionItem {
@@ -51,6 +49,9 @@ interface RequisitionService {
     isSaved: boolean;
     hourlyRate?: string;
     originalServiceId?: number;
+    // Helper fields for mapping backend data
+    categoryId?: string;
+    categoryName?: string;
 }
 
 interface ValidationErrors {
@@ -72,7 +73,7 @@ export default function RequisitionEdit({
                                             initialItems,
                                             initialServices,
                                             dbCategories = [],
-                                            systemServices = [] // 👈 Destructure
+                                            systemServices = []
                                         }: RequisitionEditProps) {
 
     // --- STATE ---
@@ -287,7 +288,6 @@ export default function RequisitionEdit({
             const unsavedItems = items.filter(item => !item.isSaved);
             if (unsavedItems.length > 0) {
                 errors.items = 'Please save all items before submitting';
-          //      alert(errors.items); // Prompting the user as requested
             }
             else if (items.length === 0) {
                 errors.items = 'Please add at least one item';
@@ -300,7 +300,7 @@ export default function RequisitionEdit({
             const unsavedServices = services.filter(service => !service.isSaved);
             if (unsavedServices.length > 0) {
                 errors.services = 'Please save all services before submitting';
-                alert(errors.services); // Prompting the user as requested
+                alert(errors.services);
             }
             else if (services.length === 0) {
                 errors.services = 'Please add at least one service';
@@ -420,6 +420,8 @@ export default function RequisitionEdit({
                                                 hasError={hasError}
                                                 editService={editService}
                                                 systemServices={systemServices}
+                                                // --- FIX: PASS THE CATEGORIES PROP HERE ---
+                                                availableCategories={dbCategories}
                                             />
                                         )}
                                     </div>
