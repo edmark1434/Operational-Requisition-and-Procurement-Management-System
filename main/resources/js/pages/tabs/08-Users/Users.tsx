@@ -165,13 +165,11 @@ export default function Users({usersList,permissions,rolesList,role_perm,success
                 />
 
                 {/* Users List */}
-                { permissionsList.includes('View Users') &&
                     <UsersList
                         users={filteredUsers}
                         isLoading={isLoading}
                         onUserClick={openModal}
                     />
-                }
                 {/* User Detail Modal */}
                 {selectedUser && (
                     <UserDetailModal

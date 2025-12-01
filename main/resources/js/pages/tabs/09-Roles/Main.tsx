@@ -8,7 +8,7 @@ import RolesPermissionsStats from './components/RolesPermissionsStats';
 import RolesList from './components/RolesList';
 import PermissionsList from './components/PermissionsList';
 import RoleDetailModal from './components/RoleDetailModal';
-
+import { usePage } from '@inertiajs/react';
 
 // Import utilities
 import { useRolesPermissionsFilters } from './utils/hooks/useRolesPermissionsFilters';
@@ -50,6 +50,8 @@ export default function RolesAndPermissions({rolesList,role_perm,permission,succ
     const [permissionCategoryFilter, setPermissionCategoryFilter] = useState<'all' | string>('all');
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
 
     const [roles, setRoles] = useState<Role[]>([]);
     const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -105,7 +107,7 @@ export default function RolesAndPermissions({rolesList,role_perm,permission,succ
         roleStatusFilter,
         permissionCategoryFilter
         );
-    
+
 const filteredPermissionsByCategory = useMemo(() => {
     const categories: { [key: string]: Permission[] } = {};
     filteredPermissions.forEach(permission => {
@@ -116,7 +118,7 @@ const filteredPermissionsByCategory = useMemo(() => {
     });
     return categories;
 }, [filteredPermissions]);
-    
+
     const categories = useMemo(() => {
         const uniqueCategories = [...new Set(permissions.map(p => p.CATEGORY))];
         return ['All', ...uniqueCategories];
@@ -173,6 +175,7 @@ const filteredPermissionsByCategory = useMemo(() => {
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Roles & Permissions</h1>
                     <div className="flex gap-3">
+                        { permissionsList.includes('Manage Roles') &&
                         <Link
                             href="/roles/add"
                             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -182,6 +185,7 @@ const filteredPermissionsByCategory = useMemo(() => {
                             </svg>
                             Add Role
                         </Link>
+                        }
                     </div>
                 </div>
 

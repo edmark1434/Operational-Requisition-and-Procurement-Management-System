@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Toaster, toast } from 'sonner';
+import { usePage } from '@inertiajs/react';
 // Import datasets
 import itemsData from '@/pages/datasets/items';
 import categoriesData from '@/pages/datasets/category';
@@ -36,6 +37,8 @@ export default function Inventory({ item, success, message }: Prop) {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [inventory, setInventory] = useState(item || []);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
 
     const {
         filteredInventory,
@@ -60,7 +63,7 @@ export default function Inventory({ item, success, message }: Prop) {
     useEffect(() => {
         if (success) {
             toast(message);
-       } 
+       }
     },[])
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -69,6 +72,7 @@ export default function Inventory({ item, success, message }: Prop) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
+                    { permissionsList.includes('Manage Items') &&
                     <Link
                         href="/inventory/add"
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -78,6 +82,7 @@ export default function Inventory({ item, success, message }: Prop) {
                         </svg>
                         Add New Item
                     </Link>
+                    }
                 </div>
 
                 {/* Stats */}
