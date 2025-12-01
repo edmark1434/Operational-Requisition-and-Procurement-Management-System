@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Edit3, Save, Trash2, Plus, Check } from 'lucide-react'
 
-// --- Interfaces ---
+// --- Interfaces (Simplified) ---
 interface RequisitionService {
     id: string;
     categoryId?: string;
@@ -16,9 +16,8 @@ interface RequisitionService {
     total: string;
     isSaved: boolean;
     hourlyRate?: string;
-    // NEW: Optional Item Link
-    itemId?: string;
-    itemName?: string;
+    itemId?: string; // Kept in interface but removed from UI/Logic
+    itemName?: string; // Kept in interface but removed from UI/Logic
 }
 
 // Service Model from Laravel
@@ -38,13 +37,7 @@ interface Category {
     name: string;
 }
 
-// NEW: Item Model from Laravel
-interface InventoryItem {
-    id: number;
-    name: string;
-    current_stock: number;
-    unit_price: number;
-}
+// NOTE: InventoryItem interface is no longer necessary in this component.
 
 interface RequisitionServiceProps {
     services: RequisitionService[];
@@ -56,11 +49,11 @@ interface RequisitionServiceProps {
     saveService: (id: string) => void;
     removeService: (id: string) => void;
     addNewService: () => void;
-    hasError: (serviceId: string, field: 'quantity' | 'serviceName' | 'description') => boolean;
+    hasError: (serviceId: string, field: 'serviceName' | 'description' | 'categoryId') => boolean;
     editService: (id: string) => void;
     systemServices: Service[];
     availableCategories: Category[];
-    inventoryItems: InventoryItem[]; // <-- Receive Items from Controller
+    // inventoryItems prop removed from receiving list
 }
 
 export default function RequisitionService({
@@ -74,7 +67,7 @@ export default function RequisitionService({
                                                editService,
                                                systemServices,
                                                availableCategories = [],
-                                               inventoryItems = [] // Default empty
+                                               // inventoryItems removed from destructuring
                                            }: RequisitionServiceProps) {
 
 
@@ -89,10 +82,12 @@ export default function RequisitionService({
         updateService(serviceId, 'serviceId', '');
         updateService(serviceId, 'serviceName', '');
         updateService(serviceId, 'description', '');
-        updateService(serviceId, 'unit_price', '');
-        updateService(serviceId, 'hourlyRate', '');
-        updateService(serviceId, 'total', '');
-        // We do NOT reset Item ID here, as the item might be independent of the service category
+
+        // Setting nominal values for backend compatibility
+        updateService(serviceId, 'unit_price', '0.00');
+        updateService(serviceId, 'hourlyRate', '0.00');
+        updateService(serviceId, 'quantity', '1'); // Set quantity to 1 for DB insertion compatibility
+        updateService(serviceId, 'total', '1.00'); // Set nominal total for form submission compatibility
     };
 
     // 2. Handle Service Selection
@@ -100,10 +95,13 @@ export default function RequisitionService({
         if (!selectedValue) {
             updateService(serviceId, 'serviceName', '');
             updateService(serviceId, 'description', '');
-            updateService(serviceId, 'unit_price', '');
-            updateService(serviceId, 'total', '');
             updateService(serviceId, 'serviceId', '');
-            updateService(serviceId, 'hourlyRate', '');
+
+            // Setting nominal values for backend compatibility
+            updateService(serviceId, 'unit_price', '0.00');
+            updateService(serviceId, 'hourlyRate', '0.00');
+            updateService(serviceId, 'quantity', '1');
+            updateService(serviceId, 'total', '0.00');
             return;
         }
 
@@ -112,48 +110,26 @@ export default function RequisitionService({
         if (selectedService) {
             updateService(serviceId, 'serviceName', selectedService.name);
             updateService(serviceId, 'description', selectedService.description);
-            updateService(serviceId, 'unit_price', selectedService.hourly_rate.toString());
             updateService(serviceId, 'serviceId', selectedService.id.toString());
+
+            // Use system service rate/data but set required fields to nominal values
+            updateService(serviceId, 'unit_price', selectedService.hourly_rate.toString());
             updateService(serviceId, 'hourlyRate', selectedService.hourly_rate.toString());
-
-            const currentService = requisitionServices.find(s => s.id === serviceId);
-            const newQuantity = currentService?.quantity && currentService.quantity !== '' ? currentService.quantity : '1';
-            updateService(serviceId, 'quantity', newQuantity);
-
-            const quantity = parseFloat(newQuantity) || 0;
-            const unitPrice = selectedService.hourly_rate;
-            const total = (quantity * unitPrice).toFixed(2);
-            updateService(serviceId, 'total', total);
+            updateService(serviceId, 'quantity', '1'); // Fixed quantity
+            updateService(serviceId, 'total', '1.00'); // Nominal cost to avoid zero total error
         }
     };
 
-    // 3. Handle Quantity Change
-    const handleQuantityChange = (serviceId: string, quantityValue: string) => {
-        const service = requisitionServices.find(service => service.id === serviceId);
-        if (!service) return;
+    // Custom save validation for simplified flow
+    const handleSave = (id: string) => {
+        const serviceToSave = requisitionServices.find(service => service.id === id);
+        if (!serviceToSave) return;
 
-        updateService(serviceId, 'quantity', quantityValue);
-
-        if (quantityValue && service.unit_price) {
-            const quantity = parseFloat(quantityValue) || 0;
-            const unitPrice = parseFloat(service.unit_price) || 0;
-            const total = (quantity * unitPrice).toFixed(2);
-            updateService(serviceId, 'total', total);
-        } else {
-            updateService(serviceId, 'total', '');
+        if (!serviceToSave.serviceName.trim() || !serviceToSave.categoryId) {
+            alert('Please select a service category and name before saving.');
+            return;
         }
-    };
-
-    // 4. Handle Optional Item Link Selection
-    const handleItemSelect = (serviceId: string, selectedItemId: string) => {
-        const item = inventoryItems.find(i => i.id.toString() === selectedItemId);
-        if (item) {
-            updateService(serviceId, 'itemId', item.id.toString());
-            updateService(serviceId, 'itemName', item.name);
-        } else {
-            updateService(serviceId, 'itemId', '');
-            updateService(serviceId, 'itemName', '');
-        }
+        saveService(id);
     }
 
     const getServiceDisplayData = (service: RequisitionService) => {
@@ -170,7 +146,7 @@ export default function RequisitionService({
             <div className="p-4 border border-sidebar-border rounded-lg bg-gray-50 dark:bg-sidebar flex-1">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Requested Services ({requisitionServices.length})
+                        Requested Services (Job Requests: {requisitionServices.length}) 👷
                     </h3>
                     <button
                         type="button"
@@ -178,7 +154,7 @@ export default function RequisitionService({
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition duration-150 ease-in-out"
                     >
                         <Plus className="w-4 h-4" />
-                        Add New Service
+                        Add New Request
                     </button>
                 </div>
 
@@ -203,7 +179,7 @@ export default function RequisitionService({
                                 className={`p-3 border-2 rounded-lg transition-all duration-300 ${
                                     service.isSaved
                                         ? 'border-green-600 bg-white dark:bg-sidebar-accent'
-                                        : validationErrors.services && (!service.serviceName.trim() || !service.quantity.trim())
+                                        : validationErrors.services && (!service.serviceName.trim() || !service.categoryId) // Simplified validation
                                             ? 'border-red-300 dark:border-red-500 bg-white dark:bg-sidebar-accent'
                                             : 'border-sidebar-border bg-white dark:bg-sidebar-accent'
                                 }`}
@@ -214,7 +190,7 @@ export default function RequisitionService({
                                             ? 'text-green-700 dark:text-green-300'
                                             : 'text-gray-900 dark:text-white'
                                     }`}>
-                                        Service {requisitionServices.length - index} {service.isSaved && <Check className="w-3 h-3 inline ml-1" />}
+                                        Job Request {requisitionServices.length - index} {service.isSaved && <Check className="w-3 h-3 inline ml-1" />}
                                     </h4>
                                     <div className="flex items-center gap-2">
                                         {service.isSaved ? (
@@ -228,7 +204,7 @@ export default function RequisitionService({
                                         ) : (
                                             <button
                                                 type="button"
-                                                onClick={() => saveService(service.id)}
+                                                onClick={() => handleSave(service.id)} // Use custom save handler
                                                 className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
                                             >
                                                 <Save className="w-3.5 h-3.5" /> Save
@@ -251,7 +227,7 @@ export default function RequisitionService({
                                     {/* 1. Category Select */}
                                     <div>
                                         <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                            Service Category
+                                            Job/Service Category <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             value={service.categoryId || ""}
@@ -272,7 +248,7 @@ export default function RequisitionService({
                                     {/* 2. Service Select (Filtered) */}
                                     <div>
                                         <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                            Service Name
+                                            Job/Service Name <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             value={service.serviceId || ""}
@@ -285,7 +261,7 @@ export default function RequisitionService({
                                         >
                                             <option value="">
                                                 {service.categoryId
-                                                    ? (filteredServices.length > 0 ? "Select Service..." : "No services in this category")
+                                                    ? (filteredServices.length > 0 ? "Select Job/Service..." : "No services in this category")
                                                     : "Select category first..."
                                                 }
                                             </option>
@@ -297,30 +273,7 @@ export default function RequisitionService({
                                         </select>
                                     </div>
 
-                                    {/* 3. OPTIONAL ITEM/MATERIAL SELECT */}
-                                    <div>
-                                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                            Include Material/Item (Optional)
-                                        </label>
-                                        <select
-                                            value={service.itemId || ""}
-                                            onChange={(e) => handleItemSelect(service.id, e.target.value)}
-                                            className="w-full px-2 py-1 text-sm border border-sidebar-border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                            disabled={service.isSaved}
-                                        >
-                                            <option value="">None</option>
-                                            {inventoryItems.map((item) => (
-                                                <option key={item.id} value={item.id}>
-                                                    {item.name} (Stock: {item.current_stock})
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {service.itemId && (
-                                            <p className="text-[10px] text-blue-500 mt-1">
-                                                * This item will be deducted from inventory upon approval.
-                                            </p>
-                                        )}
-                                    </div>
+                                    {/* Item Selection removed */}
 
                                     {(displayData.serviceName || displayData.description) && (
                                         <div className="grid grid-cols-2 gap-3">
@@ -335,7 +288,7 @@ export default function RequisitionService({
 
                                             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                                                 <label className="block text-xs text-blue-600 dark:text-blue-400 mb-1">
-                                                    Hourly Rate
+                                                    Standard Rate (Reference Only)
                                                 </label>
                                                 <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
                                                     ${displayData.hourlyRate}/hour
@@ -344,43 +297,7 @@ export default function RequisitionService({
                                         </div>
                                     )}
 
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                                Hours
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={service.quantity}
-                                                onChange={(e) => handleQuantityChange(service.id, e.target.value)}
-                                                min="1"
-                                                step="0.5"
-                                                className={`w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                                    service.isSaved
-                                                        ? 'bg-white dark:bg-sidebar-accent border-green-300 dark:border-green-600 text-gray-900 dark:text-white'
-                                                        : hasError(service.id, 'quantity')
-                                                            ? 'border-red-500 dark:border-red-500 bg-white dark:bg-sidebar-accent text-gray-900 dark:text-white'
-                                                            : 'bg-white dark:bg-sidebar-accent border-sidebar-border text-gray-900 dark:text-white'
-                                                }`}
-                                                placeholder="Hours"
-                                                required
-                                                disabled={service.isSaved || !service.serviceName}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                                Total
-                                            </label>
-                                            <div className={`w-full px-2 py-1 text-sm border rounded shadow-sm ${
-                                                service.isSaved
-                                                    ? 'bg-white dark:bg-sidebar-accent border-green-300 dark:border-green-600 text-gray-900 dark:text-white'
-                                                    : 'bg-gray-50 dark:bg-sidebar-accent border-sidebar-border text-gray-900 dark:text-white'
-                                            }`}>
-                                                ${service.total || '0.00'}
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {/* Total Cost Display removed */}
                                 </div>
                             </div>
                         );

@@ -19,6 +19,26 @@ export default function RequisitionPreviewModal({
     const servicesCount = formData?.services?.length || 0;
     const totalItems = isServiceRequisition ? servicesCount : itemsCount;
 
+    // Helper to format currency (PHP) for items only
+    const formatCurrencyDisplay = (amount: number) => {
+        return new Intl.NumberFormat('en-PH', {
+            style: 'currency',
+            currency: 'PHP',
+            minimumFractionDigits: 2
+        }).format(amount);
+    };
+
+    // Helper to format USD rate
+    const formatHourlyRate = (rate: number | string) => {
+        const value = parseFloat(rate.toString() || 0);
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2
+        }).format(value) + " / hr";
+    };
+
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-sidebar-border">
@@ -69,18 +89,24 @@ export default function RequisitionPreviewModal({
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Total {isServiceRequisition ? 'Services' : 'Items'}
+                                    Total {isServiceRequisition ? 'Jobs' : 'Items'}
                                 </label>
                                 <p className="text-sm text-gray-900 dark:text-white">{totalItems}</p>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Total Amount
-                                </label>
-                                <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                    ${formData?.total_amount?.toFixed(2) || '0.00'}
-                                </p>
-                            </div>
+
+                            {/* Total Amount Summary - HIDDEN FOR SERVICES */}
+                            {!isServiceRequisition && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Total Amount
+                                    </label>
+                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                        {formatCurrencyDisplay(formData?.total_amount || 0)}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Service Status Indicator (No longer needed) */}
                         </div>
                     </div>
 
@@ -109,27 +135,29 @@ export default function RequisitionPreviewModal({
                                         #
                                     </th>
                                     <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                        {isServiceRequisition ? 'Hours' : 'Quantity'}
+                                        {isServiceRequisition ? 'Qty' : 'Quantity'}
                                     </th>
                                     <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        {isServiceRequisition ? 'Service Name' : 'Item Name'}
+                                        {isServiceRequisition ? 'Job/Service Details' : 'Item Name'}
                                     </th>
-                                    {!isServiceRequisition && (
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Category
-                                        </th>
+
+                                    {/* Conditional Columns */}
+                                    {isServiceRequisition ? (
+                                        // Services Header Columns
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">Hourly Rate</th>
+                                    ) : (
+                                        // Items Header Columns
+                                        <>
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Unit Price</th>
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">Total</th>
+                                        </>
                                     )}
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                        Unit Price
-                                    </th>
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                        Total
-                                    </th>
                                 </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border">
                                 {isServiceRequisition ? (
-                                    // Services Table
+                                    // Services Table (New Structure: Qty | Details | Hourly Rate)
                                     formData?.services?.map((service: any, index: number) => (
                                         <tr key={service.id} className="hover:bg-gray-50 dark:hover:bg-sidebar">
                                             <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
@@ -138,7 +166,7 @@ export default function RequisitionPreviewModal({
                                                 </span>
                                             </td>
                                             <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                {service.quantity}
+                                                1
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div>
@@ -152,16 +180,13 @@ export default function RequisitionPreviewModal({
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                ${service.unit_price || '0.00'}/hr
-                                            </td>
-                                            <td className="py-3 px-4 text-sm font-bold text-green-600 dark:text-green-400">
-                                                ${service.total || '0.00'}
+                                            <td className="py-3 px-4 text-sm font-medium text-purple-600 dark:text-purple-400">
+                                                {formatHourlyRate(service.hourlyRate || service.unit_price)}
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
-                                    // Items Table
+                                    // Items Table (Unchanged)
                                     formData?.items?.map((item: any, index: number) => (
                                         <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-sidebar">
                                             <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
@@ -190,17 +215,19 @@ export default function RequisitionPreviewModal({
                                     ))
                                 )}
                                 </tbody>
-                                {/* Total Row */}
-                                <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
-                                <tr>
-                                    <td colSpan={isServiceRequisition ? 4 : 5} className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white text-right">
-                                        Grand Total:
-                                    </td>
-                                    <td className="py-3 px-4 text-lg font-bold text-green-600 dark:text-green-400">
-                                        ${formData?.total_amount?.toFixed(2) || '0.00'}
-                                    </td>
-                                </tr>
-                                </tfoot>
+                                {/* Total Row - HIDDEN FOR SERVICES */}
+                                {!isServiceRequisition && (
+                                    <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                    <tr>
+                                        <td colSpan={5} className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white text-right">
+                                            Grand Total:
+                                        </td>
+                                        <td className="py-3 px-4 text-lg font-bold text-green-600 dark:text-green-400">
+                                            {formatCurrencyDisplay(formData?.total_amount || 0)}
+                                        </td>
+                                    </tr>
+                                    </tfoot>
+                                )}
                             </table>
                         </div>
                     </div>

@@ -36,10 +36,10 @@ class RequisitionController extends Controller
 
     public function index()
     {
+        // FIX: Removed 'requisition_services.item' from eager loading
         $requisitions = Requisition::with([
             'requisition_items.item.category',
             'requisition_services.service',
-            'requisition_services.item'
         ])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -75,22 +75,19 @@ class RequisitionController extends Controller
                             'category' => $row->item->category->name ?? 'General',
                         ];
                     }
-                    // Logic for Services
+                    // Logic for Services (Simplified Job Request)
                     else {
-                        // FIX: Pull data from the SERVICE RELATIONSHIP, not the pivot table
-                        // Since your DB table doesn't have name/qty/price, we assume 1 qty and master price.
                         $service = $row->service;
                         return [
                             'id' => $row->id,
                             'name' => $service->name ?? 'Unknown Service',
-                            'quantity' => 1, // Defaulting to 1 since DB doesn't store quantity
+                            'quantity' => 1, // Fixed quantity for job requests
                             'approved_qty' => 1,
                             'unit_price' => $service->hourly_rate ?? 0,
-                            'total_price' => $service->hourly_rate ?? 0,
+                            'total_price' => 1.00, // Nominal cost for submission compatibility
                             'category' => 'Service',
                             'service_id' => $row->service_id ?? null,
-                            // Pass the linked item object so frontend can access item.item.name
-                            'item' => $row->item,
+                            // 'item' is no longer included here
                         ];
                     }
                 });
@@ -177,25 +174,21 @@ class RequisitionController extends Controller
                 foreach ($request->items as $item) {
                     if (empty($item['itemId'])) continue;
 
-                    // FIX START: Ensure approved_qty equals quantity upon creation
-                    $approvedQty = $item['quantity']; // Use the requested quantity as the initial approved quantity
-                    // FIX END
+                    // FIX: Set approved_qty equal to quantity upon creation
+                    $approvedQty = $item['quantity'];
 
                     $requisition->requisition_items()->create([
                         'item_id' => $item['itemId'],
                         'quantity' => $item['quantity'],
-                        'approved_qty' => $approvedQty, // Use the calculated approved quantity
+                        'approved_qty' => $approvedQty, // Initial approval matches request
                     ]);
                 }
             }
             elseif ($request->type === 'services') {
                 foreach ($request->services as $service) {
-                    // FIX: Removed 'service_name', 'quantity', 'unit_price', 'total_price'
-                    // because your database table does not support them.
+                    // Item ID removed from DB/flow
                     $requisition->requisition_services()->create([
                         'service_id' => $service['serviceId'] ?? null,
-                        'item_id' => $service['itemId'] ?? null,
-                        // Note: Any "Hours" entered by the user are lost here because the DB cannot store them.
                     ]);
                 }
             }
@@ -211,11 +204,11 @@ class RequisitionController extends Controller
 
     public function requisitionEdit($id)
     {
+        // FIX: Removed 'requisition_services.item' from eager loading
         $requisition = Requisition::with([
             'user',
             'requisition_items.item.category',
             'requisition_services.service',
-            'requisition_services.item'
         ])->findOrFail($id);
 
         $formattedItems = $requisition->requisition_items->map(function($ri) {
@@ -239,8 +232,8 @@ class RequisitionController extends Controller
                 'serviceId' => (string)($rs->service_id ?? ''),
                 'serviceName' => $serviceDef->name ?? 'Unknown',
                 'description' => $serviceDef->description ?? '',
-                'quantity' => "1", // Default to 1 (DB has no quantity)
-                'itemId' => (string)($rs->item_id ?? ''),
+                'quantity' => "1", // Fixed value
+                'itemId' => '', // Item ID removed
                 'unit_price' => (string)($serviceDef->hourly_rate ?? 0),
                 'total' => number_format(1 * ($serviceDef->hourly_rate ?? 0), 2, '.', ''),
                 'isSaved' => true,
@@ -311,10 +304,9 @@ class RequisitionController extends Controller
                 $requisition->requisition_services()->delete();
 
                 foreach ($request->services as $service) {
-                    // FIX: STRICT ERD MATCHING
+                    // Item ID removed from creation data
                     $requisition->requisition_services()->create([
                         'service_id' => $service['originalServiceId'] ?? $service['serviceId'] ?? null,
-                        'item_id' => $service['itemId'] ?? null,
                     ]);
                 }
             }

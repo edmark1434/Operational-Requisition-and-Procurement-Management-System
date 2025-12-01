@@ -6,18 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Requisition;
 use App\Models\Service;
-use App\Models\Item;
+// Removed: use App\Models\Item;
 
 class RequisitionService extends Model
 {
     /** @use HasFactory<\Database\Factories\RequisitionServiceFactory> */
     use HasFactory;
 
-    public $fillable = ['req_id','service_id','item_id'];
+    // item_id removed from fillable
+    public $fillable = ['req_id','service_id'];
 
     public $timestamps = false;
-
-    // FIX: Added 'return' keyword to all relationships below
 
     public function requisition(){
         return $this->belongsTo(Requisition::class, 'req_id');
@@ -27,7 +26,5 @@ class RequisitionService extends Model
         return $this->belongsTo(Service::class, 'service_id');
     }
 
-    public function item(){
-        return $this->belongsTo(Item::class, 'item_id');
-    }
+    // item() relationship removed
 }

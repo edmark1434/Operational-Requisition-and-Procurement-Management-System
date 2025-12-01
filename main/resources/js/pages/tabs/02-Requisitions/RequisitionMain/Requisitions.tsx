@@ -57,8 +57,7 @@ export default function Requisitions({
     const [localRequisitions, setLocalRequisitions] = useState<Requisition[]>(serverRequisitions || []);
 
     // =========================================================================
-    // 👇 FIX #1: ADD THIS useEffect HERE
-    // This syncs your list when the server sends back fresh data (e.g. after a reload)
+    // FIX #1: Sync local state when serverRequisitions prop changes
     // =========================================================================
     useEffect(() => {
         setLocalRequisitions(serverRequisitions || []);
@@ -66,8 +65,6 @@ export default function Requisitions({
 
 
     // --- Filter Logic ---
-// In Requisitions.tsx
-
     const filteredRequisitions = useMemo(() => {
         return localRequisitions.filter(req => {
             const searchLower = searchTerm.toLowerCase();
@@ -78,8 +75,7 @@ export default function Requisitions({
                 req.id.toString().includes(searchLower) ||
                 (req.notes && req.notes.toLowerCase().includes(searchLower));
 
-            // 👇 FIX IS HERE: Replace underscores with spaces for safe comparison
-            // This ensures "partially_approved" matches "Partially Approved"
+            // FIX: Replace underscores with spaces for safe comparison (e.g. 'partially_approved' vs 'Partially Approved')
             const dbStatus = req.status.toLowerCase().replace(/_/g, ' ');
             const filterStatus = statusFilter.toLowerCase().replace(/_/g, ' ');
 
@@ -104,18 +100,14 @@ export default function Requisitions({
     // --- Handlers ---
     const handleStatusUpdate = (id: number, newStatus: string, reason?: string) => {
 
-        // =========================================================================
-        // 👇 FIX #2: CHANGED 'setAllRequisitions' TO 'setLocalRequisitions'
-        // This makes the UI update instantly (Optimistic Update)
-        // =========================================================================
+        // FIX #2: Optimistically update local state for instant UI feedback
         setLocalRequisitions(prevItems => prevItems.map(item =>
             item.id === id
                 ? { ...item, status: newStatus, remarks: reason || item.remarks }
                 : item
         ));
 
-        // 2. INSTANTLY Update the Modal (The Popup)
-        // We use 'as Requisition' to keep Typescript happy if it complains about null
+        // INSTANTLY Update the Modal (The Popup)
         if (selectedRequisition && selectedRequisition.id === id) {
             setSelectedRequisition(prev => prev ? ({
                 ...prev,
@@ -124,7 +116,7 @@ export default function Requisitions({
             }) : null);
         }
 
-        // 3. Send Request to Backend (Background Sync)
+        // Send Request to Backend (Background Sync)
         router.put(`/requisitions/${id}/status`, {
             status: newStatus,
             reason: reason
@@ -135,7 +127,7 @@ export default function Requisitions({
                 console.log("Synced with server");
             },
             onError: () => {
-                alert("Failed to save status.");
+                alert("Failed to save status. Reloading page.");
                 // If it failed, reload to get the real data back
                 router.reload();
             }
