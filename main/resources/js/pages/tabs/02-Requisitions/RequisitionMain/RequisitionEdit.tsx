@@ -1,29 +1,31 @@
-// RequisitionEdit.tsx - Updated version with services support
 import AppLayout from '@/layouts/app-layout';
 import { requisitions } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 
-// Import your datasets
+// Import datasets
 import itemsData from "@/pages/datasets/items";
 import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
-import requisitionsData from '@/pages/datasets/requisition';
-import requisitionItemsData from "@/pages/datasets/requisition_item";
-import requisitionServiceData from "@/pages/datasets/requisition_service"; // ADD THIS
-import serviceData from "@/pages/datasets/service"; // ADD THIS
+import serviceData from "@/pages/datasets/service";
 
 // Import components
-import RequestorInformation from './RequestorInformation';
-import RequisitionDetails from './RequisitionDetails';
-import RequestedItems from './RequestedItems';
-import RequisitionService from './RequisitionService'; // ADD THIS
-import RequisitionPreviewModal from './RequisitionPreviewModal';
+import RequestorInformation from '../RequisitionForm/RequestorInformation';
+import RequisitionDetails from '../RequisitionForm/RequisitionDetails';
+import RequestedItems from '../RequisitionForm/RequestedItems';
+import RequisitionService from '../RequisitionForm/RequisitionService';
+import RequisitionPreviewModal from '../RequisitionForm/RequisitionPreviewModal';
 
 interface RequisitionEditProps {
     auth: any;
     requisitionId: number;
+    serverRequisition: any;
+    initialItems: RequisitionItem[];
+    initialServices: RequisitionService[];
+    dbCategories: Array<{ id: number; name: string }>;
+    systemServices: any[]; // 👈 Add this
 }
 
 interface RequisitionItem {
@@ -59,33 +61,37 @@ interface ValidationErrors {
 }
 
 const breadcrumbs = (requisitionId: number): BreadcrumbItem[] => [
-    {
-        title: 'RequisitionMain',
-        href: requisitions().url,
-    },
-    {
-        title: `Edit Requisition #${requisitionId}`,
-        href: `/requisitions/${requisitionId}/edit`,
-    },
+    { title: 'RequisitionMain', href: requisitions().url },
+    { title: `Edit Requisition #${requisitionId}`, href: `/requisitions/${requisitionId}/edit` },
 ];
 
-export default function RequisitionEdit({ auth, requisitionId }: RequisitionEditProps) {
+export default function RequisitionEdit({
+                                            auth,
+                                            requisitionId,
+                                            serverRequisition,
+                                            initialItems,
+                                            initialServices,
+                                            dbCategories = [],
+                                            systemServices = [] // 👈 Destructure
+                                        }: RequisitionEditProps) {
+
+    // --- STATE ---
     const [requestorType, setRequestorType] = useState<'self' | 'other'>('self');
     const [otherRequestor, setOtherRequestor] = useState('');
     const [selectedUser, setSelectedUser] = useState('');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [priority, setPriority] = useState('normal');
-    const [type, setType] = useState('items'); // 'items' or 'services'
+    const [type, setType] = useState('items');
     const [notes, setNotes] = useState('');
+
     const [items, setItems] = useState<RequisitionItem[]>([]);
     const [services, setServices] = useState<RequisitionService[]>([]);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [originalRequisition, setOriginalRequisition] = useState<any>(null);
 
-    // Use actual users from dataset
+    // --- DATASETS ---
     const systemUsers = usersData.map(user => ({
         id: user.US_ID.toString(),
         name: user.NAME,
@@ -93,218 +99,113 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         department: 'General'
     }));
 
-    // Use actual categories from dataset
-    const categories = categoriesData.map(cat => ({
-        id: cat.CAT_ID,
-        name: cat.NAME,
-        description: cat.DESCRIPTION
-    }));
-
-    // Use actual items for autocomplete or suggestions
     const systemItems = itemsData.map(item => ({
         id: item.ITEM_ID,
         name: item.NAME,
-        category: categories.find(cat => cat.id === item.CATEGORY_ID)?.name || 'Unknown',
         unitPrice: item.UNIT_PRICE,
-        barcode: item.BARCODE
     }));
 
-    // Use actual services from dataset
-    const systemServices = serviceData;
+    // --- API HELPER FOR DYNAMIC ITEMS ---
+    const fetchItemsForCategory = async (categoryName: string) => {
+        if (!categoryName) return [];
 
-    // Reset items/services when type changes
-    const handleTypeChange = (newType: string) => {
-        setType(newType);
-        // Clear validation errors when switching types
-        setValidationErrors(prev => ({ ...prev, items: undefined, services: undefined }));
-    };
+        // Find ID based on name (Case Insensitive Match)
+        const cat = dbCategories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
 
-    // Load requisition data on component mount
-    useEffect(() => {
-        loadRequisitionData();
-    }, [requisitionId]);
-
-    const loadRequisitionData = () => {
-        setIsLoading(true);
+        if (!cat) {
+            console.warn(`Category '${categoryName}' not found in database categories.`);
+            return [];
+        }
 
         try {
-            // Find the requisition to edit
-            const requisition = requisitionsData.find(req => req.ID === requisitionId);
+            const response = await axios.get(`/requisition/api/items/${cat.id}`);
+            return response.data;
+        } catch (error) {
+            console.error("Failed to fetch items", error);
+            return [];
+        }
+    };
 
-            if (!requisition) {
-                console.error(`Requisition #${requisitionId} not found`);
-                alert('Requisition not found!');
-                router.visit(requisitions().url);
-                return;
-            }
+    const grandTotal = useMemo(() => {
+        if (type === 'items') {
+            return items.reduce((sum, item) => (parseFloat(item.total) || 0) + sum, 0);
+        } else {
+            return services.reduce((sum, service) => (parseFloat(service.total) || 0) + sum, 0);
+        }
+    }, [items, services, type]);
 
-            setOriginalRequisition(requisition);
+    // --- INITIALIZE ---
+    useEffect(() => {
+        if (serverRequisition) {
+            setPriority((serverRequisition.priority || 'normal').toLowerCase());
+            const rawType = (serverRequisition.type || 'items').toLowerCase();
+            setType(rawType);
+            setNotes(serverRequisition.notes || '');
 
-            // Set basic form data
-            setPriority(requisition.PRIORITY.toLowerCase());
-            setType(requisition.TYPE); // Set the type from requisition data
-            setNotes(requisition.NOTES || '');
+            // Requestor Logic
+            const storedRequestorName = serverRequisition.requestor || '';
+            const currentUserName = auth.user.fullname || auth.user.name || '';
 
-            // Determine requestor type and set requestor fields
-            const isSelf = requisition.USER_ID === auth.user.id;
-            setRequestorType(isSelf ? 'self' : 'other');
-
-            if (isSelf) {
+            if (storedRequestorName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
+                setRequestorType('self');
                 setSelectedUser('');
                 setOtherRequestor('');
             } else {
-                // Check if requestor is in system users
+                setRequestorType('other');
                 const userInSystem = systemUsers.find(user =>
-                    user.name.toLowerCase() === requisition.REQUESTOR.toLowerCase()
+                    user.name.toLowerCase() === storedRequestorName.toLowerCase()
                 );
-
                 if (userInSystem) {
                     setSelectedUser(userInSystem.id);
-                    setOtherRequestor('');
+                    setOtherRequestor(userInSystem.name);
                 } else {
                     setSelectedUser('');
-                    setOtherRequestor(requisition.REQUESTOR);
+                    setOtherRequestor(storedRequestorName);
                 }
             }
 
-            // Load requisition items if it's an items requisition
-            if (requisition.TYPE === 'items') {
-                const requisitionItems = requisitionItemsData
-                    .filter(item => item.REQ_ID === requisitionId)
-                    .map(reqItem => {
-                        const itemDetails = itemsData.find(item => item.ITEM_ID === reqItem.ITEM_ID);
-                        const category = categoriesData.find(cat => cat.CAT_ID === itemDetails?.CATEGORY_ID);
+            // Ensure items are marked as saved initially so they don't block submission
+            const processedItems = (initialItems || []).map(i => ({ ...i, isSaved: true }));
+            const processedServices = (initialServices || []).map(s => ({ ...s, isSaved: true }));
 
-                        return {
-                            id: `existing_${reqItem.REQT_ID}`,
-                            category: reqItem.CATEGORY || category?.NAME || '',
-                            itemName: itemDetails?.NAME || '',
-                            quantity: reqItem.QUANTITY.toString(),
-                            unit_price: itemDetails?.UNIT_PRICE?.toString() || '0',
-                            total: ((itemDetails?.UNIT_PRICE || 0) * reqItem.QUANTITY).toFixed(2),
-                            isSaved: true,
-                            itemId: reqItem.ITEM_ID,
-                            originalItemId: reqItem.ITEM_ID
-                        };
-                    });
+            if (processedItems.length > 0) setItems(processedItems);
+            else setItems([createNewItem()]);
 
-                setItems(requisitionItems.length > 0 ? requisitionItems : [createNewItem()]);
-            } else {
-                // Load requisition services if it's a services requisition - FIXED VERSION
-                const requisitionServices = requisitionServiceData
-                    .filter(service => service.REQ_ID === requisitionId)
-                    .map(reqService => {
-                        const serviceDetails = serviceData.find(service => service.ID === reqService.SERVICE_ID);
+            if (processedServices.length > 0) setServices(processedServices);
+            else setServices([createNewService()]);
 
-                        // Ensure serviceId matches the system service ID for combobox recognition
-                        const serviceId = reqService.SERVICE_ID?.toString();
-
-                        return {
-                            id: `existing_${reqService.ID}`,
-                            serviceId: serviceId, // This is crucial for combobox selection
-                            serviceName: serviceDetails?.NAME || '',
-                            description: serviceDetails?.DESCRIPTION || '',
-                            quantity: reqService.QUANTITY.toString(),
-                            unit_price: reqService.UNIT_PRICE.toString(),
-                            total: reqService.TOTAL.toString(),
-                            isSaved: true,
-                            hourlyRate: serviceDetails?.HOURLY_RATE.toString() || reqService.UNIT_PRICE.toString(),
-                            originalServiceId: reqService.SERVICE_ID
-                        };
-                    });
-
-                setServices(requisitionServices.length > 0 ? requisitionServices : [createNewService()]);
-            }
-        } catch (error) {
-            console.error('Error loading requisition data:', error);
-            alert('Error loading requisition data!');
-            router.visit(requisitions().url);
-        } finally {
             setIsLoading(false);
         }
-    };
+    }, [serverRequisition, initialItems, initialServices]);
 
-    // Add this useEffect in RequisitionEdit.tsx after the loadRequisitionData function
-    useEffect(() => {
-        if (!isLoading && type === 'services' && services.length > 0) {
-            // Force update services to ensure they're properly linked to system data
-            const updatedServices = services.map(service => {
-                if (service.serviceId) {
-                    const systemService = systemServices.find(sys => sys.ID.toString() === service.serviceId);
-                    if (systemService) {
-                        return {
-                            ...service,
-                            serviceName: systemService.NAME,
-                            description: systemService.DESCRIPTION,
-                            hourlyRate: systemService.HOURLY_RATE.toString(),
-                            unit_price: systemService.HOURLY_RATE.toString()
-                        };
-                    }
-                }
-                return service;
-            });
-
-            // Only update if changes were made
-            if (JSON.stringify(updatedServices) !== JSON.stringify(services)) {
-                setServices(updatedServices);
-            }
-        }
-    }, [isLoading, type, services, systemServices]);
-
+    // --- HANDLERS ---
     const createNewItem = (): RequisitionItem => ({
-        id: Date.now().toString(),
-        category: '',
-        itemName: '',
-        quantity: '',
-        unit_price: '',
-        total: '',
-        isSaved: false
+        id: Date.now().toString(), category: '', itemName: '', quantity: '', unit_price: '', total: '', isSaved: false
     });
-
     const createNewService = (): RequisitionService => ({
-        id: Date.now().toString(),
-        serviceName: '',
-        description: '',
-        quantity: '',
-        unit_price: '',
-        total: '',
-        isSaved: false
+        id: Date.now().toString(), serviceName: '', description: '', quantity: '', unit_price: '', total: '', isSaved: false
     });
 
-    // Items functions
     const addNewItem = () => {
-        const newItem = createNewItem();
-        setItems(prev => [newItem, ...prev]);
+        setItems(prev => [createNewItem(), ...prev]);
         setValidationErrors(prev => ({ ...prev, items: undefined }));
     };
 
-    const removeItem = (id: string) => {
-        if (items.length > 1) {
-            setItems(prev => prev.filter(item => item.id !== id));
-        }
-    };
+    const removeItem = (id: string) => items.length > 1 && setItems(prev => prev.filter(item => item.id !== id));
 
-    const updateItem = (id: string, field: keyof RequisitionItem, value: string) => {
+    const updateItem = (id: string, field: keyof RequisitionItem, value: string | number) => {
         setItems(prev => prev.map(item => {
             if (item.id === id) {
-                const updatedItem = { ...item, [field]: value, isSaved: false };
-
-                // Only calculate total when quantity OR unit_price is manually changed
+                const updated = { ...item, [field]: value, isSaved: false };
                 if (field === 'quantity' && item.unit_price) {
-                    const quantity = parseFloat(value) || 0;
-                    const unitPrice = parseFloat(item.unit_price) || 0;
-                    updatedItem.total = (quantity * unitPrice).toFixed(2);
+                    updated.total = ((parseFloat(value.toString()) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2);
                 } else if (field === 'unit_price' && item.quantity) {
-                    const quantity = parseFloat(item.quantity) || 0;
-                    const unitPrice = parseFloat(value) || 0;
-                    updatedItem.total = (quantity * unitPrice).toFixed(2);
+                    updated.total = ((parseFloat(item.quantity) || 0) * (parseFloat(value.toString()) || 0)).toFixed(2);
                 }
-
-                return updatedItem;
+                return updated;
             }
             return item;
         }));
-
         if (field === 'quantity' || field === 'category' || field === 'itemName') {
             setValidationErrors(prev => ({ ...prev, items: undefined }));
         }
@@ -314,228 +215,50 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         const itemToSave = items.find(item => item.id === id);
         if (!itemToSave) return;
 
-        // Validate required fields
         if (!itemToSave.itemName.trim() || !itemToSave.quantity.trim() || !itemToSave.category.trim()) {
-            alert('Please fill in category, item name and quantity before saving the item.');
+            alert('Please fill in category, item name and quantity before saving.');
             return;
         }
 
-        // Link to actual item if it exists in the system
-        const matchedSystemItem = systemItems.find(sysItem =>
-            sysItem.name.toLowerCase() === itemToSave.itemName.toLowerCase()
-        );
+        // Try to match ID if missing
+        if (!itemToSave.itemId) {
+            const matched = systemItems.find(si => si.name === itemToSave.itemName);
+            if(matched) itemToSave.itemId = matched.id;
+        }
 
-        setItems(prev => {
-            const updatedItems = prev.map(item =>
-                item.id === id ? {
-                    ...item,
-                    isSaved: true,
-                    itemId: matchedSystemItem?.id
-                } : item
-            );
-
-            const savedItem = updatedItems.find(item => item.id === id);
-            if (savedItem) {
-                const filteredItems = updatedItems.filter(item => item.id !== id);
-                return [...filteredItems, savedItem];
-            }
-
-            return updatedItems;
-        });
+        setItems(prev => prev.map(item => item.id === id ? { ...item, isSaved: true, itemId: itemToSave.itemId } : item));
     };
 
-    const editItem = (id: string) => {
-        setItems(prev => prev.map(item =>
-            item.id === id
-                ? { ...item, isSaved: false }
-                : item
-        ));
-    };
+    const editItem = (id: string) => setItems(prev => prev.map(item => item.id === id ? { ...item, isSaved: false } : item));
 
-    // Services functions
+    // Service handlers
     const addNewService = () => {
-        const newService = createNewService();
-        setServices(prev => [newService, ...prev]);
+        setServices(prev => [createNewService(), ...prev]);
         setValidationErrors(prev => ({ ...prev, services: undefined }));
     };
 
-    const removeService = (id: string) => {
-        if (services.length > 1) {
-            setServices(prev => prev.filter(service => service.id !== id));
-        }
-    };
+    const removeService = (id: string) => services.length > 1 && setServices(prev => prev.filter(s => s.id !== id));
 
     const updateService = (id: string, field: keyof RequisitionService, value: string) => {
-        setServices(prev => prev.map(service => {
-            if (service.id === id) {
-                const updatedService = { ...service, [field]: value, isSaved: false };
-
-                // Calculate total when quantity OR unit_price is changed
-                if (field === 'quantity' && service.unit_price) {
-                    const quantity = parseFloat(value) || 0;
-                    const unitPrice = parseFloat(service.unit_price) || 0;
-                    updatedService.total = (quantity * unitPrice).toFixed(2);
-                } else if (field === 'unit_price' && service.quantity) {
-                    const quantity = parseFloat(service.quantity) || 0;
-                    const unitPrice = parseFloat(value) || 0;
-                    updatedService.total = (quantity * unitPrice).toFixed(2);
-                }
-
-                return updatedService;
-            }
-            return service;
-        }));
-
+        setServices(prev => prev.map(s => s.id === id ? { ...s, [field]: value, isSaved: false } : s));
         if (field === 'quantity' || field === 'serviceName') {
             setValidationErrors(prev => ({ ...prev, services: undefined }));
         }
     };
 
     const saveService = (id: string) => {
-        const serviceToSave = services.find(service => service.id === id);
-        if (!serviceToSave) return;
-
-        // Validate required fields
-        if (!serviceToSave.serviceName.trim() || !serviceToSave.quantity.trim()) {
-            alert('Please fill in service name and quantity before saving the service.');
-            return;
-        }
-
-        setServices(prev => {
-            const updatedServices = prev.map(service =>
-                service.id === id ? {
-                    ...service,
-                    isSaved: true
-                } : service
-            );
-
-            const savedService = updatedServices.find(service => service.id === id);
-            if (savedService) {
-                const filteredServices = updatedServices.filter(service => service.id !== id);
-                return [...filteredServices, savedService];
-            }
-
-            return updatedServices;
-        });
+        const s = services.find(serv => serv.id === id);
+        if (!s?.serviceName || !s?.quantity) return alert("Fill required fields");
+        setServices(prev => prev.map(s => s.id === id ? { ...s, isSaved: true } : s));
     };
 
-    const editService = (id: string) => {
-        setServices(prev => prev.map(service =>
-            service.id === id
-                ? { ...service, isSaved: false }
-                : service
-        ));
-    };
+    const editService = (id: string) => setServices(prev => prev.map(s => s.id === id ? { ...s, isSaved: false } : s));
 
-    const getTotalAmount = () => {
-        if (type === 'items') {
-            return items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
-        } else {
-            return services.reduce((sum, service) => sum + (parseFloat(service.total) || 0), 0);
-        }
-    };
-
-    const validateForm = () => {
-        const errors: ValidationErrors = {};
-
-        // Validate requestor
-        if (requestorType === 'other' && !otherRequestor.trim() && !selectedUser) {
-            errors.requestor = 'Please select or enter a requestor name';
-        }
-
-        if (type === 'items') {
-            // Validate items
-            const unsavedItems = items.filter(item => !item.isSaved);
-            if (unsavedItems.length > 0) {
-                errors.items = 'Please save all items before submitting';
-            }
-
-            if (items.length === 0) {
-                errors.items = 'Please add at least one item';
-            }
-
-            const invalidItems = items.filter(item =>
-                !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim())
-            );
-            if (invalidItems.length > 0) {
-                errors.items = 'All items must have category, item name and quantity filled out before saving';
-            }
-        } else {
-            // Validate services
-            const unsavedServices = services.filter(service => !service.isSaved);
-            if (unsavedServices.length > 0) {
-                errors.services = 'Please save all services before submitting';
-            }
-
-            if (services.length === 0) {
-                errors.services = 'Please add at least one service';
-            }
-
-            const invalidServices = services.filter(service =>
-                !service.isSaved && (!service.serviceName.trim() || !service.quantity.trim())
-            );
-            if (invalidServices.length > 0) {
-                errors.services = 'All services must have service name and quantity filled out before saving';
-            }
-        }
-
-        setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
-
-        const finalRequestor = requestorType === 'self'
-            ? auth.user.name
-            : selectedUser ? systemUsers.find(user => user.id === selectedUser)?.name || '' : otherRequestor;
-
-        const formData = {
-            requisitionId,
-            requestor: finalRequestor,
-            priority,
-            type,
-            notes,
-            items: type === 'items' ? items.map(item => ({
-                ...item,
-                itemId: item.itemId || null,
-                originalItemId: item.originalItemId
-            })) : [],
-            services: type === 'services' ? services.map(service => ({
-                ...service,
-                originalServiceId: service.originalServiceId
-            })) : [],
-            total_amount: getTotalAmount(),
-            us_id: requestorType === 'self' ? auth.user.id :
-                selectedUser ? parseInt(selectedUser) : null
-        };
-
-        setPreviewData(formData);
-        setShowPreview(true);
-    };
-
-    const handleConfirmSubmit = () => {
-        // TODO: Add update logic when backend is ready
-        alert('Requisition updated successfully! (Demo mode)');
-        setShowPreview(false);
-        router.visit('/requisitions');
-    };
-
-    const handleCancel = () => {
-        if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-            router.visit(requisitions().url);
-        }
-    };
-
-    const hasError = (id: string, field: 'quantity' | 'serviceName' | 'description' | 'category' | 'itemName') => {
+    // --- VALIDATION & ERROR HANDLING ---
+    const hasError = (id: string, field: string) => {
         if (type === 'items') {
             const item = items.find(item => item.id === id);
             if (!item || item.isSaved) return false;
-
             if (validationErrors.items) {
                 if (field === 'quantity' && !item.quantity.trim()) return true;
                 if (field === 'category' && !item.category.trim()) return true;
@@ -545,80 +268,104 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
         } else {
             const service = services.find(service => service.id === id);
             if (!service || service.isSaved) return false;
-
             if (validationErrors.services) {
                 if (field === 'quantity' && !service.quantity.trim()) return true;
                 if (field === 'serviceName' && !service.serviceName.trim()) return true;
-                if (field === 'description' && !service.description.trim()) return true;
             }
             return false;
         }
     };
 
-    const getItemSuggestions = (itemName: string) => {
-        if (!itemName.trim()) return [];
-        return systemItems.filter(item =>
-            item.name.toLowerCase().includes(itemName.toLowerCase())
-        ).slice(0, 5);
+    const validateForm = () => {
+        const errors: ValidationErrors = {};
+
+        if (requestorType === 'other' && !otherRequestor.trim() && !selectedUser) {
+            errors.requestor = 'Please select or enter a requestor name';
+        }
+
+        if (type === 'items') {
+            const unsavedItems = items.filter(item => !item.isSaved);
+            if (unsavedItems.length > 0) {
+                errors.items = 'Please save all items before submitting';
+          //      alert(errors.items); // Prompting the user as requested
+            }
+            else if (items.length === 0) {
+                errors.items = 'Please add at least one item';
+            }
+            else {
+                const invalidItems = items.filter(item => !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim()));
+                if (invalidItems.length > 0) errors.items = 'All items must have details filled out';
+            }
+        } else {
+            const unsavedServices = services.filter(service => !service.isSaved);
+            if (unsavedServices.length > 0) {
+                errors.services = 'Please save all services before submitting';
+                alert(errors.services); // Prompting the user as requested
+            }
+            else if (services.length === 0) {
+                errors.services = 'Please add at least one service';
+            }
+            else {
+                const invalidServices = services.filter(service => !service.isSaved && (!service.serviceName.trim() || !service.quantity.trim()));
+                if (invalidServices.length > 0) errors.services = 'All services must have details filled out';
+            }
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
-    if (isLoading) {
-        return (
-            <AppLayout breadcrumbs={breadcrumbs(requisitionId)}>
-                <Head title="Edit Requisition" />
-                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-2xl font-bold">Edit Requisition</h1>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading requisition data...</p>
-                        </div>
-                    </div>
-                </div>
-            </AppLayout>
-        );
-    }
+    // --- SUBMIT ---
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!validateForm()) return;
+
+        const finalRequestor = requestorType === 'self' ? auth.user.fullname : otherRequestor;
+        const finalUserId = requestorType === 'self' ? auth.user.id : (selectedUser ? parseInt(selectedUser) : auth.user.id);
+
+        setPreviewData({
+            requisitionId, requestor: finalRequestor, priority, type, notes,
+            items: type === 'items' ? items : [], services: type === 'services' ? services : [],
+            total_amount: grandTotal, us_id: finalUserId
+        });
+        setShowPreview(true);
+    };
+
+    const handleConfirmSubmit = () => {
+        router.put(`/requisitions/${requisitionId}`, previewData, {
+            onSuccess: () => setShowPreview(false),
+            onError: (err) => {
+                console.error(err);
+                alert("Update failed. Please check form for errors.");
+                setShowPreview(false);
+            }
+        });
+    };
+
+    if (isLoading) return (
+        <AppLayout breadcrumbs={breadcrumbs(requisitionId)}>
+            <div className="flex h-full items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        </AppLayout>
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs(requisitionId)}>
             <Head title="Edit Requisition" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold">Edit Requisition</h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Editing Requisition #{requisitionId} ({type})
-                        </p>
-                    </div>
-                    <Link
-                        href={requisitions().url}
-                        className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
-                    >
-                        Return to Requisitions
-                    </Link>
+                    <h1 className="text-2xl font-bold">Edit Requisition</h1>
+                    <Link href={requisitions().url} className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">Back</Link>
                 </div>
 
                 <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-white dark:bg-[oklch(0.145_0_0)]">
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                {/* Header Section - Updated colors */}
-                                <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                        Edit Requisition #{requisitionId}
-                                    </h2>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Update the requisition details below.
-                                    </p>
-                                </div>
-
                                 <form onSubmit={handleSubmit} className="p-6">
-                                    {/* Requisition Info */}
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                                        {/* Left Column - Smaller */}
                                         <div className="space-y-6 lg:col-span-1">
                                             <RequestorInformation
                                                 requestorType={requestorType}
@@ -634,34 +381,30 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                                                 auth={auth}
                                                 systemUsers={systemUsers}
                                             />
-
                                             <RequisitionDetails
                                                 priority={priority}
                                                 setPriority={setPriority}
                                                 type={type}
-                                                setType={handleTypeChange}
+                                                setType={() => {}} // Locked
                                                 notes={notes}
                                                 setNotes={setNotes}
+                                                totalAmount={grandTotal}
                                             />
+                                            <div className="text-xs text-red-500 mt-1 italic">* Requisition Type cannot be changed when editing.</div>
                                         </div>
 
-                                        {/* Right Column - Items/Services Section (Wider) */}
                                         {type === 'items' ? (
                                             <RequestedItems
                                                 items={items}
-                                                setItems={setItems}
                                                 validationErrors={validationErrors}
-                                                setValidationErrors={setValidationErrors}
-                                                categories={categories}
-                                                systemItems={systemItems}
-                                                getTotalAmount={getTotalAmount}
                                                 updateItem={updateItem}
                                                 saveItem={saveItem}
                                                 removeItem={removeItem}
                                                 addNewItem={addNewItem}
                                                 hasError={hasError}
-                                                getItemSuggestions={getItemSuggestions}
                                                 editItem={editItem}
+                                                availableCategories={dbCategories}
+                                                onFetchItems={fetchItemsForCategory}
                                             />
                                         ) : (
                                             <RequisitionService
@@ -669,7 +412,7 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                                                 setServices={setServices}
                                                 validationErrors={validationErrors}
                                                 setValidationErrors={setValidationErrors}
-                                                getTotalAmount={getTotalAmount}
+                                                getTotalAmount={() => grandTotal}
                                                 updateService={updateService}
                                                 saveService={saveService}
                                                 removeService={removeService}
@@ -680,21 +423,12 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                                             />
                                         )}
                                     </div>
-
-                                    {/* Action Buttons */}
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-4 pb-2 border-t border-sidebar-border/70 -mx-6 px-6">
                                         <div className="flex gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={handleCancel}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
+                                            <button type="button" onClick={() => router.visit(requisitions().url)} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300">
                                                 Cancel
                                             </button>
-                                            <button
-                                                type="submit"
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
-                                            >
+                                            <button type="submit" className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold">
                                                 Update Requisition
                                             </button>
                                         </div>
@@ -704,15 +438,8 @@ export default function RequisitionEdit({ auth, requisitionId }: RequisitionEdit
                         </div>
                     </div>
                 </div>
-
-                {/* Preview Modal */}
-                <RequisitionPreviewModal
-                    isOpen={showPreview}
-                    onClose={() => setShowPreview(false)}
-                    onConfirm={handleConfirmSubmit}
-                    formData={previewData}
-                />
             </div>
+            <RequisitionPreviewModal isOpen={showPreview} onClose={() => setShowPreview(false)} onConfirm={handleConfirmSubmit} formData={previewData} />
         </AppLayout>
     );
 }

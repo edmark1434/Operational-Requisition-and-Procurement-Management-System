@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react'; // Ensure useEffect is imported
 import AppLayout from '@/layouts/app-layout';
+import { router } from '@inertiajs/react';
 import { requisitions as requisitionsRoute, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 
@@ -13,7 +14,7 @@ import RequisitionDetailModal from './RequisitionDetailModal';
 // --- Types based on your Laravel Controller ---
 interface Requisition {
     id: number;
-    references_no?: string; // <--- Reference Number Field (Optional if null in DB)
+    references_no?: string;
     requestor: string;
     priority: string;
     type: string;
@@ -39,7 +40,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Requisitions({
                                          requisitions: serverRequisitions,
-                                         dbCategories = [] // Default to empty array to prevent crash if backend isn't ready
+                                         dbCategories = []
                                      }: RequisitionsPageProps) {
 
     // 1. State for Filters
@@ -52,30 +53,35 @@ export default function Requisitions({
     const [selectedRequisition, setSelectedRequisition] = useState<Requisition | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // 3. Local state for requisitions (so we can update status instantly on the UI)
+    // 3. Local state for requisitions
     const [localRequisitions, setLocalRequisitions] = useState<Requisition[]>(serverRequisitions || []);
 
-    // --- Filter Logic (Replaces useRequisitionFilters hook) ---
-    // We use useMemo so it doesn't slow down the page
+    // =========================================================================
+    // FIX #1: Sync local state when serverRequisitions prop changes
+    // =========================================================================
+    useEffect(() => {
+        setLocalRequisitions(serverRequisitions || []);
+    }, [serverRequisitions]);
+
+
+    // --- Filter Logic ---
     const filteredRequisitions = useMemo(() => {
         return localRequisitions.filter(req => {
-            // Search (Reference No, ID, Requestor, or Notes)
             const searchLower = searchTerm.toLowerCase();
 
-            // --- UPDATED SEARCH LOGIC ---
             const matchesSearch =
-                (req.references_no && req.references_no.toLowerCase().includes(searchLower)) || // Check Reference No
+                (req.references_no && req.references_no.toLowerCase().includes(searchLower)) ||
                 req.requestor.toLowerCase().includes(searchLower) ||
                 req.id.toString().includes(searchLower) ||
                 (req.notes && req.notes.toLowerCase().includes(searchLower));
 
-            // Status Filter
-            const matchesStatus = statusFilter === 'All' || req.status.toLowerCase() === statusFilter.toLowerCase();
+            // FIX: Replace underscores with spaces for safe comparison (e.g. 'partially_approved' vs 'Partially Approved')
+            const dbStatus = req.status.toLowerCase().replace(/_/g, ' ');
+            const filterStatus = statusFilter.toLowerCase().replace(/_/g, ' ');
 
-            // Priority Filter
+            const matchesStatus = statusFilter === 'All' || dbStatus === filterStatus;
+
             const matchesPriority = priorityFilter === 'All' || req.priority.toLowerCase() === priorityFilter.toLowerCase();
-
-            // Category Filter (Checks if the category array contains the selected filter)
             const matchesCategory = categoryFilter === 'All' ||
                 (req.categories && req.categories.some(cat => cat.toLowerCase() === categoryFilter.toLowerCase()));
 
@@ -83,33 +89,49 @@ export default function Requisitions({
         });
     }, [localRequisitions, searchTerm, statusFilter, priorityFilter, categoryFilter]);
 
-    // --- Extract Unique Values for Dropdowns ---
-
-    // 1. Static Values (Always show these options)
+    // --- Dropdown Values ---
     const statuses = [
         'All', 'pending', 'approved', 'partially_approved',
         'rejected', 'ordered', 'awaiting_pickup', 'delivered', 'received'
     ];
-
     const priorities = ['All', 'Low', 'Normal', 'High'];
-
-    // 2. CATEGORIES (Pulling from Database Prop)
-    // Now we just take the list passed from Laravel and add "All" to the front.
     const allCategories = ['All', ...dbCategories];
 
     // --- Handlers ---
     const handleStatusUpdate = (id: number, newStatus: string, reason?: string) => {
-        // Update local state immediately (Optimistic UI)
-        setLocalRequisitions(prev =>
-            prev.map(req =>
-                req.id === id ? {
-                    ...req,
-                    status: newStatus,
-                    remarks: reason || req.remarks,
-                    // Note: In a real app, you should also trigger a router.post() here to save to DB
-                } : req
-            )
-        );
+
+        // FIX #2: Optimistically update local state for instant UI feedback
+        setLocalRequisitions(prevItems => prevItems.map(item =>
+            item.id === id
+                ? { ...item, status: newStatus, remarks: reason || item.remarks }
+                : item
+        ));
+
+        // INSTANTLY Update the Modal (The Popup)
+        if (selectedRequisition && selectedRequisition.id === id) {
+            setSelectedRequisition(prev => prev ? ({
+                ...prev,
+                status: newStatus,
+                remarks: reason || prev.remarks
+            }) : null);
+        }
+
+        // Send Request to Backend (Background Sync)
+        router.put(`/requisitions/${id}/status`, {
+            status: newStatus,
+            reason: reason
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // The useEffect (Fix #1) will handle the final data sync automatically
+                console.log("Synced with server");
+            },
+            onError: () => {
+                alert("Failed to save status. Reloading page.");
+                // If it failed, reload to get the real data back
+                router.reload();
+            }
+        });
     };
 
     const openModal = (requisition: Requisition) => {
@@ -140,7 +162,7 @@ export default function Requisitions({
                     </Link>
                 </div>
 
-                {/* Stats - Uses the real filtered data now */}
+                {/* Stats */}
                 <RequisitionStats requisitions={localRequisitions} />
 
                 {/* Search and Filters */}

@@ -34,11 +34,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('requisitionform', [RequisitionController::class, 'requisitionForm'])->name('requisitionform');
     Route::post('/requisition/store', [RequisitionController::class, 'store'])->name('requisition.store');
     Route::get('requisitions/{id}/edit', [RequisitionController::class, 'requisitionEdit'])->name('requisitionedit');
+// Add this line under your existing requisition routes
+    Route::put('/requisitions/{id}', [RequisitionController::class, 'update'])->name('requisitions.update');
+    Route::get('requisitions/{id}/adjust', [RequisitionController::class, 'requisitionAdjust'])->name('requisitionadjust');
 
+    Route::get('/requisitions/{id}/adjust', [RequisitionController::class, 'adjust'])->name('requisitions.adjust');
+    Route::put('/requisitions/{id}/adjust', [RequisitionController::class, 'updateAdjust'])->name('requisitions.updateAdjust');
     // API Routes for Dropdowns
     Route::get('/requisition/api/categories', [RequisitionController::class, 'getCategories']);
     Route::get('/requisition/api/items/{categoryId}', [RequisitionController::class, 'getItemsByCategory']);
 
+
+    //Route::put('/requisitions/{id}/status', [RequisitionController::class, 'updateStatus'])->name('requisitions.updateStatus');
+    // In routes/web.php inside your auth group
+    Route::put('/requisitions/{id}/status', [RequisitionController::class, 'updateStatus']);
     // INVENTORY
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');
     Route::get('inventory/add',[Inventory::class,"store"])->name('inventoryadd');

@@ -1,14 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
-import { requisitions, requisitionform } from '@/routes';
+import { requisitions } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useMemo } from 'react'; // <--- Added useMemo
+import { useState, useMemo } from 'react';
+import axios from 'axios';
 
-// Import your datasets
+// Import datasets (Keep for static data fallback/reference)
 import itemsData from "@/pages/datasets/items";
-import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
-import serviceData from '@/pages/datasets/service';
 
 // Import components
 import RequestorInformation from './RequestorInformation';
@@ -17,27 +16,32 @@ import RequestedItems from './RequestedItems';
 import RequisitionService from './RequisitionService';
 import RequisitionPreviewModal from './RequisitionPreviewModal';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Requisitions / Form',
-        href: requisitionform().url,
-    },
-];
+// --- INTERFACES ---
+
+interface RequisitionFormProps {
+    auth: any;
+    dbCategories: Array<{ id: number; name: string }>;
+    serviceCategories: Array<{ id: number; name: string }>;
+    systemServices: any[];
+    inventoryItems: any[]; // <--- NEW: Inventory Items for Services
+}
 
 interface RequisitionItem {
     id: string;
     category: string;
     itemName: string;
     quantity: string;
+    approved_qty: string; // <--- ADDED: Approved Quantity field
     unit_price: string;
     total: string;
     isSaved: boolean;
     itemId?: number;
-    categoryId?: number; // Ensure this is here for dropdowns
 }
 
 interface RequisitionService {
     id: string;
+    categoryId?: string;
+    categoryName?: string;
     serviceId?: string;
     serviceName: string;
     description: string;
@@ -46,6 +50,8 @@ interface RequisitionService {
     total: string;
     isSaved: boolean;
     hourlyRate?: string;
+    itemId?: string; // Optional linked item
+    itemName?: string;
 }
 
 interface ValidationErrors {
@@ -55,42 +61,49 @@ interface ValidationErrors {
     [key: string]: string | undefined;
 }
 
-export default function RequisitionForm({ auth }: { auth: any }) {
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'RequisitionMain',
+        href: requisitions().url,
+    },
+    {
+        title: 'RequisitionForm',
+        href: '/requisitionform',
+    },
+];
+
+export default function RequisitionForm({
+                                            auth,
+                                            dbCategories = [],
+                                            serviceCategories = [],
+                                            systemServices = [],
+                                            inventoryItems = [] // <--- NEW PROP
+                                        }: RequisitionFormProps) {
+
+    // --- STATE ---
     const [requestorType, setRequestorType] = useState<'self' | 'other'>('self');
     const [otherRequestor, setOtherRequestor] = useState('');
     const [selectedUser, setSelectedUser] = useState('');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
+
     const [priority, setPriority] = useState('normal');
     const [type, setType] = useState('items'); // 'items' or 'services'
     const [notes, setNotes] = useState('');
+
     const [items, setItems] = useState<RequisitionItem[]>([
-        {
-            id: '1',
-            category: '',
-            itemName: '',
-            quantity: '',
-            unit_price: '',
-            total: '',
-            isSaved: false
-        }
+        { id: Date.now().toString(), category: '', itemName: '', quantity: '1', approved_qty: '1', unit_price: '', total: '', isSaved: false } // Updated default quantity/approved_qty
     ]);
+
+    // Ensure this is initialized as an array!
     const [services, setServices] = useState<RequisitionService[]>([
-        {
-            id: '1',
-            serviceName: '',
-            description: '',
-            quantity: '',
-            unit_price: '',
-            total: '',
-            isSaved: false,
-            hourlyRate: ''
-        }
+        { id: Date.now().toString(), serviceName: '', description: '', quantity: '', unit_price: '', total: '', isSaved: false }
     ]);
+
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
 
-    // Use actual users from dataset
+    // Use actual users from dataset for the dropdown logic
     const systemUsers = usersData.map(user => ({
         id: user.US_ID.toString(),
         name: user.NAME,
@@ -98,30 +111,31 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         department: 'General'
     }));
 
-    // Use actual categories from dataset
-    const categories = categoriesData.map(cat => ({
-        id: cat.CAT_ID,
-        name: cat.NAME,
-        description: cat.DESCRIPTION
-    }));
-
-    // Use actual items for autocomplete or suggestions
+    // Static items (fallback or for ID matching if needed)
     const systemItems = itemsData.map(item => ({
         id: item.ITEM_ID,
         name: item.NAME,
-        category: categories.find(cat => cat.id === item.CATEGORY_ID)?.name || 'Unknown',
         unitPrice: item.UNIT_PRICE,
-        barcode: item.BARCODE
     }));
 
-    // Use actual services from dataset
-    const systemServices = serviceData;
+    // --- API HELPER FUNCTION ---
+    const fetchItemsForCategory = async (categoryName: string) => {
+        const cat = dbCategories.find(c => c.name === categoryName);
+        if (!cat) return [];
 
-    // --- GRAND TOTAL CALCULATION (NEW) ---
+        try {
+            const response = await axios.get(`/requisition/api/items/${cat.id}`);
+            return response.data;
+        } catch (error) {
+            console.error("Failed to fetch items", error);
+            return [];
+        }
+    };
+
+    // --- GRAND TOTAL CALCULATION ---
     const grandTotal = useMemo(() => {
         if (type === 'items') {
             return items.reduce((sum, item) => {
-                // Parse the total string, default to 0 if empty
                 const itemTotal = parseFloat(item.total) || 0;
                 return sum + itemTotal;
             }, 0);
@@ -133,24 +147,26 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         }
     }, [items, services, type]);
 
-    // Reset items/services when type changes
     const handleTypeChange = (newType: string) => {
         setType(newType);
+        // Clear errors when switching types
         setValidationErrors(prev => ({ ...prev, items: undefined, services: undefined }));
     };
 
-    // Items functions
+    // --- ITEM ACTIONS ---
+    const createNewItem = (): RequisitionItem => ({
+        id: Date.now().toString(),
+        category: '',
+        itemName: '',
+        quantity: '1', // Set default requested quantity to 1
+        approved_qty: '1', // Set default approved quantity to 1
+        unit_price: '',
+        total: '',
+        isSaved: false
+    });
+
     const addNewItem = () => {
-        const newItem = {
-            id: Date.now().toString(),
-            category: '',
-            itemName: '',
-            quantity: '',
-            unit_price: '',
-            total: '',
-            isSaved: false
-        };
-        setItems(prev => [newItem, ...prev]);
+        setItems(prev => [createNewItem(), ...prev]);
         setValidationErrors(prev => ({ ...prev, items: undefined }));
     };
 
@@ -163,23 +179,25 @@ export default function RequisitionForm({ auth }: { auth: any }) {
     const updateItem = (id: string, field: keyof RequisitionItem, value: string | number) => {
         setItems(prev => prev.map(item => {
             if (item.id === id) {
-                // Ensure value is treated correctly (string vs number)
                 const stringValue = value.toString();
-                const updatedItem = { ...item, [field]: value, isSaved: false };
 
-                // Only calculate total when quantity OR unit_price is manually changed
+                // If quantity is updated, automatically update approved_qty too
+                const updatedItem = {
+                    ...item,
+                    [field]: value,
+                    isSaved: false,
+                    ...(field === 'quantity' && { approved_qty: stringValue }) // Ensure approved_qty tracks quantity on creation
+                };
+
                 if (field === 'quantity' && item.unit_price) {
                     const quantity = parseFloat(stringValue) || 0;
                     const unitPrice = parseFloat(item.unit_price) || 0;
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
-                }
-                else if (field === 'unit_price' && item.quantity) {
+                } else if (field === 'unit_price' && item.quantity) {
                     const quantity = parseFloat(item.quantity) || 0;
                     const unitPrice = parseFloat(stringValue) || 0;
                     updatedItem.total = (quantity * unitPrice).toFixed(2);
-                }
-                // Special case for 'total' being passed directly (from RequestedItems component)
-                else if (field === 'total') {
+                } else if (field === 'total') {
                     updatedItem.total = stringValue;
                 }
 
@@ -187,7 +205,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             }
             return item;
         }));
-
         if (field === 'quantity' || field === 'category' || field === 'itemName') {
             setValidationErrors(prev => ({ ...prev, items: undefined }));
         }
@@ -202,31 +219,32 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             return;
         }
 
+        // Match ID if missing
         if (!itemToSave.itemId) {
-            alert("System Error: Item ID is missing. Please re-select the item from the dropdown.");
-            return;
+            const matched = systemItems.find(si => si.name === itemToSave.itemName);
+            if(matched) itemToSave.itemId = matched.id;
         }
 
-        setItems(prev => prev.map(item => item.id === id ? { ...item, isSaved: true } : item));
+        setItems(prev => prev.map(item => item.id === id ? { ...item, isSaved: true, itemId: itemToSave.itemId } : item));
     };
 
     const editItem = (id: string) => {
         setItems(prev => prev.map(item => item.id === id ? { ...item, isSaved: false } : item));
     };
 
-    // Services functions
+    // --- SERVICE ACTIONS ---
+    const createNewService = (): RequisitionService => ({
+        id: Date.now().toString(),
+        serviceName: '',
+        description: '',
+        quantity: '',
+        unit_price: '',
+        total: '',
+        isSaved: false
+    });
+
     const addNewService = () => {
-        const newService = {
-            id: Date.now().toString(),
-            serviceName: '',
-            description: '',
-            quantity: '',
-            unit_price: '',
-            total: '',
-            isSaved: false,
-            hourlyRate: ''
-        };
-        setServices(prev => [newService, ...prev]);
+        setServices(prev => [createNewService(), ...prev]);
         setValidationErrors(prev => ({ ...prev, services: undefined }));
     };
 
@@ -255,7 +273,6 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             }
             return service;
         }));
-
         if (field === 'quantity' || field === 'serviceName') {
             setValidationErrors(prev => ({ ...prev, services: undefined }));
         }
@@ -266,26 +283,17 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         if (!serviceToSave) return;
 
         if (!serviceToSave.serviceName.trim() || !serviceToSave.quantity.trim()) {
-            alert('Please fill in service name and quantity before saving the service.');
+            alert('Please fill in service name and quantity before saving.');
             return;
         }
-
-        setServices(prev => {
-            const updatedServices = prev.map(service => service.id === id ? { ...service, isSaved: true } : service);
-            const savedService = updatedServices.find(service => service.id === id);
-            if (savedService) {
-                const filteredServices = updatedServices.filter(service => service.id !== id);
-                return [...filteredServices, savedService];
-            }
-            return updatedServices;
-        });
+        setServices(prev => prev.map(service => service.id === id ? { ...service, isSaved: true } : service));
     };
 
     const editService = (id: string) => {
         setServices(prev => prev.map(service => service.id === id ? { ...service, isSaved: false } : service));
     };
 
-    // Helper for submission payload
+    // --- SUBMISSION ---
     const getTotalAmount = () => grandTotal;
 
     const validateForm = () => {
@@ -301,14 +309,14 @@ export default function RequisitionForm({ auth }: { auth: any }) {
             if (items.length === 0) errors.items = 'Please add at least one item';
 
             const invalidItems = items.filter(item => !item.isSaved && (!item.itemName.trim() || !item.quantity.trim() || !item.category.trim()));
-            if (invalidItems.length > 0) errors.items = 'All items must have category, item name and quantity filled out before saving';
+            if (invalidItems.length > 0) errors.items = 'All items must have details filled out';
         } else {
             const unsavedServices = services.filter(service => !service.isSaved);
             if (unsavedServices.length > 0) errors.services = 'Please save all services before submitting';
             if (services.length === 0) errors.services = 'Please add at least one service';
 
             const invalidServices = services.filter(service => !service.isSaved && (!service.serviceName.trim() || !service.quantity.trim()));
-            if (invalidServices.length > 0) errors.services = 'All services must have service name and quantity filled out before saving';
+            if (invalidServices.length > 0) errors.services = 'All services must have details filled out';
         }
 
         setValidationErrors(errors);
@@ -319,17 +327,30 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         e.preventDefault();
         if (!validateForm()) return;
 
-        const finalRequestor = requestorType === 'self' ? auth.user.fullname : selectedUser || otherRequestor;
+        // Use optional chaining for auth.user.fullname in case structure varies
+        const finalRequestorName = requestorType === 'self'
+            ? (auth.user?.fullname || auth.user?.name || 'Unknown')
+            : otherRequestor;
+
+        const finalUserId = requestorType === 'self'
+            ? (auth.user?.id || 0)
+            : (selectedUser ? parseInt(selectedUser) : (auth.user?.id || 0));
 
         const formData = {
-            requestor: finalRequestor,
+            requestor: finalRequestorName,
             priority,
             type,
             notes,
-            items: type === 'items' ? items.map(item => ({ ...item, itemId: item.itemId || null })) : [],
-            services: type === 'services' ? services.map(service => ({ ...service })) : [],
+            // Ensure approved_qty is included in the item data sent to the backend
+            items: type === 'items' ? items.map(item => ({
+                ...item,
+                itemId: item.itemId || null,
+                // The backend RequisitionItem model expects 'approved_qty'
+                approved_qty: item.approved_qty || item.quantity // Use current approved_qty, or fallback to quantity
+            })) : [],
+            services: type === 'services' ? services : [],
             total_amount: getTotalAmount(),
-            us_id: requestorType === 'self' ? auth.user.id : selectedUser ? parseInt(selectedUser) : null
+            us_id: finalUserId
         };
 
         setPreviewData(formData);
@@ -337,44 +358,14 @@ export default function RequisitionForm({ auth }: { auth: any }) {
     };
 
     const handleConfirmSubmit = () => {
-        router.post('/requisitions', previewData, {
+        router.post('/requisition/store', previewData, {
             onSuccess: () => setShowPreview(false),
-            onError: (errors) => {
-                console.error('Backend Errors:', errors);
+            onError: (err) => {
+                console.error(err);
+                alert("Creation failed");
                 setShowPreview(false);
-                setValidationErrors(errors);
-                alert('Please check the form for errors.');
             }
         });
-    };
-
-    const clearForm = () => {
-        setRequestorType('self');
-        setOtherRequestor('');
-        setSelectedUser('');
-        setPriority('normal');
-        setType('items');
-        setNotes('');
-        setItems([{
-            id: '1',
-            category: '',
-            itemName: '',
-            quantity: '',
-            unit_price: '',
-            total: '',
-            isSaved: false
-        }]);
-        setServices([{
-            id: '1',
-            serviceName: '',
-            description: '',
-            quantity: '',
-            unit_price: '',
-            total: '',
-            isSaved: false,
-            hourlyRate: ''
-        }]);
-        setValidationErrors({});
     };
 
     const hasError = (id: string, field: string) => {
@@ -398,22 +389,21 @@ export default function RequisitionForm({ auth }: { auth: any }) {
         }
     };
 
-    const getItemSuggestions = (itemName: string) => {
-        if (!itemName.trim()) return [];
-        return systemItems.filter(item =>
-            item.name.toLowerCase().includes(itemName.toLowerCase())
-        ).slice(0, 5);
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Requisition Form" />
+            <Head title="Create Requisition" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold">Requisition Form</h1>
+                    <div>
+                        <h1 className="text-2xl font-bold">Create Requisition</h1>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            New Requisition Request
+                        </p>
+                    </div>
                     <Link
                         href={requisitions().url}
-                        className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+                        className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700"
                     >
                         Return to Requisitions
                     </Link>
@@ -423,12 +413,13 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20">
+                                {/* Header */}
+                                <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                        New Requisition Form
+                                        Requisition Form
                                     </h2>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Complete the form below to submit a new requisition
+                                    <p className="text-gray-600 dark:text-gray-400">
+                                        Fill in the details below to submit a new requisition request.
                                     </p>
                                 </div>
 
@@ -457,27 +448,26 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                                 setType={handleTypeChange}
                                                 notes={notes}
                                                 setNotes={setNotes}
-                                                totalAmount={grandTotal} // <--- PASSING THE CALCULATED TOTAL
+                                                totalAmount={grandTotal}
                                             />
                                         </div>
 
                                         {type === 'items' ? (
                                             <RequestedItems
                                                 items={items}
-                                                // items state is managed by parent, no setItems needed for child
                                                 validationErrors={validationErrors}
-                                                // categories/systemItems props removed as RequestedItems fetches internally now
-                                                // but keeping these props if you revert to old version doesn't hurt
                                                 updateItem={updateItem}
                                                 saveItem={saveItem}
                                                 removeItem={removeItem}
                                                 addNewItem={addNewItem}
                                                 hasError={hasError}
                                                 editItem={editItem}
+                                                availableCategories={dbCategories}
+                                                onFetchItems={fetchItemsForCategory}
                                             />
                                         ) : (
                                             <RequisitionService
-                                                services={services}
+                                                services={services}  // <--- ENSURE THIS IS PASSED
                                                 setServices={setServices}
                                                 validationErrors={validationErrors}
                                                 setValidationErrors={setValidationErrors}
@@ -488,7 +478,11 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                                 addNewService={addNewService}
                                                 hasError={hasError}
                                                 editService={editService}
+
+                                                // Props from Controller:
                                                 systemServices={systemServices}
+                                                availableCategories={serviceCategories}
+                                                inventoryItems={inventoryItems} // <--- NEW PROP PASSED DOWN
                                             />
                                         )}
                                     </div>
@@ -497,16 +491,16 @@ export default function RequisitionForm({ auth }: { auth: any }) {
                                         <div className="flex gap-3">
                                             <button
                                                 type="button"
-                                                onClick={clearForm}
-                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                onClick={() => router.visit(requisitions().url)}
+                                                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600"
                                             >
-                                                Clear Form
+                                                Cancel
                                             </button>
                                             <button
                                                 type="submit"
-                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold"
                                             >
-                                                Submit Requisition
+                                                Submit Request
                                             </button>
                                         </div>
                                     </div>

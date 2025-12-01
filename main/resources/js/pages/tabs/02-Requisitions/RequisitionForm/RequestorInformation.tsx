@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 interface RequestorInformationProps {
     requestorType: 'self' | 'other';
     setRequestorType: (type: 'self' | 'other') => void;
@@ -19,16 +21,45 @@ export default function RequestorInformation({
                                                  setSelectedUser,
                                                  otherRequestor,
                                                  setOtherRequestor,
+                                                 showUserDropdown,
+                                                 setShowUserDropdown,
                                                  validationErrors,
                                                  setValidationErrors,
                                                  auth,
+                                                 systemUsers,
                                              }: RequestorInformationProps) {
+
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowUserDropdown(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [setShowUserDropdown]);
 
     const handleManualInput = (value: string) => {
         setOtherRequestor(value);
-        setSelectedUser('');
+        setSelectedUser(''); // Clear the ID because the user is typing manually/editing
+        setShowUserDropdown(true); // Show dropdown while typing
         setValidationErrors((prev: any) => ({ ...prev, requestor: undefined }));
     };
+
+    const handleSelectUser = (user: any) => {
+        setOtherRequestor(user.name); // Set the Input Text
+        setSelectedUser(user.id);     // Set the ID for the database
+        setShowUserDropdown(false);   // Hide the dropdown
+        setValidationErrors((prev: any) => ({ ...prev, requestor: undefined }));
+    };
+
+    // Filter users based on input
+    const filteredUsers = systemUsers.filter(user =>
+        user.name.toLowerCase().includes(otherRequestor.toLowerCase())
+    );
 
     return (
         <div className="p-4 border border-gray-200 dark:border-sidebar-border rounded-lg bg-gray-50 dark:bg-sidebar">
@@ -42,20 +73,21 @@ export default function RequestorInformation({
                         Requesting For
                     </label>
                     <div className="flex gap-4">
-                        <label className="flex items-center">
+                        <label className="flex items-center cursor-pointer">
                             <input
                                 type="radio"
                                 value="self"
                                 checked={requestorType === 'self'}
                                 onChange={(e) => {
                                     setRequestorType(e.target.value as 'self' | 'other');
+                                    setShowUserDropdown(false);
                                     setValidationErrors((prev: any) => ({ ...prev, requestor: undefined }));
                                 }}
                                 className="mr-2 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-700 dark:text-gray-300">Myself</span>
                         </label>
-                        <label className="flex items-center">
+                        <label className="flex items-center cursor-pointer">
                             <input
                                 type="radio"
                                 value="other"
@@ -93,8 +125,8 @@ export default function RequestorInformation({
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {/* Manual Input Only */}
+                    <div className="space-y-3 relative" ref={dropdownRef}>
+                        {/* Manual Input / Search Field */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Requestor Name
@@ -103,14 +135,45 @@ export default function RequestorInformation({
                                 type="text"
                                 value={otherRequestor}
                                 onChange={(e) => handleManualInput(e.target.value)}
+                                onFocus={() => setShowUserDropdown(true)}
                                 className={`w-full px-3 py-2 text-sm border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-sidebar-accent text-gray-900 dark:text-white ${
                                     validationErrors.requestor
                                         ? 'border-red-500 dark:border-red-500'
                                         : 'border-gray-300 dark:border-sidebar-border'
                                 }`}
-                                placeholder="Enter requestor's name"
+                                placeholder="Search or enter requestor's name"
+                                autoComplete="off"
                             />
                         </div>
+
+                        {/* Autocomplete Dropdown */}
+                        {showUserDropdown && otherRequestor && (
+                            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-sidebar-accent border border-gray-200 dark:border-sidebar-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                {filteredUsers.length > 0 ? (
+                                    <ul className="py-1">
+                                        {filteredUsers.map((user) => (
+                                            <li
+                                                key={user.id}
+                                                onClick={() => handleSelectUser(user)}
+                                                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex flex-col"
+                                            >
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {user.name}
+                                                </span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {user.email}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                        No users found. Using "{otherRequestor}" as manual entry.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {validationErrors.requestor && (
                             <p className="text-red-500 text-xs mt-1">{validationErrors.requestor}</p>
                         )}
