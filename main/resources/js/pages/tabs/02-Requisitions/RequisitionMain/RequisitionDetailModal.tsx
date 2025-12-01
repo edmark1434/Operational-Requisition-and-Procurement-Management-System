@@ -16,6 +16,7 @@ const getStatusColor = (status: string) => {
         case 'rejected':
             return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800';
         case 'awaiting_pickup':
+        case 'awaiting pickup':
             return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
         case 'ordered':
             return 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800';
@@ -146,7 +147,8 @@ export default function RequisitionDetailModal({
     const isServiceRequisition = type.toLowerCase() === 'services';
     const isPending = status.toLowerCase() === 'pending';
     const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved';
-    const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup';
+    const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup' || status.toLowerCase() === 'awaiting pickup';
+    const isReceived = status.toLowerCase() === 'received';
 
     // --- HANDLERS ---
     const handleStatusChange = (newStatus: string) => {
@@ -198,6 +200,16 @@ export default function RequisitionDetailModal({
 
     const handleReleaseForPickup = () => {
         onStatusUpdate(id, 'awaiting_pickup');
+        onClose();
+    };
+
+    const handleMarkItemAsReceived = () => {
+        onStatusUpdate(id, 'received');
+        onClose();
+    };
+
+    const handleMarkServiceAsReceived = () => {
+        onStatusUpdate(id, 'received');
         onClose();
     };
 
@@ -258,9 +270,10 @@ export default function RequisitionDetailModal({
                     </button>
                 );
             }
+
             if (isAwaitingPickup) {
                 return (
-                    <button onClick={handleMarkAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                    <button onClick={handleMarkItemAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
                         Mark as Received
                     </button>
                 );
@@ -283,7 +296,7 @@ export default function RequisitionDetailModal({
             }
             if (isApproved) {
                 return (
-                    <button onClick={handleMarkAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                    <button onClick={handleMarkServiceAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
                         Mark as Received
                     </button>
                 );
