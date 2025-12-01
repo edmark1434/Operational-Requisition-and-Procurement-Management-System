@@ -119,25 +119,34 @@ export default function RequisitionDetailModal({
     const notes = safeReq.notes || safeReq.NOTES;
     const remarks = safeReq.remarks || safeReq.REMARKS;
 
-    // Combine Items and Services
-    const rawItems = safeReq.items || safeReq.ITEMS || safeReq.services || safeReq.SERVICES || [];
+    // FIX: Check for standard prop names AND raw relationship names
+    const rawItems =
+        safeReq.items ||
+        safeReq.ITEMS ||
+        safeReq.requisition_items || // Raw Eloquent Items
+        safeReq.services ||
+        safeReq.SERVICES ||
+        safeReq.requisition_services || // Raw Eloquent Services
+        [];
+
     const totalItems = rawItems.length;
 
-    // --- LOGIC: Only show Approved Column if at least one item has approved_qty > 0 ---
-    const hasApprovedQuantities = rawItems.some((item: any) => {
+    // --- LOGIC: Visibility of Approved Column ---
+    // Only show column if at least ONE item has approved > 0 AND approved != requested
+    const showApprovedColumn = rawItems.some((item: any) => {
         const appQty = parseFloat(item.approved_qty ?? item.APPROVED_QTY ?? item.approved_quantity ?? 0);
-        return appQty > 0;
+        const reqQty = parseFloat(item.quantity ?? 0);
+        return appQty > 0 && appQty !== reqQty;
     });
 
     // --- LOGIC: Calculate Display Total ---
-    // Rule: If Approved > 0, use Approved. Else use Requested.
     const displayTotalCost = rawItems.reduce((acc: number, item: any) => {
         const reqQty = parseFloat(item.quantity ?? 0);
         const appQty = parseFloat(item.approved_qty ?? 0);
 
         // Use approved if > 0, otherwise fallback to requested
         const finalQty = appQty > 0 ? appQty : reqQty;
-        const price = parseFloat(item.unit_price ?? 0);
+        const price = parseFloat(item.unit_price || item.item?.unit_price || 0);
 
         return acc + (finalQty * price);
     }, 0);
@@ -160,19 +169,9 @@ export default function RequisitionDetailModal({
     const handleAccept = () => {
         let targetStatus = 'approved';
 
-        if (hasApprovedQuantities) {
-            // Check if any valid approved qty (>0) is different from requested qty
-            const isModified = rawItems.some((item: any) => {
-                const reqQty = parseFloat(item.quantity ?? 0);
-                const appQty = parseFloat(item.approved_qty ?? 0);
-                // Only counts as modified if approved is set (>0) AND different
-                return appQty > 0 && appQty !== reqQty;
-            });
-
-            // If we found active adjustments, it's partially approved.
-            if (isModified) {
-                targetStatus = 'partially_approved';
-            }
+        if (showApprovedColumn) {
+            // If we have variances displayed, it's partially approved
+            targetStatus = 'partially_approved';
         }
 
         onStatusUpdate(id, targetStatus);
@@ -341,7 +340,6 @@ export default function RequisitionDetailModal({
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                         Grand Total Cost
-                                                        {hasApprovedQuantities && <span className="ml-2 text-xs text-gray-500 font-normal">(Approved)</span>}
                                                     </label>
                                                     <p className="text-lg font-bold text-green-600 dark:text-green-400">
                                                         ₱{Number(displayTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -378,7 +376,7 @@ export default function RequisitionDetailModal({
                                                     <tr>
                                                         <th className="py-3 px-4 text-left font-medium text-gray-500 w-12">#</th>
                                                         <th className="py-3 px-4 text-left font-medium text-gray-500 w-24">Qty</th>
-                                                        {hasApprovedQuantities && (
+                                                        {showApprovedColumn && (
                                                             <th className="py-3 px-4 text-left font-medium text-teal-600 dark:text-teal-400 w-28 bg-teal-50 dark:bg-teal-900/10">
                                                                 Approved
                                                             </th>
@@ -393,15 +391,45 @@ export default function RequisitionDetailModal({
                                                     {rawItems.map((item: any, index: number) => {
                                                         const reqQty = parseFloat(item.quantity ?? 0);
                                                         const appQty = parseFloat(item.approved_qty ?? 0);
-                                                        const iName = item.name || item.NAME || 'Unknown';
-                                                        const iCat = item.category || item.CATEGORY || 'General';
-                                                        const iPrice = item.unit_price || item.UNIT_PRICE || 0;
+
+                                                        // Handle Name and potential Linked Item Name
+                                                        let displayName: React.ReactNode = 'Unknown';
+                                                        let itemCategory = 'General';
+
+                                                        if (isServiceRequisition) {
+                                                            // Service Logic
+                                                            const serviceName = item.service_name || item.service?.name || item.name || 'Unknown Service';
+                                                            // Check for nested Item relation
+                                                            const linkedItemName = item.item?.name;
+
+                                                            if (linkedItemName) {
+                                                                displayName = (
+                                                                    <div>
+                                                                        <div className="font-medium">{serviceName}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1">
+                                                                            <span className="opacity-70">Item:</span>
+                                                                            <span>{linkedItemName}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            } else {
+                                                                displayName = <div className="font-medium">{serviceName}</div>;
+                                                            }
+                                                            itemCategory = 'Service';
+
+                                                        } else {
+                                                            // Standard Item Logic
+                                                            const itemName = item.name || item.item?.name || 'Unknown Item';
+                                                            displayName = <div className="font-medium">{itemName}</div>;
+                                                            itemCategory = item.category || item.item?.category?.name || 'General';
+                                                        }
+
+                                                        const iPrice = parseFloat(item.unit_price || item.item?.unit_price || 0);
 
                                                         // LOGIC: Use Approved if > 0, else Requested
                                                         const finalQty = appQty > 0 ? appQty : reqQty;
                                                         const iTotal = finalQty * iPrice;
 
-                                                        // Valid modification: approved exists (>0) AND different from requested
                                                         const isModified = appQty > 0 && appQty !== reqQty;
 
                                                         return (
@@ -410,18 +438,18 @@ export default function RequisitionDetailModal({
                                                                 <td className={`py-3 px-4 font-bold ${isModified ? 'text-gray-400 line-through decoration-red-400' : 'text-blue-600'}`}>
                                                                     {reqQty}
                                                                 </td>
-                                                                {hasApprovedQuantities && (
+                                                                {showApprovedColumn && (
                                                                     <td className="py-3 px-4 font-bold text-teal-600 bg-teal-50/50 dark:bg-teal-900/5">
-                                                                        {appQty > 0 ? appQty : '-'}
+                                                                        {isModified ? appQty : '-'}
                                                                     </td>
                                                                 )}
                                                                 <td className="py-3 px-4 text-gray-900 dark:text-white">
-                                                                    <div className="font-medium">{iName}</div>
+                                                                    {displayName}
                                                                 </td>
                                                                 {!isServiceRequisition && (
                                                                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
                                                                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-sidebar border border-sidebar-border">
-                                                                                {iCat}
+                                                                                {itemCategory}
                                                                             </span>
                                                                     </td>
                                                                 )}
@@ -436,14 +464,14 @@ export default function RequisitionDetailModal({
                                                     })}
                                                     {rawItems.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={hasApprovedQuantities ? 7 : 6} className="py-4 text-center text-gray-500 italic">No items found.</td>
+                                                            <td colSpan={showApprovedColumn ? 7 : 6} className="py-4 text-center text-gray-500 italic">No items found.</td>
                                                         </tr>
                                                     )}
                                                     </tbody>
                                                     <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
                                                     <tr>
-                                                        <td colSpan={hasApprovedQuantities ? (isServiceRequisition ? 5 : 5) : (isServiceRequisition ? 4 : 4)} className="py-3 px-4 text-left font-medium text-gray-900 dark:text-white">
-                                                            Grand Total {hasApprovedQuantities ? '(Approved)' : '(Requested)'}:
+                                                        <td colSpan={showApprovedColumn ? (isServiceRequisition ? 5 : 5) : (isServiceRequisition ? 4 : 4)} className="py-3 px-4 text-left font-medium text-gray-900 dark:text-white">
+                                                            Grand Total:
                                                         </td>
                                                         <td colSpan={2} className="py-3 px-4 text-right text-lg font-bold text-green-600 dark:text-green-400">
                                                             ₱{Number(displayTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -460,7 +488,10 @@ export default function RequisitionDetailModal({
                                         <div className="flex justify-between items-center">
                                             <div className="flex gap-3">
                                                 <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">Edit Requisition</button>
-                                                <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">Adjust Requisition</button>
+                                                {/* FIX: Hide Adjust button for Service requisitions */}
+                                                {!isServiceRequisition && (
+                                                    <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">Adjust Requisition</button>
+                                                )}
                                             </div>
 
                                             <div className="flex gap-3">
