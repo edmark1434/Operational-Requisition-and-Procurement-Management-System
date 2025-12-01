@@ -29,10 +29,10 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
             'approved': 'Approved',
             'rejected': 'Rejected',
             'partially_approved': 'Partially Approved',
-            'ordered': 'Ordered',
             'delivered': 'Delivered',
             'awaiting_pickup': 'Awaiting Pickup',
-            'received': 'Received'
+            'received': 'Received',
+            'completed': 'Completed'
         };
         // Safety check if status is null/undefined
         return statusMap[status?.toLowerCase()] || status;
