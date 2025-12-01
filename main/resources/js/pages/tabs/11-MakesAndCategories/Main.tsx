@@ -14,6 +14,7 @@ import CategoryDetailModal from './components/CategoryDetailModal';
 import { transformMakesData, transformCategoriesData } from './utils';
 import { useMakesCategoriesFilters } from './utils/hooks/useMakesCategoriesFilters';
 import { toast, Toaster } from 'sonner';
+import { usePage } from '@inertiajs/react';
 interface Prop{
     makeList: any[],
     categoriesList: any[],
@@ -36,6 +37,8 @@ export default function MakesAndCategories({makeList,categoriesList,success,mess
     const [selectedCategory, setSelectedCategory] = useState<any>(null);
     const [isMakeModalOpen, setIsMakeModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
 
     const [makes, setMakes] = useState(makeList);
     const [categories, setCategories] = useState(categoriesList);
@@ -101,6 +104,7 @@ export default function MakesAndCategories({makeList,categoriesList,success,mess
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Makes & Categories</h1>
                     <div className="flex gap-3">
+                        { permissionsList.includes('Manage Categories') &&
                         <Link
                             href="/makes-categories/category/add"
                             className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
@@ -110,6 +114,8 @@ export default function MakesAndCategories({makeList,categoriesList,success,mess
                             </svg>
                             Add Category
                         </Link>
+                        }
+                        { permissionsList.includes('Manage Makes') &&
                         <Link
                             href="/makes-categories/make/add"
                             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -119,6 +125,7 @@ export default function MakesAndCategories({makeList,categoriesList,success,mess
                             </svg>
                             Add Make
                         </Link>
+                        }
                     </div>
                 </div>
 
