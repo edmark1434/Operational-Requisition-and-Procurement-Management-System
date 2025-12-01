@@ -5,28 +5,46 @@ namespace App\Http\Controllers\Requisition;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Requisition;
 use App\Models\RequisitionItem;
-use App\Models\RequisitionService; // Make sure to import this
+use App\Models\RequisitionService;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\Service;
 
 class RequisitionController extends Controller
 {
-    // This defines where your React files are located
     protected $base_path = "tabs/02-Requisitions";
+
+    private function getSystemServices()
+    {
+        return Service::where('is_active', true)
+            ->select('id', 'name', 'description', 'hourly_rate', 'vendor_id', 'is_active', 'category_id')
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function getInventoryItems()
+    {
+        return Item::where('is_active', true)
+            ->where('current_stock', '>', 0)
+            ->select('id', 'name', 'current_stock', 'unit_price')
+            ->orderBy('name')
+            ->get();
+    }
 
     public function index()
     {
-        // 1. Fetch Requisitions
-        $requisitions = Requisition::with(['requisition_items.item.category'])
+        // FIX: Removed 'requisition_services.item' from eager loading
+        $requisitions = Requisition::with([
+            'requisition_items.item.category',
+            'requisition_services.service',
+        ])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($req) {
 
-                // ... (Category List logic stays the same) ...
                 $categoryList = [];
                 if ($req->type === 'Items') {
                     $categoryList = $req->requisition_items
@@ -38,20 +56,40 @@ class RequisitionController extends Controller
                     $categoryList = ['Services'];
                 }
 
-                // --- BUILD ITEMS LIST ---
-                $itemsList = $req->requisition_items->map(function($item) {
-                    return [
-                        'id' => $item->id,
-                        'name' => $item->item->name ?? $item->item_name ?? $item->service_name ?? 'Unknown Item',
-                        'quantity' => $item->quantity,
+                // Determine which collection to map based on type
+                $rawRows = ($req->type === 'Services' || $req->type === 'services')
+                    ? $req->requisition_services
+                    : $req->requisition_items;
 
-                        // 👇 ADD THIS LINE HERE 👇
-                        'approved_qty' => $item->approved_qty,
+                $itemsList = $rawRows->map(function($row) use ($req) {
 
-                        'unit_price' => $item->item->unit_price ?? $item->unit_price ?? 0,
-                        'total_price' => $item->total_price ?? 0,
-                        'category' => $item->item->category->name ?? $item->category ?? 'General',
-                    ];
+                    // Logic for Items
+                    if ($req->type === 'Items') {
+                        return [
+                            'id' => $row->id,
+                            'name' => $row->item->name ?? 'Unknown Item',
+                            'quantity' => $row->quantity, // Items have quantity
+                            'approved_qty' => $row->approved_qty,
+                            'unit_price' => $row->item->unit_price ?? 0,
+                            'total_price' => ($row->quantity * ($row->item->unit_price ?? 0)),
+                            'category' => $row->item->category->name ?? 'General',
+                        ];
+                    }
+                    // Logic for Services (Simplified Job Request)
+                    else {
+                        $service = $row->service;
+                        return [
+                            'id' => $row->id,
+                            'name' => $service->name ?? 'Unknown Service',
+                            'quantity' => 1, // Fixed quantity for job requests
+                            'approved_qty' => 1,
+                            'unit_price' => $service->hourly_rate ?? 0,
+                            'total_price' => 1.00, // Nominal cost for submission compatibility
+                            'category' => 'Service',
+                            'service_id' => $row->service_id ?? null,
+                            // 'item' is no longer included here
+                        ];
+                    }
                 });
 
                 return [
@@ -70,9 +108,6 @@ class RequisitionController extends Controller
                 ];
             });
 
-        // ... rest of the function ...
-
-        // 2. Fetch Categories for Dropdown
         $dbCategories = Category::where('is_active', true)
             ->where('type', 'Items')
             ->orderBy('name')
@@ -86,14 +121,27 @@ class RequisitionController extends Controller
 
     public function requisitionForm()
     {
-        $dbCategories = Category::where('is_active', true)
-            ->where('type', 'Items')
+        $serviceCategories = Category::query()
+            ->whereRaw('LOWER(type) IN (?, ?, ?)', ['services', 'service', 'Services'])
+            ->where('is_active', true)
             ->select('id', 'name')
-            ->orderBy('name')
             ->get();
 
-        return Inertia::render($this->base_path .'/RequisitionForm/RequisitionForm', [
-            'dbCategories' => $dbCategories
+        $systemServices = $this->getSystemServices();
+
+        $itemCategories = Category::query()
+            ->whereRaw('LOWER(type) IN (?, ?, ?)', ['items', 'item', 'Items'])
+            ->select('id', 'name')
+            ->get();
+
+        $inventoryItems = $this->getInventoryItems();
+
+        return Inertia::render('tabs/02-Requisitions/RequisitionForm/RequisitionForm', [
+            'auth' => ['user' => auth()->user()],
+            'dbCategories' => $itemCategories,
+            'serviceCategories' => $serviceCategories,
+            'systemServices' => $systemServices,
+            'inventoryItems' => $inventoryItems
         ]);
     }
 
@@ -112,7 +160,6 @@ class RequisitionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Create Parent
             $requisition = Requisition::create([
                 'user_id' => $request->us_id,
                 'requestor' => $request->requestor,
@@ -123,36 +170,30 @@ class RequisitionController extends Controller
                 'total_cost' => $request->total_amount,
             ]);
 
-            // Create Items
             if ($request->type === 'items') {
                 foreach ($request->items as $item) {
-                    if (empty($item['itemId'])) {
-                        DB::rollBack();
-                        return back()->withErrors(['items' => "Error: The item '{$item['itemName']}' was not found in the database."]);
-                    }
+                    if (empty($item['itemId'])) continue;
+
+                    // FIX: Set approved_qty equal to quantity upon creation
+                    $approvedQty = $item['quantity'];
 
                     $requisition->requisition_items()->create([
                         'item_id' => $item['itemId'],
                         'quantity' => $item['quantity'],
-                        'approved_qty' => 0, // Default to 0 until approved
+                        'approved_qty' => $approvedQty, // Initial approval matches request
                     ]);
                 }
             }
-            // Create Services
             elseif ($request->type === 'services') {
                 foreach ($request->services as $service) {
+                    // Item ID removed from DB/flow
                     $requisition->requisition_services()->create([
                         'service_id' => $service['serviceId'] ?? null,
-                        'service_name' => $service['serviceName'],
-                        'quantity' => $service['quantity'],
-                        // Ensure your DB has approved_qty for services if needed
-                        'approved_qty' => 0,
                     ]);
                 }
             }
 
             DB::commit();
-
             return redirect()->route('requisitions')->with('success', 'Requisition created!');
 
         } catch (\Exception $e) {
@@ -163,18 +204,17 @@ class RequisitionController extends Controller
 
     public function requisitionEdit($id)
     {
+        // FIX: Removed 'requisition_services.item' from eager loading
         $requisition = Requisition::with([
             'user',
             'requisition_items.item.category',
-            'requisition_services'
+            'requisition_services.service',
         ])->findOrFail($id);
 
-        // Format Items
         $formattedItems = $requisition->requisition_items->map(function($ri) {
             return [
                 'id' => 'existing_' . $ri->id,
                 'itemId' => $ri->item_id,
-                'originalItemId' => $ri->item_id,
                 'category' => $ri->item->category->name ?? 'General',
                 'itemName' => $ri->item->name ?? 'Unknown',
                 'quantity' => (string)$ri->quantity,
@@ -186,15 +226,16 @@ class RequisitionController extends Controller
 
         // Format Services
         $formattedServices = $requisition->requisition_services->map(function($rs) {
+            $serviceDef = $rs->service;
             return [
                 'id' => 'existing_' . $rs->id,
                 'serviceId' => (string)($rs->service_id ?? ''),
-                'originalServiceId' => $rs->service_id,
-                'serviceName' => $rs->service_name,
-                'description' => $rs->description ?? '',
-                'quantity' => (string)$rs->quantity,
-                'unit_price' => (string)($rs->unit_price ?? 0),
-                'total' => number_format($rs->quantity * ($rs->unit_price ?? 0), 2, '.', ''),
+                'serviceName' => $serviceDef->name ?? 'Unknown',
+                'description' => $serviceDef->description ?? '',
+                'quantity' => "1", // Fixed value
+                'itemId' => '', // Item ID removed
+                'unit_price' => (string)($serviceDef->hourly_rate ?? 0),
+                'total' => number_format(1 * ($serviceDef->hourly_rate ?? 0), 2, '.', ''),
                 'isSaved' => true,
             ];
         });
@@ -205,52 +246,18 @@ class RequisitionController extends Controller
             ->select('id', 'name')
             ->get();
 
+        $systemServices = $this->getSystemServices();
+        $inventoryItems = $this->getInventoryItems();
+
         return Inertia::render($this->base_path .'/RequisitionMain/RequisitionEdit', [
             'requisitionId' => (int)$id,
             'serverRequisition' => $requisition,
             'initialItems' => $formattedItems,
             'initialServices' => $formattedServices,
             'dbCategories' => $dbCategories,
+            'systemServices' => $systemServices,
+            'inventoryItems' => $inventoryItems
         ]);
-    }
-
-    // In RequisitionController.php
-
-    public function updateStatus(Request $request, $id)
-    {
-        $request->validate([
-            'status' => 'required|string',
-            'reason' => 'nullable|string'
-        ]);
-
-        $requisition = Requisition::findOrFail($id);
-
-        // 1. Map Frontend "slugs" to Database "Proper Case"
-        $statusMap = [
-            'pending' => 'Pending',
-            'approved' => 'Approved',
-            'rejected' => 'Rejected', // Or 'Declined' if your DB uses that
-            'partially_approved' => 'Partially Approved', // Fixes the underscore issue
-            'ordered' => 'Ordered',
-            'delivered' => 'Delivered',
-            'awaiting_pickup' => 'Awaiting Pickup',
-            'received' => 'Received',
-            'completed' => 'Completed' // or 'Çompleted' based on your model typo
-        ];
-
-        // Get the correct string, or default to simple capitalization if not found
-        $dbStatus = $statusMap[strtolower($request->status)] ?? ucfirst($request->status);
-
-        $updateData = ['status' => $dbStatus];
-
-        // If rejected, save the reason
-        if ($request->status === 'rejected' && $request->reason) {
-            $updateData['remarks'] = $request->reason;
-        }
-
-        $requisition->update($updateData);
-
-        return redirect()->back()->with('success', 'Status updated successfully.');
     }
 
     public function update(Request $request, $id)
@@ -270,7 +277,6 @@ class RequisitionController extends Controller
 
             $requisition = Requisition::findOrFail($id);
 
-            // Update Parent
             $requisition->update([
                 'user_id' => $request->us_id,
                 'requestor' => $request->requestor,
@@ -280,18 +286,16 @@ class RequisitionController extends Controller
                 'total_cost' => $request->total_amount,
             ]);
 
-            // Sync Items/Services (Delete and Recreate)
             if ($request->type === 'items') {
                 $requisition->requisition_services()->delete();
                 $requisition->requisition_items()->delete();
 
                 foreach ($request->items as $item) {
                     if (empty($item['itemId'])) throw new \Exception("Item missing valid ID.");
-
                     $requisition->requisition_items()->create([
                         'item_id' => $item['itemId'],
                         'quantity' => $item['quantity'],
-                        'approved_qty' => 0, // Reset approval on edit
+                        'approved_qty' => 0,
                     ]);
                 }
             }
@@ -300,11 +304,9 @@ class RequisitionController extends Controller
                 $requisition->requisition_services()->delete();
 
                 foreach ($request->services as $service) {
+                    // Item ID removed from creation data
                     $requisition->requisition_services()->create([
-                        'service_id' => $service['originalServiceId'] ?? null,
-                        'service_name' => $service['serviceName'],
-                        'quantity' => $service['quantity'],
-                        'approved_qty' => 0,
+                        'service_id' => $service['originalServiceId'] ?? $service['serviceId'] ?? null,
                     ]);
                 }
             }
@@ -318,62 +320,78 @@ class RequisitionController extends Controller
         }
     }
 
-    // --- ADJUSTMENT LOGIC (Fixed) ---
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string',
+            'reason' => 'nullable|string'
+        ]);
+
+        $requisition = Requisition::findOrFail($id);
+
+        $statusMap = [
+            'pending' => 'Pending',
+            'approved' => 'Approved',
+            'rejected' => 'Rejected',
+            'partially_approved' => 'Partially Approved',
+            'ordered' => 'Ordered',
+            'delivered' => 'Delivered',
+            'awaiting_pickup' => 'Awaiting Pickup',
+            'received' => 'Received',
+            'completed' => 'Completed'
+        ];
+
+        $dbStatus = $statusMap[strtolower($request->status)] ?? ucfirst($request->status);
+        $updateData = ['status' => $dbStatus];
+
+        if ($request->status === 'rejected' && $request->reason) {
+            $updateData['remarks'] = $request->reason;
+        }
+
+        $requisition->update($updateData);
+
+        return redirect()->back()->with('success', 'Status updated successfully.');
+    }
 
     public function adjust($id)
     {
-        // 1. Load relationships
-        // We ensure we load 'requisition_items.item' so we can get the price from the master list
-        $requisition = Requisition::with(['requisition_items.item', 'requisition_services', 'user'])
+        $requisition = Requisition::with(['requisition_items.item', 'requisition_services.service', 'user'])
             ->findOrFail($id);
 
-        // 2. Select Items vs Services
-        $rawItems = $requisition->type === 'services'
+        $rawItems = $requisition->type === 'services' || $requisition->type === 'Services'
             ? $requisition->requisition_services
             : $requisition->requisition_items;
 
-        // 3. Format Data
-        $formattedItems = $rawItems->map(function($row) {
+        $formattedItems = $rawItems->map(function($row) use ($requisition) {
 
-            // --- NAME LOGIC ---
-            $name = 'Unknown Item';
-            if ($row->item) {
-                $name = $row->item->name;
-            } elseif (!empty($row->item_name)) {
-                $name = $row->item_name;
-            } elseif (!empty($row->service_name)) {
-                $name = $row->service_name;
+            if ($requisition->type === 'Items') {
+                $name = $row->item->name ?? 'Unknown';
+                $price = $row->item->unit_price ?? 0;
+                $qty = $row->quantity;
+            } else {
+                $name = $row->service->name ?? 'Unknown';
+                $price = $row->service->hourly_rate ?? 0;
+                $qty = 1; // Fallback
             }
 
-            // --- PRICE LOGIC (The Fix) ---
-            // 1. Check if price exists on the specific requisition row
-            // 2. If not, check the master Item table ($row->item->unit_price)
-            // 3. If neither, default to 0
-            $price = $row->unit_price ?? ($row->item->unit_price ?? 0);
-
-            // --- TOTAL LOGIC ---
-            // Recalculate total to ensure it's not 0 if the DB total is missing
-            $calculatedTotal = $row->quantity * $price;
+            $calculatedTotal = $qty * $price;
 
             return [
                 'id' => $row->id,
                 'name' => $name,
-                'category' => $row->category ?? ($row->item->category->name ?? 'General'),
-                'quantity' => $row->quantity,
-                'approved_quantity' => $row->approved_qty ?? $row->quantity,
-                'unit_price' => $price, // Sending the fixed price
-                'total' => $calculatedTotal, // Sending recalculated total
+                'category' => 'General',
+                'quantity' => $qty,
+                'approved_quantity' => $qty, // Defaults to 1 for services since we cant track partial approval of time
+                'unit_price' => $price,
+                'total' => $calculatedTotal,
             ];
         });
 
-        // 4. Render
         return Inertia::render($this->base_path .'/RequisitionMain/RequisitionAdjust', [
             'requisitionId' => (int)$id,
             'serverRequisition' => $requisition,
             'initialItems' => $formattedItems,
-            'auth' => [
-                'user' => auth()->user()
-            ]
+            'auth' => ['user' => auth()->user()]
         ]);
     }
 
@@ -381,6 +399,17 @@ class RequisitionController extends Controller
     {
         $requisition = Requisition::findOrFail($id);
 
+        // Basic validation - Service adjustments are disabled since there is no 'approved_qty' column
+        if ($requisition->type === 'services' || $requisition->type === 'Services') {
+            // Just update parent remarks/total
+            $requisition->update([
+                'remarks' => $request->remarks,
+                'total_cost' => $request->total_amount,
+            ]);
+            return redirect()->route('requisitions')->with('success', 'Adjustments saved successfully.');
+        }
+
+        // ... Existing item logic ...
         $request->validate([
             'items' => 'required|array',
             'items.*.id' => 'required',
@@ -391,21 +420,14 @@ class RequisitionController extends Controller
 
         try {
             DB::transaction(function () use ($request, $requisition) {
-                // Update Parent
                 $requisition->update([
                     'remarks' => $request->remarks,
                     'total_cost' => $request->total_amount,
                 ]);
 
-                // Update Items/Services
                 foreach ($request->items as $itemData) {
-                    if ($requisition->type === 'services') {
-                        RequisitionService::where('id', $itemData['id'])
-                            ->update(['approved_qty' => $itemData['approved_quantity']]);
-                    } else {
-                        RequisitionItem::where('id', $itemData['id'])
-                            ->update(['approved_qty' => $itemData['approved_quantity']]);
-                    }
+                    RequisitionItem::where('id', $itemData['id'])
+                        ->update(['approved_qty' => $itemData['approved_quantity']]);
                 }
             });
 
@@ -415,8 +437,6 @@ class RequisitionController extends Controller
             return back()->withErrors(['error' => 'Failed to save: ' . $e->getMessage()]);
         }
     }
-
-    // --- API Methods ---
 
     public function getCategories()
     {

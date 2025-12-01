@@ -51,6 +51,25 @@ const formatTime = (date: string) => {
     return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 };
 
+// Helper to format currency (PHP)
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2
+    }).format(amount);
+};
+
+// Helper to format USD rate
+const formatHourlyRate = (rate: number | string) => {
+    const value = parseFloat(rate.toString() || 0);
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2
+    }).format(value) + " / hr";
+};
+
 // Component: DeclineReasonModal
 function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
     const [reason, setReason] = useState('');
@@ -119,32 +138,55 @@ export default function RequisitionDetailModal({
 
     const status = safeReq.status || safeReq.STATUS || 'pending';
     const type = safeReq.type || safeReq.TYPE || 'items';
+
+    // Define isServiceRequisition early
+    const isServiceRequisition = type.toLowerCase() === 'services';
+
     const priority = safeReq.priority || safeReq.PRIORITY || 'normal';
     const requestor = safeReq.requestor || safeReq.REQUESTOR || 'Unknown';
     const created_at = safeReq.created_at || safeReq.CREATED_AT;
     const notes = safeReq.notes || safeReq.NOTES;
     const remarks = safeReq.remarks || safeReq.REMARKS;
 
-    // Combine Items and Services
-    const rawItems = safeReq.items || safeReq.ITEMS || safeReq.services || safeReq.SERVICES || [];
+    // FIX: Check for standard prop names AND raw relationship names
+    const rawItems =
+        safeReq.items ||
+        safeReq.ITEMS ||
+        safeReq.requisition_items || // Raw Eloquent Items
+        safeReq.services ||
+        safeReq.SERVICES ||
+        safeReq.requisition_services || // Raw Eloquent Services
+        [];
+
     const totalItems = rawItems.length;
 
-    // --- LOGIC: Only show Approved Column if at least one item has approved_qty > 0 ---
-    const hasApprovedQuantities = rawItems.some((item: any) => {
+    // --- LOGIC: Visibility of Approved Column ---
+    // Only show column if at least ONE item has approved > 0 AND approved != requested
+    const showApprovedColumn = rawItems.some((item: any) => {
         const appQty = parseFloat(item.approved_qty ?? item.APPROVED_QTY ?? item.approved_quantity ?? 0);
-        return appQty > 0;
+        const reqQty = parseFloat(item.quantity ?? 0);
+        return appQty > 0 && appQty !== reqQty;
     });
 
     // --- LOGIC: Calculate Display Total ---
+    // Calculates total cost by summing item rows (for Items), or returning parent total (for Services).
     const displayTotalCost = rawItems.reduce((acc: number, item: any) => {
+        if (isServiceRequisition) {
+            // If service, return parent total and break out of item row calculation
+            return safeReq.total_cost || 0;
+        }
+
         const reqQty = parseFloat(item.quantity ?? 0);
         const appQty = parseFloat(item.approved_qty ?? 0);
         const finalQty = appQty > 0 ? appQty : reqQty;
-        const price = parseFloat(item.unit_price ?? 0);
+        const price = parseFloat(item.unit_price || item.item?.unit_price || 0);
+
         return acc + (finalQty * price);
     }, 0);
 
-    const isServiceRequisition = type.toLowerCase() === 'services';
+    // Define finalSummaryCost using the calculated cost.
+    const finalSummaryCost = (isServiceRequisition && safeReq.total_cost) ? safeReq.total_cost : displayTotalCost;
+
     const isPending = status.toLowerCase() === 'pending';
     const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved';
     const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup' || status.toLowerCase() === 'awaiting pickup';
@@ -163,15 +205,10 @@ export default function RequisitionDetailModal({
 
     const handleAccept = () => {
         let targetStatus = 'approved';
-        if (hasApprovedQuantities) {
-            const isModified = rawItems.some((item: any) => {
-                const reqQty = parseFloat(item.quantity ?? 0);
-                const appQty = parseFloat(item.approved_qty ?? 0);
-                return appQty > 0 && appQty !== reqQty;
-            });
-            if (isModified) {
-                targetStatus = 'partially_approved';
-            }
+
+        if (showApprovedColumn) {
+            // If we have variances displayed, it's partially approved
+            targetStatus = 'partially_approved';
         }
         onStatusUpdate(id, targetStatus);
         onClose();
@@ -435,6 +472,8 @@ export default function RequisitionDetailModal({
                                                     <p className="text-sm text-gray-900 dark:text-white">{requestor}</p>
                                                 </div>
                                             </div>
+
+                                            {/* Summary Totals */}
                                             <div className="space-y-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
@@ -442,15 +481,18 @@ export default function RequisitionDetailModal({
                                                         {formatDate(created_at)} at {formatTime(created_at)}
                                                     </p>
                                                 </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Grand Total Cost
-                                                        {hasApprovedQuantities && <span className="ml-2 text-xs text-gray-500 font-normal">(Approved)</span>}
-                                                    </label>
-                                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                                        ₱{Number(displayTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                    </p>
-                                                </div>
+
+                                                {/* GRAND TOTAL COST (Hidden for Services) */}
+                                                {!isServiceRequisition && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Grand Total Cost
+                                                        </label>
+                                                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                            {formatCurrency(finalSummaryCost)}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -481,79 +523,130 @@ export default function RequisitionDetailModal({
                                                     <thead className="bg-gray-50 dark:bg-sidebar border-b border-sidebar-border">
                                                     <tr>
                                                         <th className="py-3 px-4 text-left font-medium text-gray-500 w-12">#</th>
-                                                        <th className="py-3 px-4 text-left font-medium text-gray-500 w-24">Qty</th>
-                                                        {hasApprovedQuantities && (
+
+                                                        {/* Qty column present ONLY for Items */}
+                                                        {!isServiceRequisition && (
+                                                            <th className="py-3 px-4 text-left font-medium text-gray-500 w-24">Qty</th>
+                                                        )}
+
+                                                        {showApprovedColumn && (
                                                             <th className="py-3 px-4 text-left font-medium text-teal-600 dark:text-teal-400 w-28 bg-teal-50 dark:bg-teal-900/10">
                                                                 Approved
                                                             </th>
                                                         )}
                                                         <th className="py-3 px-4 text-left font-medium text-gray-500">Name</th>
-                                                        {!isServiceRequisition && <th className="py-3 px-4 text-left font-medium text-gray-500">Category</th>}
-                                                        <th className="py-3 px-4 text-right font-medium text-gray-500 w-32">Unit Price</th>
-                                                        <th className="py-3 px-4 text-right font-medium text-gray-500 w-32">Total</th>
+
+                                                        {/* Conditional Columns for Items/Services */}
+                                                        {!isServiceRequisition ? (
+                                                            <>
+                                                                <th className="py-3 px-4 text-left font-medium text-gray-500">Category</th>
+                                                                <th className="py-3 px-4 text-right font-medium text-gray-500 w-32">Unit Price</th>
+                                                                <th className="py-3 px-4 text-right font-medium text-gray-500 w-32">Total</th>
+                                                            </>
+                                                        ) : (
+                                                            // For Services, replace cost columns with Hourly Rate
+                                                            <th className="py-3 px-4 text-left font-medium text-gray-500">Standard Rate</th>
+                                                        )}
                                                     </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-sidebar-border">
                                                     {rawItems.map((item: any, index: number) => {
                                                         const reqQty = parseFloat(item.quantity ?? 0);
                                                         const appQty = parseFloat(item.approved_qty ?? 0);
-                                                        const iName = item.name || item.NAME || 'Unknown';
-                                                        const iCat = item.category || item.CATEGORY || 'General';
-                                                        const iPrice = item.unit_price || item.UNIT_PRICE || 0;
 
-                                                        // LOGIC: Use Approved if > 0, else Requested
+                                                        // Handle Name and Price/Total for display
+                                                        let displayName: React.ReactNode = 'Unknown';
+                                                        let itemCategory = 'General';
+                                                        const iPrice = parseFloat(item.unit_price || item.item?.unit_price || 0);
+
+                                                        // LOGIC: Use Approved if > 0, otherwise fallback to requested
                                                         const finalQty = appQty > 0 ? appQty : reqQty;
                                                         const iTotal = finalQty * iPrice;
 
-                                                        // Valid modification: approved exists (>0) AND different from requested
                                                         const isModified = appQty > 0 && appQty !== reqQty;
+
+                                                        if (isServiceRequisition) {
+                                                            // Service Logic (Simplified Job Request)
+                                                            const serviceName = item.service_name || item.service?.name || item.name || 'Unknown Service';
+                                                            displayName = <div className="font-medium">{serviceName}</div>;
+                                                            itemCategory = 'Service';
+
+                                                        } else {
+                                                            // Standard Item Logic
+                                                            const itemName = item.name || item.item?.name || 'Unknown Item';
+                                                            displayName = <div className="font-medium">{itemName}</div>;
+                                                            itemCategory = item.category || item.item?.category?.name || 'General';
+                                                        }
 
                                                         return (
                                                             <tr key={index} className="hover:bg-gray-50 dark:hover:bg-sidebar">
                                                                 <td className="py-3 px-4 text-gray-500">{index + 1}</td>
-                                                                <td className={`py-3 px-4 font-bold ${isModified ? 'text-gray-400 line-through decoration-red-400' : 'text-blue-600'}`}>
-                                                                    {reqQty}
-                                                                </td>
-                                                                {hasApprovedQuantities && (
+
+                                                                {/* Qty Cell (Present ONLY for Items) */}
+                                                                {!isServiceRequisition && (
+                                                                    <td className={`py-3 px-4 font-bold ${isModified ? 'text-gray-400 line-through decoration-red-400' : 'text-blue-600'}`}>
+                                                                        {reqQty}
+                                                                    </td>
+                                                                )}
+
+                                                                {showApprovedColumn && (
                                                                     <td className="py-3 px-4 font-bold text-teal-600 bg-teal-50/50 dark:bg-teal-900/5">
-                                                                        {appQty > 0 ? appQty : '-'}
+                                                                        {isModified ? appQty : '-'}
                                                                     </td>
                                                                 )}
                                                                 <td className="py-3 px-4 text-gray-900 dark:text-white">
-                                                                    <div className="font-medium">{iName}</div>
+                                                                    {displayName}
                                                                 </td>
-                                                                {!isServiceRequisition && (
-                                                                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+
+                                                                {/* Item-Specific Columns */}
+                                                                {!isServiceRequisition ? (
+                                                                    <>
+                                                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
                                                                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-sidebar border border-sidebar-border">
-                                                                                {iCat}
+                                                                                {itemCategory}
                                                                             </span>
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
+                                                                            {formatCurrency(iPrice)}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-right font-bold text-green-600 dark:text-green-400">
+                                                                            {formatCurrency(iTotal)}
+                                                                        </td>
+                                                                    </>
+                                                                ) : (
+                                                                    // For Services, show Hourly Rate instead of cost columns
+                                                                    <td colSpan={1} className="py-3 px-4 text-purple-600 dark:text-purple-400 font-medium">
+                                                                        {formatHourlyRate(iPrice)}
                                                                     </td>
                                                                 )}
-                                                                <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
-                                                                    ₱{Number(iPrice).toLocaleString()}
-                                                                </td>
-                                                                <td className="py-3 px-4 text-right font-bold text-green-600 dark:text-green-400">
-                                                                    ₱{Number(iTotal).toLocaleString()}
-                                                                </td>
                                                             </tr>
                                                         );
                                                     })}
                                                     {rawItems.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={hasApprovedQuantities ? 7 : 6} className="py-4 text-center text-gray-500 italic">No items found.</td>
+                                                            {/* Colspan calculation:
+                                                            Items: 1 (#) + 1 (Qty) + (1 if Approved shown) + 1 (Name) + 1 (Cat) + 1 (Price) + 1 (Total)
+                                                            Services: 1 (#) + (1 if Approved shown) + 1 (Name) + 1 (Rate) = 3 + (1 if Approved shown)
+                                                            */}
+                                                            <td colSpan={isServiceRequisition ? (showApprovedColumn ? 4 : 3) : (showApprovedColumn ? 7 : 6)} className="py-4 text-center text-gray-500 italic">No items found.</td>
                                                         </tr>
                                                     )}
                                                     </tbody>
-                                                    <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
-                                                    <tr>
-                                                        <td colSpan={hasApprovedQuantities ? (isServiceRequisition ? 5 : 5) : (isServiceRequisition ? 4 : 4)} className="py-3 px-4 text-left font-medium text-gray-900 dark:text-white">
-                                                            Grand Total {hasApprovedQuantities ? '(Approved)' : '(Requested)'}:
-                                                        </td>
-                                                        <td colSpan={2} className="py-3 px-4 text-right text-lg font-bold text-green-600 dark:text-green-400">
-                                                            ₱{Number(displayTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                        </td>
-                                                    </tr>
-                                                    </tfoot>
+
+                                                    {/* FOOTER TOTAL (Hidden for Services) */}
+                                                    {!isServiceRequisition && (
+                                                        <tfoot className="bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                                        <tr>
+                                                            {/* Colspan adjustment: # (1) + Qty (1) + Approved (1) + Name (1) + Category (1) = 5 columns */}
+                                                            <td colSpan={showApprovedColumn ? 5 : 4} className="py-3 px-4 text-left font-medium text-gray-900 dark:text-white">
+                                                                Grand Total:
+                                                            </td>
+                                                            <td colSpan={2} className="py-3 px-4 text-right text-lg font-bold text-green-600 dark:text-green-400">
+                                                                {formatCurrency(finalSummaryCost)}
+                                                            </td>
+                                                        </tr>
+                                                        </tfoot>
+                                                    )}
                                                 </table>
                                             </div>
                                         </div>
@@ -563,7 +656,11 @@ export default function RequisitionDetailModal({
                                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                                         <div className="flex justify-between items-center">
                                             <div className="flex gap-3">
-                                                {renderLeftButtons()}
+                                                <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">Edit Requisition</button>
+                                                {/* FIX: Hide Adjust button for Service requisitions */}
+                                                {!isServiceRequisition && (
+                                                    <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">Adjust Requisition</button>
+                                                )}
                                             </div>
 
                                             <div className="flex gap-3">

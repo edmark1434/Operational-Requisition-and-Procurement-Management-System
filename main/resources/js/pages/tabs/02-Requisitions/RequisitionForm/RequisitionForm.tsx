@@ -3,13 +3,11 @@ import { requisitions } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
-import axios from 'axios'; // 1. IMPORT AXIOS
+import axios from 'axios';
 
-// Import datasets (Keep for static data if needed)
+// Import datasets (Keep for static data fallback/reference)
 import itemsData from "@/pages/datasets/items";
-import categoriesData from "@/pages/datasets/category";
 import usersData from '@/pages/datasets/user';
-import serviceData from "@/pages/datasets/service";
 
 // Import components
 import RequestorInformation from './RequestorInformation';
@@ -18,10 +16,14 @@ import RequestedItems from './RequestedItems';
 import RequisitionService from './RequisitionService';
 import RequisitionPreviewModal from './RequisitionPreviewModal';
 
-// 2. UPDATE INTERFACE
+// --- INTERFACES ---
+
 interface RequisitionFormProps {
     auth: any;
-    dbCategories: Array<{ id: number; name: string }>; // Received from Controller
+    dbCategories: Array<{ id: number; name: string }>;
+    serviceCategories: Array<{ id: number; name: string }>;
+    systemServices: any[];
+    inventoryItems: any[]; // <--- NEW: Inventory Items for Services
 }
 
 interface RequisitionItem {
@@ -29,6 +31,7 @@ interface RequisitionItem {
     category: string;
     itemName: string;
     quantity: string;
+    approved_qty: string; // <--- ADDED: Approved Quantity field
     unit_price: string;
     total: string;
     isSaved: boolean;
@@ -37,6 +40,8 @@ interface RequisitionItem {
 
 interface RequisitionService {
     id: string;
+    categoryId?: string;
+    categoryName?: string;
     serviceId?: string;
     serviceName: string;
     description: string;
@@ -45,7 +50,8 @@ interface RequisitionService {
     total: string;
     isSaved: boolean;
     hourlyRate?: string;
-    originalServiceId?: number;
+    itemId?: string; // Optional linked item
+    itemName?: string;
 }
 
 interface ValidationErrors {
@@ -66,7 +72,15 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function RequisitionForm({ auth, dbCategories = [] }: RequisitionFormProps) {
+export default function RequisitionForm({
+                                            auth,
+                                            dbCategories = [],
+                                            serviceCategories = [],
+                                            systemServices = [],
+                                            inventoryItems = [] // <--- NEW PROP
+                                        }: RequisitionFormProps) {
+
+    // --- STATE ---
     const [requestorType, setRequestorType] = useState<'self' | 'other'>('self');
     const [otherRequestor, setOtherRequestor] = useState('');
     const [selectedUser, setSelectedUser] = useState('');
@@ -77,9 +91,10 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
     const [notes, setNotes] = useState('');
 
     const [items, setItems] = useState<RequisitionItem[]>([
-        { id: Date.now().toString(), category: '', itemName: '', quantity: '', unit_price: '', total: '', isSaved: false }
+        { id: Date.now().toString(), category: '', itemName: '', quantity: '1', approved_qty: '1', unit_price: '', total: '', isSaved: false } // Updated default quantity/approved_qty
     ]);
 
+    // Ensure this is initialized as an array!
     const [services, setServices] = useState<RequisitionService[]>([
         { id: Date.now().toString(), serviceName: '', description: '', quantity: '', unit_price: '', total: '', isSaved: false }
     ]);
@@ -88,7 +103,7 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
 
-    // Use actual users from dataset
+    // Use actual users from dataset for the dropdown logic
     const systemUsers = usersData.map(user => ({
         id: user.US_ID.toString(),
         name: user.NAME,
@@ -96,15 +111,14 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
         department: 'General'
     }));
 
+    // Static items (fallback or for ID matching if needed)
     const systemItems = itemsData.map(item => ({
         id: item.ITEM_ID,
         name: item.NAME,
         unitPrice: item.UNIT_PRICE,
     }));
 
-    const systemServices = serviceData;
-
-    // --- 3. ADD API HELPER FUNCTION ---
+    // --- API HELPER FUNCTION ---
     const fetchItemsForCategory = async (categoryName: string) => {
         const cat = dbCategories.find(c => c.name === categoryName);
         if (!cat) return [];
@@ -144,7 +158,8 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
         id: Date.now().toString(),
         category: '',
         itemName: '',
-        quantity: '',
+        quantity: '1', // Set default requested quantity to 1
+        approved_qty: '1', // Set default approved quantity to 1
         unit_price: '',
         total: '',
         isSaved: false
@@ -165,7 +180,14 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
         setItems(prev => prev.map(item => {
             if (item.id === id) {
                 const stringValue = value.toString();
-                const updatedItem = { ...item, [field]: value, isSaved: false };
+
+                // If quantity is updated, automatically update approved_qty too
+                const updatedItem = {
+                    ...item,
+                    [field]: value,
+                    isSaved: false,
+                    ...(field === 'quantity' && { approved_qty: stringValue }) // Ensure approved_qty tracks quantity on creation
+                };
 
                 if (field === 'quantity' && item.unit_price) {
                     const quantity = parseFloat(stringValue) || 0;
@@ -305,20 +327,27 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
         e.preventDefault();
         if (!validateForm()) return;
 
+        // Use optional chaining for auth.user.fullname in case structure varies
         const finalRequestorName = requestorType === 'self'
-            ? auth.user.fullname
+            ? (auth.user?.fullname || auth.user?.name || 'Unknown')
             : otherRequestor;
 
         const finalUserId = requestorType === 'self'
-            ? auth.user.id
-            : (selectedUser ? parseInt(selectedUser) : auth.user.id);
+            ? (auth.user?.id || 0)
+            : (selectedUser ? parseInt(selectedUser) : (auth.user?.id || 0));
 
         const formData = {
             requestor: finalRequestorName,
             priority,
             type,
             notes,
-            items: type === 'items' ? items.map(item => ({ ...item, itemId: item.itemId || null })) : [],
+            // Ensure approved_qty is included in the item data sent to the backend
+            items: type === 'items' ? items.map(item => ({
+                ...item,
+                itemId: item.itemId || null,
+                // The backend RequisitionItem model expects 'approved_qty'
+                approved_qty: item.approved_qty || item.quantity // Use current approved_qty, or fallback to quantity
+            })) : [],
             services: type === 'services' ? services : [],
             total_amount: getTotalAmount(),
             us_id: finalUserId
@@ -433,13 +462,12 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
                                                 addNewItem={addNewItem}
                                                 hasError={hasError}
                                                 editItem={editItem}
-                                                // 4. PASS THE NEW PROPS
                                                 availableCategories={dbCategories}
                                                 onFetchItems={fetchItemsForCategory}
                                             />
                                         ) : (
                                             <RequisitionService
-                                                services={services}
+                                                services={services}  // <--- ENSURE THIS IS PASSED
                                                 setServices={setServices}
                                                 validationErrors={validationErrors}
                                                 setValidationErrors={setValidationErrors}
@@ -450,7 +478,11 @@ export default function RequisitionForm({ auth, dbCategories = [] }: Requisition
                                                 addNewService={addNewService}
                                                 hasError={hasError}
                                                 editService={editService}
+
+                                                // Props from Controller:
                                                 systemServices={systemServices}
+                                                availableCategories={serviceCategories}
+                                                inventoryItems={inventoryItems} // <--- NEW PROP PASSED DOWN
                                             />
                                         )}
                                     </div>
