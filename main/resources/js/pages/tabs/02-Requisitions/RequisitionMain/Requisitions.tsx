@@ -14,7 +14,7 @@ import RequisitionDetailModal from './RequisitionDetailModal';
 // --- Types based on your Laravel Controller ---
 interface Requisition {
     id: number;
-    references_no?: string;
+    ref_no?: string;
     requestor: string;
     priority: string;
     type: string;
@@ -70,7 +70,7 @@ export default function Requisitions({
             const searchLower = searchTerm.toLowerCase();
 
             const matchesSearch =
-                (req.references_no && req.references_no.toLowerCase().includes(searchLower)) ||
+                (req.ref_no && req.ref_no.toLowerCase().includes(searchLower)) ||
                 req.requestor.toLowerCase().includes(searchLower) ||
                 req.id.toString().includes(searchLower) ||
                 (req.notes && req.notes.toLowerCase().includes(searchLower));

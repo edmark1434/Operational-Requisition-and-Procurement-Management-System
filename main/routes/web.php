@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\Requisition\RequisitionController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\Supplier\SupplierController;
@@ -61,6 +62,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('purchases',[Purchasing::class,'index'])->name('purchases');
     Route::get('purchases/create',[Purchasing::class,"create"])->name('PurchaseOrderForm');
     Route::get('purchases/{purchaseId}/edit',[Purchasing::class,"edit"])->name('PurchaseOrderEdit');
+    Route::post('purchases/add',[PurchaseOrderController::class,"post"])->name('orderpost');
+    Route::put('purchases/{id}/edit',[PurchaseOrderController::class,"put"])->name('orderput');
+    Route::delete('purchases/{id}/delete',[PurchaseOrderController::class,"delete"])->name('orderdelete');
 
     // SUPPLIERS
     Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
@@ -137,10 +141,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // --- TEMPORARY FIX ROUTE (RUN ONCE THEN DELETE) ---
 Route::get('/fix-references', function () {
-    $items = Requisition::whereNull('references_no')->orWhere('references_no', '')->get();
+    $items = Requisition::whereNull('ref_no')->orWhere('ref_no', '')->get();
 
     foreach ($items as $item) {
-        $item->references_no = 'REQ-' . str_pad($item->id, 6, '0', STR_PAD_LEFT);
+        $item->ref_no = 'REQ-' . str_pad($item->id, 6, '0', STR_PAD_LEFT);
         $item->saveQuietly();
     }
 

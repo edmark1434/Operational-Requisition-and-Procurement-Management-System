@@ -120,7 +120,7 @@ export default function RequisitionAdjust({
                     <div>
                         <h1 className="text-2xl font-bold">Adjust Approved Quantities</h1>
                         <p className="text-sm text-gray-500">
-                            Requisition #{serverRequisition.references_no || requisitionId} • Requestor: {serverRequisition.requestor}
+                            Requisition {serverRequisition.ref_no || requisitionId} • Requestor: {serverRequisition.requestor}
                         </p>
                     </div>
                     <Link href={requisitions().url} className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700 transition">

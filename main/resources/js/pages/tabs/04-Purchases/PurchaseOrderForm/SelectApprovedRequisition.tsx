@@ -54,7 +54,7 @@ export default function SelectApprovedRequisition({
 
         // Filter by search term
         const searchMatch = !searchTerm ||
-            requisition.id.toString().includes(searchTerm) ||
+            requisition.ref_no.toString().includes(searchTerm) ||
             requisition.requestor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             requisition.notes?.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -186,7 +186,7 @@ export default function SelectApprovedRequisition({
                                 key={requisition.id}
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg text-sm border border-blue-200 dark:border-blue-700"
                             >
-                                <span className="font-medium">Req #{requisition.id}</span>
+                                <span className="font-medium">{requisition.ref_no}</span>
                                 <span className="text-blue-600 dark:text-blue-400">•</span>
                                 {getRequisitionCategories(requisition).map(category => (
                                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getTypeColor(requisition.type)}`}>
@@ -194,7 +194,9 @@ export default function SelectApprovedRequisition({
                                     </span>
                                 ))}
                                 <span className="text-blue-600 dark:text-blue-400">•</span>
-                                <span>{requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0} items</span>
+                                <span>{requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0} {getRequisitionTypeLabel(formData.ORDER_TYPE ?? '')}
+                                    {requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0 > 1 ? 's' : ''}
+                                </span>
                                 {!isEditMode && (
                                     <button
                                         type="button"
@@ -265,7 +267,7 @@ export default function SelectApprovedRequisition({
                                         >
                                             <div className="flex justify-between items-start mb-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-medium text-sm">Req #{requisition.id}</span>
+                                                    <span className="font-medium text-sm">{requisition.ref_no}</span>
                                                     {getRequisitionCategories(requisition).map(category => (
                                                         <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getTypeColor(requisition.type)}`}>
                                                             {category.name}

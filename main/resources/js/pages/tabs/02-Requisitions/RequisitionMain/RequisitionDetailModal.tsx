@@ -15,7 +15,6 @@ const getStatusColor = (status: string) => {
         case 'declined':
         case 'rejected':
             return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800';
-        case 'awaiting_pickup':
         case 'awaiting pickup':
             return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
         case 'ordered':
@@ -62,7 +61,7 @@ const formatCurrency = (amount: number) => {
 
 // Helper to format USD rate
 const formatHourlyRate = (rate: number | string) => {
-    const value = parseFloat(rate.toString() || 0);
+    const value = parseFloat(rate.toString() || '0');
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -134,7 +133,7 @@ export default function RequisitionDetailModal({
     // --- 1. SAFE DATA NORMALIZATION ---
     const safeReq = requisition || {};
     const id = safeReq.id || safeReq.ID;
-    const references_no = safeReq.references_no || safeReq.REFERENCES_NO || `REQ-#${id}`;
+    const ref_no = safeReq.ref_no || safeReq.REF_NO || `REQ-#${id}`;
 
     const status = safeReq.status || safeReq.STATUS || 'pending';
     const type = safeReq.type || safeReq.TYPE || 'items';
@@ -398,7 +397,7 @@ export default function RequisitionDetailModal({
                                     {/* Header */}
                                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10 flex items-center justify-between">
                                         <Dialog.Title as="h3" className="text-xl font-bold text-gray-900 dark:text-white">
-                                            {references_no} | Details
+                                            {ref_no} | Details
                                         </Dialog.Title>
                                         <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent">
                                             <X className="w-6 h-6" />

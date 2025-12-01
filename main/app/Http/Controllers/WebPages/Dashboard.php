@@ -37,7 +37,7 @@ class Dashboard extends Controller
         ])->get()->map(function ($po) {
             return [
                 'ID' => $po->id,
-                'REFERENCE_NO' => $po->references_no,
+                'REFERENCE_NO' => $po->ref_no,
                 'ORDER_TYPE' => $po->type,
                 'CREATED_AT' => $po->created_at,
                 'TOTAL_COST' => $po->total_cost,
@@ -130,6 +130,6 @@ class Dashboard extends Controller
             'items' => $items
         ]);
 
-        
+
     }
 }

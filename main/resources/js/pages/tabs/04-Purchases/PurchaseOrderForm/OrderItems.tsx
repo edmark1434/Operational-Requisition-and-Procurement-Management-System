@@ -65,7 +65,7 @@ export default function OrderItems({
                     Order Items
                 </h3>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedItems.length} of {requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length} items selected • {totalItems} total quantity
+                    {selectedItems.length} of {requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length} item{requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length > 1 ? 's' : ''} selected • {totalItems} total quantity
                 </div>
             </div>
 
@@ -218,7 +218,7 @@ export default function OrderItems({
                             <div className="col-span-12">
                                 <div className="flex justify-between items-center text-sm">
                                     <div className="text-gray-600 dark:text-gray-400">
-                                        <span className="font-medium">{selectedItems.length}</span> items selected •
+                                        <span className="font-medium">{selectedItems.length}</span> item{selectedItems.length > 1 ? 's' : ''} selected •
                                         <span className="font-medium"> {totalItems}</span> total quantity
                                     </div>
                                 </div>

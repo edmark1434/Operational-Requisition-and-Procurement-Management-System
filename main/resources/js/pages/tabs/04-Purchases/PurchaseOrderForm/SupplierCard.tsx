@@ -1,4 +1,4 @@
-import {Category} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import {Category, CategoryVendor} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
 
 interface SupplierCardProps {
     supplier: any;
@@ -7,6 +7,7 @@ interface SupplierCardProps {
     isBestMatch?: boolean;
     matchPercentage?: number;
     categories?: Category[];
+    vendorCategories?: CategoryVendor[];
     matchingCategories?: Category[];
     orderType?: string;
     supplierActualCategories?: Category[]; // Add this prop to receive categories from parent
@@ -19,6 +20,7 @@ export default function SupplierCard({
                                          isBestMatch = false,
                                          matchPercentage,
                                          categories = [],
+                                         vendorCategories = [],
                                          matchingCategories = [],
                                          orderType = 'items',
                                          supplierActualCategories = [] // Default to empty array
@@ -28,11 +30,15 @@ export default function SupplierCard({
 
     // Determine supplier type based on their actual categories
     const getSupplierType = () => {
-        const hasServices = displayCategories.some(cat =>
+        const displayCategories2 = displayCategories?.length > 0 ? displayCategories : categories
+            .filter(c => vendorCategories.filter(vc => vc.vendor_id === supplier.vendor.id)
+                .map(vc => vc.category_id).includes(c.id));
+
+        const hasServices = displayCategories2.some(cat =>
             categories.filter(c => c.type === 'Services').includes(cat)
         );
 
-        const hasItems = displayCategories.some(cat =>
+        const hasItems = displayCategories2.some(cat =>
             categories.filter(c => c.type === 'Items').includes(cat)
         );
 

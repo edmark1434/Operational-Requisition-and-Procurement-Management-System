@@ -30,19 +30,12 @@ export default function OrderService({
     };
 
     const getSelectedServices = () => {
-        return formData.SERVICES.filter((service: any) => service.SELECTED);
+        return formData.SERVICES;
     };
 
     const calculateSubtotal = () => {
         return formData.SERVICES
-            .filter((service: any) => service.SELECTED)
             .reduce((total: number, service: any) => total + (service.QUANTITY * service.UNIT_PRICE), 0);
-    };
-
-    const calculateTotalHours = () => {
-        return formData.SERVICES
-            .filter((service: any) => service.SELECTED)
-            .reduce((total: number, service: any) => total + service.QUANTITY, 0);
     };
 
     if (!selectedRequisition) {
@@ -51,7 +44,10 @@ export default function OrderService({
 
     const selectedServices = getSelectedServices();
     const subtotal = calculateSubtotal();
-    const totalHours = calculateTotalHours();
+
+    const reqServicetoFormService = (reqService: RequisitionService) => {
+        return formData.SERVICES.find(service => service.id === reqService.id) || {}
+    }
 
     return (
         <div className="space-y-4">
@@ -61,7 +57,7 @@ export default function OrderService({
                     Order Services
                 </h3>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedServices.length} of {formData.SERVICES.length} services selected • {totalHours} total hours
+                    {selectedServices.length} of {requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).length} service{requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).length > 1 ? 's' : ''} selected
                 </div>
             </div>
 
@@ -81,32 +77,24 @@ export default function OrderService({
                     <div className="col-span-4 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Service Details
                     </div>
-                    <div className="col-span-1 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider text-center">
-                        Type
+                    <div className="col-span-5 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider text-center">
+                        Category
                     </div>
                     <div className="col-span-2 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider text-right">
                         Hourly Rate
-                    </div>
-                    <div className="col-span-2 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider text-center">
-                        Hours
-                    </div>
-                    <div className="col-span-2 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider text-right">
-                        Total
                     </div>
                 </div>
 
                 {/* Table Body */}
                 <div className="divide-y divide-sidebar-border max-h-96 overflow-y-auto">
-                    {formData.SERVICES.map((service) => {
-                        const originalQty = originalQuantities[service.ID] || service.QUANTITY;
-                        const isIncreased = service.QUANTITY > originalQty;
-                        const serviceTotal = service.QUANTITY * service.UNIT_PRICE;
+                    {requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).map((service) => {
+                        const serviceTotal = service.service.hourly_rate;
 
                         return (
                             <div
-                                key={service.ID}
+                                key={service.id}
                                 className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors ${
-                                    service.SELECTED
+                                    formData.SERVICES.some(i => i.id === service.id)
                                         ? 'bg-purple-50 dark:bg-purple-900/10 hover:bg-purple-100 dark:hover:bg-purple-900/20'
                                         : 'hover:bg-gray-50 dark:hover:bg-sidebar'
                                 }`}
@@ -115,8 +103,8 @@ export default function OrderService({
                                 <div className="col-span-1">
                                     <input
                                         type="checkbox"
-                                        checked={service.SELECTED || false}
-                                        onChange={() => onToggleServiceSelection(service.ID)}
+                                        checked={formData.SERVICES.some(i => i.id === service.id) || false}
+                                        onChange={() => onToggleServiceSelection(service.id)}
                                         className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                                     />
                                 </div>
@@ -124,39 +112,24 @@ export default function OrderService({
                                 {/* Service Details */}
                                 <div className="col-span-4">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {service.NAME}
+                                        {service.service.name}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {service.DESCRIPTION}
+                                        {service.service.description}
                                     </p>
-                                    {isIncreased && (
-                                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                                            ⚠️ Increased from {originalQty} hours
-                                        </p>
-                                    )}
                                 </div>
 
-                                {/* Service Type */}
-                                <div className="col-span-1 text-center">
-                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
-                                        Service
+                                {/* Category */}
+                                <div className="col-span-5 text-center">
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-sidebar text-gray-600 dark:text-gray-400">
+                                        {categories.find(c => c.id === service.service.category_id)?.name || 'N/A'}
                                     </span>
                                 </div>
 
                                 {/* Hourly Rate */}
                                 <div className="col-span-2 text-right">
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {formatCurrency(service.UNIT_PRICE)}/hr
-                                    </p>
-                                </div>
-
-                                {/* Service Total */}
-                                <div className="col-span-2 text-right">
                                     <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                        {formatCurrency(serviceTotal)}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {service.QUANTITY} hrs × {formatCurrency(service.UNIT_PRICE)}/hr
+                                        {formatCurrency(service.service.hourly_rate)}/hr
                                     </p>
                                 </div>
                             </div>
@@ -167,52 +140,12 @@ export default function OrderService({
                 {/* Summary Section */}
                 {selectedServices.length > 0 && (
                     <>
-                        {/* Subtotal Row */}
-                        <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
-                            <div className="col-span-8 text-right">
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Subtotal ({selectedServices.length} services):</p>
-                            </div>
-                            <div className="col-span-4 text-right">
-                                <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                    {formatCurrency(subtotal)}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/*/!* Tax Row (if applicable) *!/*/}
-                        {/*<div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">*/}
-                        {/*    <div className="col-span-8 text-right">*/}
-                        {/*        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tax (0%):</p>*/}
-                        {/*    </div>*/}
-                        {/*    <div className="col-span-4 text-right">*/}
-                        {/*        <p className="text-sm text-gray-600 dark:text-gray-400">*/}
-                        {/*            {formatCurrency(0)}*/}
-                        {/*        </p>*/}
-                        {/*    </div>*/}
-                        {/*</div>*/}
-
-                        {/* Grand Total Row */}
-                        <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-green-50 dark:bg-green-900/20 border-t border-sidebar-border">
-                            <div className="col-span-8 text-right">
-                                <p className="text-lg font-bold text-gray-900 dark:text-white">Grand Total:</p>
-                            </div>
-                            <div className="col-span-4 text-right">
-                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                    {formatCurrency(subtotal)}
-                                </p>
-                            </div>
-                        </div>
-
                         {/* Summary Breakdown */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
                             <div className="col-span-12">
                                 <div className="flex justify-between items-center text-sm">
                                     <div className="text-gray-600 dark:text-gray-400">
-                                        <span className="font-medium">{selectedServices.length}</span> services selected •
-                                        <span className="font-medium"> {totalHours}</span> total hours
-                                    </div>
-                                    <div className="text-gray-600 dark:text-gray-400">
-                                        Average per service: {formatCurrency(selectedServices.length > 0 ? subtotal / selectedServices.length : 0)}
+                                        <span className="font-medium">{selectedServices.length}</span> service{selectedServices.length > 1 ? 's' : ''} selected •
                                     </div>
                                 </div>
                             </div>

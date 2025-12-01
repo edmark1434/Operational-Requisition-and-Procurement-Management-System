@@ -26,6 +26,7 @@ import PreviewModal from './PurchaseOrderForm/PreviewModal';
 
 // Import UI components
 import { Button } from '@/components/ui/button';
+import {orderpost, servicepost} from "@/routes";
 
 interface PageProps {
     purchaseId?: number;
@@ -76,6 +77,7 @@ export interface Service {
 
 export type Requisition = {
     id: number;
+    ref_no: string;
     type: 'Items' | 'Services'; // Requisition::TYPES
     status: string; // based on Requisition::STATUS
     remarks: string | null;
@@ -102,8 +104,6 @@ export interface RequisitionService {
     req_id: number;
     service_id: number;
     service: Service;
-    item_id: number | null;
-    item: Item | null;
 }
 
 export type Vendor = {
@@ -513,12 +513,10 @@ export default function PurchaseOrderForm() {
 
     const calculateTotal = () => {
         const itemsTotal = formData.ITEMS
-            .filter((item: any) => item.SELECTED)
-            .reduce((total: number, item: any) => total + (item.QUANTITY * item.UNIT_PRICE), 0);
+            .reduce((total: number, item: RequisitionItem) => total + (item.quantity * item.item.unit_price), 0);
 
         const servicesTotal = formData.SERVICES
-            .filter((service: any) => service.SELECTED)
-            .reduce((total: number, service: any) => total + (service.QUANTITY * service.UNIT_PRICE), 0);
+            .reduce((total: number, service: RequisitionService) => total + (service.service.hourly_rate), 0);
 
         return itemsTotal + servicesTotal;
     };
@@ -536,7 +534,8 @@ export default function PurchaseOrderForm() {
 
         if (validateForm()) {
             // Show preview instead of directly submitting
-            setShowPreview(true);
+            //  setShowPreview(true);
+            handleConfirmSubmit();
         }
     };
 
@@ -555,22 +554,20 @@ export default function PurchaseOrderForm() {
             STATUS: isEditMode ? currentPurchase?.status : 'Pending',
             REMARKS: formData.REMARKS,
             CREATED_AT: isEditMode ? currentPurchase?.created_at : new Date().toISOString(),
-            UPDATED_AT: new Date().toISOString(),
-            ITEMS: selectedItems.map(item => ({
+            ITEMS: formData.ITEMS.map(item => ({
+                REQ_ITEM_ID: item.id,
                 ITEM_ID: item.item_id,
                 QUANTITY: item.quantity,
-                UNIT_PRICE: item.item.unit_price,
-                REQUISITION_ID: item.req_id
             })),
-            SERVICES: selectedServices.map(service => ({
+            SERVICES: formData.SERVICES.map(service => ({
+                REQ_SERVICE_ID: service.id,
                 SERVICE_ID: service.service_id,
-                HOURLY_RATE: service.service.hourly_rate,
-                REQUISITION_ID: service.req_id
             }))
         };
 
-        // In real application, you would send POST/PUT request to backend
-        alert(`Purchase order ${isEditMode ? 'updated' : 'created'} successfully! ${formData.REQUISITION_IDS.length > 1 ? `(Merged ${formData.REQUISITION_IDS.length} requisitions)` : ''}`);
+        console.log(JSON.stringify(purchaseOrderData));
+        // router.post(orderpost().url, purchaseOrderData);
+        alert('Purchase order added successfully!');
 
         // Close preview and redirect
         setShowPreview(false);
@@ -664,6 +661,7 @@ export default function PurchaseOrderForm() {
 
                 {/* Form Container */}
                 <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:bg-sidebar">
+                    {JSON.stringify(formData)}
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-7xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">

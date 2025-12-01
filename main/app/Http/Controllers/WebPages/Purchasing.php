@@ -28,7 +28,7 @@ class Purchasing extends Controller
         return Inertia::render($this->base_path .'/PurchaseOrderForm', [
             'requisitions' => Requisition::query()->where('status', 'Approved')->get(),
             'requisitionItems' => RequisitionItem::with('item')->get(),
-            'requisitionServices' => RequisitionService::with('service', 'item')->get(),
+            'requisitionServices' => RequisitionService::with('service')->get(),
             'vendors' => Vendor::query()->where('is_active', true)->get(),
             'vendorCategories' => CategoryVendor::with('vendor', 'category')->get(),
             'purchaseOrders' => PurchaseOrder::query()->whereNotIn('status', ['Issued', 'Delivered', 'Received'])->get(),

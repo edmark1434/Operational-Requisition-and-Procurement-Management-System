@@ -6,7 +6,7 @@ import { formatDate } from './utils/formatters';
 
 interface Requisition {
     id: number;
-    references_no: string; // <--- ADDED THIS
+    ref_no: string; // <--- ADDED THIS
     requestor: string;
     priority: string;
     type: string;
@@ -111,7 +111,7 @@ function RequisitionListItem({
     const id = requisition.id || requisition.ID;
 
     // NEW: Extract Reference Number. Fallback to ID if reference is missing.
-    const referenceNo = requisition.references_no || requisition.REFERENCES_NO || `#${id}`;
+    const referenceNo = requisition.ref_no || requisition.REFERENCES_NO || `#${id}`;
 
     const status = requisition.status || requisition.STATUS;
     const type = requisition.type || requisition.TYPE;

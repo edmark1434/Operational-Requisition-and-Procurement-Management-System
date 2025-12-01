@@ -48,7 +48,7 @@ class Requisition extends Model
             } else {
                 // 2. Strict Parsing: Remove everything except digits (0-9)
                 // "REQ-000001" -> "000001" -> 1
-                $stringNumber = preg_replace('/[^0-9]/', '', $latest->references_no ?? '');
+                $stringNumber = preg_replace('/[^0-9]/', '', $latest->ref_no ?? '');
 
                 // Fallback: If parsing failed (empty), use the ID
                 $lastNumber = $stringNumber ? (int)$stringNumber : $latest->id;
@@ -61,14 +61,14 @@ class Requisition extends Model
             $ref = '';
             do {
                 $ref = 'REQ-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
-                $exists = self::where('references_no', $ref)->exists();
+                $exists = self::where('ref_no', $ref)->exists();
                 if ($exists) {
                     $nextId++;
                 }
             } while ($exists);
 
             // 4. Assign the final unique reference
-            $model->references_no = $ref;
+            $model->ref_no = $ref;
         });
     }
 

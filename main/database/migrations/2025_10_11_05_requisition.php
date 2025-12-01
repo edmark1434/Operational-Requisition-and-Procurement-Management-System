@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('requisition', function (Blueprint $table) {
             $table->id();
-            $table->string('references_no')->unique();
+            $table->string('ref_no')->unique();
             $table->enum('type',Requisition::TYPES);
             $table->timestamps();
             $table->enum('status',Requisition::STATUS)->default('Pending');

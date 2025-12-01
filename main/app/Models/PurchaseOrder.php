@@ -50,20 +50,17 @@ class PurchaseOrder extends Model
         return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
-    public function items()
+    public function item()
     {
         return $this->hasMany(OrderItem::class, 'po_id');
+    }
+
+    public function service(){
+        return $this->hasMany(OrderService::class, 'po_id');
     }
 
     public function delivery()
     {
         return $this->hasMany(Delivery::class, 'po_id');
-    }
-    public function deliveryItem()
-    {
-        return $this->hasMany(DeliveryItem::class, 'po_id');
-    }
-    public function order_service(){
-        $this->hasMany(OrderService::class, 'po_id');
     }
 }
