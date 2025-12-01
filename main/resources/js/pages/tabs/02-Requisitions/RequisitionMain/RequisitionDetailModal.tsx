@@ -20,7 +20,7 @@ const getStatusColor = (status: string) => {
             return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
         case 'ordered':
             return 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800';
-        case 'received':
+        case 'completed':
             return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800';
         default:
             return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
@@ -148,7 +148,7 @@ export default function RequisitionDetailModal({
     const isPending = status.toLowerCase() === 'pending';
     const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved';
     const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup' || status.toLowerCase() === 'awaiting pickup';
-    const isReceived = status.toLowerCase() === 'received';
+    const isReceived = status.toLowerCase() === 'completed';
 
     // --- HANDLERS ---
     const handleStatusChange = (newStatus: string) => {
@@ -204,19 +204,19 @@ export default function RequisitionDetailModal({
     };
 
     const handleMarkItemAsReceived = () => {
-        onStatusUpdate(id, 'received');
+        onStatusUpdate(id, 'completed');
         onClose();
     };
 
     const handleMarkServiceAsReceived = () => {
-        onStatusUpdate(id, 'received');
+        onStatusUpdate(id, 'completed');
         onClose();
     };
 
     const handleMarkAsReceived = () => {
         // For Items: Awaiting Pickup -> Ordered
-        // For Services: Approved -> Received
-        const newStatus = isServiceRequisition ? 'received' : 'ordered';
+        // For Services: Approved -> completed
+        const newStatus = isServiceRequisition ? 'completed' : 'ordered';
         onStatusUpdate(id, newStatus);
         onClose();
     };
@@ -244,7 +244,7 @@ export default function RequisitionDetailModal({
         { value: 'ordered', label: 'Ordered' },
         { value: 'delivered', label: 'Delivered' },
         { value: 'awaiting_pickup', label: 'Awaiting Pickup' },
-        { value: 'received', label: 'Received' }
+        { value: 'completed', label: 'Completed' }
     ];
 
     // --- BUTTON LOGIC ---
@@ -274,7 +274,7 @@ export default function RequisitionDetailModal({
             if (isAwaitingPickup) {
                 return (
                     <button onClick={handleMarkItemAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
-                        Mark as Received
+                        Mark as Completed
                     </button>
                 );
             }
@@ -297,7 +297,7 @@ export default function RequisitionDetailModal({
             if (isApproved) {
                 return (
                     <button onClick={handleMarkServiceAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
-                        Mark as Received
+                        Mark as Completed
                     </button>
                 );
             }
@@ -593,13 +593,13 @@ function RequisitionStatusIcon({ status }: { status: string }) {
         case 'rejected': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
         case 'awaiting_pickup': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
         case 'ordered': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>;
-        case 'received': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>;
+        case 'completed': return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>;
         default: return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
     }
 }
 
 function getStatusDisplayName(status: string): string {
-    const statusMap: { [key: string]: string } = { 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'partially_approved': 'Partially Approved', 'ordered': 'Ordered', 'delivered': 'Delivered', 'awaiting_pickup': 'Awaiting Pickup', 'received': 'Received' };
+    const statusMap: { [key: string]: string } = { 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'partially_approved': 'Partially Approved', 'ordered': 'Ordered', 'delivered': 'Delivered', 'awaiting_pickup': 'Awaiting Pickup', 'completed': 'Completed' };
     return statusMap[(status || '').toLowerCase()] || status;
 }
 
