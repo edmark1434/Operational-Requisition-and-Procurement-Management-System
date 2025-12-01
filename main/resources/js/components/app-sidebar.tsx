@@ -83,7 +83,7 @@ const allNavItems = {
             title: 'Reworks',
             href: reworks(),
             icon: Waypoints,
-            requiredPermission: null,
+            requiredPermission: 'View Returns',
         },
     ],
 
