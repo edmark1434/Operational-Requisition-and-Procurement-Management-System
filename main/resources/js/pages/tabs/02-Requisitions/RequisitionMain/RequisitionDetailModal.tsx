@@ -9,6 +9,7 @@ const getStatusColor = (status: string) => {
         case 'approved':
             return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800';
         case 'partially_approved':
+        case 'partially approved':
             return 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 border border-teal-200 dark:border-teal-800';
         case 'pending':
             return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
@@ -146,7 +147,7 @@ export default function RequisitionDetailModal({
 
     const isServiceRequisition = type.toLowerCase() === 'services';
     const isPending = status.toLowerCase() === 'pending';
-    const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved';
+    const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved' || status.toLowerCase() === 'partially approved';
     const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup' || status.toLowerCase() === 'awaiting pickup';
     const isReceived = status.toLowerCase() === 'completed';
 
