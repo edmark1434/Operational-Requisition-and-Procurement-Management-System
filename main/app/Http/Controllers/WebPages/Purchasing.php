@@ -25,7 +25,7 @@ class Purchasing extends Controller
         $purchases = PurchaseOrder::with(
             'vendor',
             'requisition.requisition_items.item',
-            'order_service.service'
+            'service.service'
         )
         ->get()
         ->map(function ($po) {
@@ -68,7 +68,7 @@ class Purchasing extends Controller
                 // SERVICES: order_service → service
                 // -------------------------------
                 'SERVICES' => $type === 'services'
-                    ? $po->order_service->map(function ($os) {
+                    ? $po->service->map(function ($os) {
                         return [
                             'ID'           => $os->id,
                             'SERVICE_ID'   => $os->service->id,
