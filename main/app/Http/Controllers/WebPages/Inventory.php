@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\WebPages;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\CategoryVendor;
 use App\Models\Item;
 use App\Models\Permission;
 use App\Models\AuditLog;
+use App\Models\Vendor;
 use App\Models\UserPermission;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +59,13 @@ class Inventory extends Controller
     }
     public function store(){
         $categories = Category::where('type', 'Items')->where('is_active',true)->get();
-
+        $categorySupplier = CategoryVendor::all()->map(function($categsup){
+            return  [
+                'ID' => $categsup->id,
+                'CATEGORY_ID' => $categsup->category_id,
+                'SUPPLIER_ID' => $categsup->vendor_id
+            ];
+        });
         $categoryOptions = $categories->map(function ($category) {
             return [
                 'CAT_ID' => $category->id,
@@ -66,9 +74,45 @@ class Inventory extends Controller
                 'TYPE' => $category->type,
             ];
         });
+         $vendor = Vendor::where('is_active', true)->get()->map(function ($ven) {
+            return [
+                'ID' => $ven->id,
+                'NAME' => $ven->name,
+                'EMAIL' => $ven->email,
+                'CONTACT_NUMBER' => $ven->contact_number,
+                'ALLOWS_CASH' => $ven->allows_cash,
+                'ALLOWS_DISBURSEMENT' => $ven->allows_disbursement,
+                'ALLOWS_STORE_CREDIT' => $ven->allows_store_credit
+            ];
+        });
+        $inventory = Item::where('is_active', true)->get()->map(function ($item) {
+             return [
+                'ID' => $item->id,
+                'BARCODE' => $item->barcode,
+                'NAME' => $item->name,
+                'DIMENSIONS' => $item->dimensions,
+                'UNIT_PRICE' => $item->unit_price,
+                'CURRENT_STOCK' => $item->current_stock,
+                'MAKE_ID' => $item->make_id,
+                'CATEGORY_ID' => $item->category_id,
+                'SUPPLIER_ID' => $item->vendor_id,
+                
+            ];
+        });
 
+        $categories = Category::where('is_active', true)->get()->map(function ($categ) {
+            return [
+                "CAT_ID" => $categ->id,
+                "NAME" => $categ->name,
+                "DESCRIPTION" => $categ->description,
+                "TYPE" => $categ->type,
+            ];
+        });
         return Inertia::render($this->base_path . '/ItemAdd', [
-            'CATEGORY_OPTIONS' => $categoryOptions
+            'CATEGORY_OPTIONS' => $categoryOptions,
+            'categorySuppliers' => $categorySupplier,
+            'SUPPLIER_OPTIONS' => $vendor,
+            'itemsData' => $inventory
         ]);
     }
     public function create(Request $request){
