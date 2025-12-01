@@ -66,6 +66,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
     Route::get('suppliers/add',[SupplierController::class,"store"])->name('supplieradd');
     Route::get('suppliers/{id}/edit',[SupplierController::class,"edit"])->name('supplieredit');
+    Route::post('suppliers/create',[SupplierController::class,"create"])->name('suppliercreate');
+    Route::put('suppliers/{id}/editUpdate',[SupplierController::class,"update"])->name('supplierupdate');
+    Route::delete('suppliers/{id}/delete',[SupplierController::class,"delete"])->name('supplierdelete');
+    Route::delete('suppliers/{id}/delete-modal',[SupplierController::class,"deleteModal"])->name('supplierdeleteModal');
 
     // DELIVERIES
     Route::get('deliveries',[Deliveries::class,'index'])->name('delivery');
@@ -128,6 +132,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('contacts',[Contact::class,'index'])->name('contacts');
     Route::get('contacts/add',[Contact::class,"store"])->name('contactsadd');
     Route::get('contacts/{id}/edit',[Contact::class,"edit"])->name('contactsedit');
+    Route::post('contacts/create',[Contact::class,"create"])->name('contactscreate');
+    Route::put('contacts/{id}/update',[Contact::class,"update"])->name('contactsupdate');
+    Route::delete('contacts/{id}/delete',[Contact::class,"delete"])->name('contactsdelete');
+    Route::delete('contacts/{id}/delete-modal',[Contact::class,"deleteModal"])->name('contactsdeleteModal');
 
     Route::get('notifications',[Notifications::class,'index'])->name('notifications');
     Route::put('notifications/{id}/editIsRead',[Notifications::class,'editIsRead'])->name('notificationsIsRead');

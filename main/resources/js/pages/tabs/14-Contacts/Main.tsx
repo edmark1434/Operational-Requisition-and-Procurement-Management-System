@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -12,6 +12,7 @@ import ContactDetailModal from './ContactDetailModal';
 // Import utilities
 import { transformContactsData } from './utils';
 import { useContactFilters } from './utils/hooks';
+import { toast, Toaster } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -19,16 +20,20 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/contacts',
     },
 ];
+interface Prop{
+    contactsData: any[],
+    success: boolean,
+    message: string
+}
 
-export default function Contacts() {
+export default function Contacts({contactsData,success,message}:Prop) {
     const [searchTerm, setSearchTerm] = useState('');
     const [vendorFilter, setVendorFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedContact, setSelectedContact] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [contacts, setContacts] = useState(transformContactsData());
+    const [contacts, setContacts] = useState(contactsData);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
-
     const {
         filteredContacts,
         vendors,
@@ -49,7 +54,11 @@ export default function Contacts() {
         setIsDetailModalOpen(false);
         setSelectedContact(null);
     };
-
+    useEffect(() => {
+        if (success) {
+            toast(message)
+        }     
+    },[]);
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Contacts" />
@@ -108,6 +117,7 @@ export default function Contacts() {
                     />
                 )}
             </div>
+        <Toaster/>
         </AppLayout>
     );
 }

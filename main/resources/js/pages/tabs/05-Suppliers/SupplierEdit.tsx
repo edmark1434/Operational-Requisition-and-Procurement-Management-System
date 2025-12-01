@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { suppliers } from '@/routes';
+import { supplierdelete, suppliers, supplierupdate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -10,6 +10,8 @@ import categorySuppliersData from '@/pages/datasets/category_supplier';
 interface SupplierEditProps {
     auth: any;
     supplierId: number;
+    vendor: any,
+    categoriesData : any[]
 }
 
 interface FormData {
@@ -33,7 +35,7 @@ const breadcrumbs = (supplierId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function SupplierEdit({ auth, supplierId }: SupplierEditProps) {
+export default function SupplierEdit({ auth, supplierId,vendor,categoriesData }: SupplierEditProps) {
     const [formData, setFormData] = useState<FormData>({
         NAME: '',
         EMAIL: '',
@@ -48,45 +50,11 @@ export default function SupplierEdit({ auth, supplierId }: SupplierEditProps) {
 
     // Load supplier data on component mount
     useEffect(() => {
-        loadSupplierData();
-    }, [supplierId]);
+        setFormData(vendor)
+        setIsLoading(false)
+    }, [vendor]);
 
-    const loadSupplierData = () => {
-        setIsLoading(true);
-
-        try {
-            // Find the supplier to edit
-            const supplier = suppliersData.find(s => s.ID === supplierId);
-
-            if (!supplier) {
-                console.error(`Supplier #${supplierId} not found`);
-                alert('Supplier not found!');
-                router.visit(suppliers().url);
-                return;
-            }
-
-            // Get supplier categories
-            const supplierCategories = categorySuppliersData
-                .filter(cs => cs.SUPPLIER_ID === supplierId)
-                .map(cs => cs.CATEGORY_ID);
-
-            setFormData({
-                NAME: supplier.NAME || '',
-                EMAIL: supplier.EMAIL || '',
-                CONTACT_NUMBER: supplier.CONTACT_NUMBER || '',
-                ALLOWS_CASH: supplier.ALLOWS_CASH || false,
-                ALLOWS_DISBURSEMENT: supplier.ALLOWS_DISBURSEMENT || false,
-                ALLOWS_STORE_CREDIT: supplier.ALLOWS_STORE_CREDIT || false,
-                CATEGORIES: supplierCategories
-            });
-        } catch (error) {
-            console.error('Error loading supplier data:', error);
-            alert('Error loading supplier data!');
-            router.visit(suppliers().url);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    
 
     const handleCategoryToggle = (categoryId: number) => {
         setFormData(prev => ({
@@ -103,17 +71,8 @@ export default function SupplierEdit({ auth, supplierId }: SupplierEditProps) {
         // Prepare updated supplier data
         const updatedSupplierData = {
             ...formData,
-            CONTACT_INFO: `${formData.EMAIL} | ${formData.CONTACT_NUMBER}`,
-            UPDATED_AT: new Date().toISOString()
         };
-
-        console.log('Updated Supplier Data:', updatedSupplierData);
-
-        // In real application, you would send PATCH request to backend
-        alert('Supplier updated successfully!');
-
-        // Redirect back to suppliers list
-        router.visit(suppliers().url);
+        router.put(supplierupdate(supplierId),updatedSupplierData)
     };
 
     const handleInputChange = (field: keyof FormData, value: any) => {
@@ -131,14 +90,11 @@ export default function SupplierEdit({ auth, supplierId }: SupplierEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting supplier:', supplierId);
-
-        // In real application, you would send DELETE request to backend
-        alert('Supplier deleted successfully!');
+       
+        router.delete(supplierdelete(supplierId));
+        
         setShowDeleteConfirm(false);
 
-        // Redirect back to suppliers list
-        router.visit(suppliers().url);
     };
 
     const handleCancel = () => {
