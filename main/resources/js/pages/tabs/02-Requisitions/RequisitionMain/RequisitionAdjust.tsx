@@ -118,36 +118,38 @@ export default function RequisitionAdjust({
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold">Adjust Approved Quantities</h1>
-                        <p className="text-sm text-gray-500">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Adjust Approved Quantities</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                             Requisition #{serverRequisition.references_no || requisitionId} • Requestor: {serverRequisition.requestor}
                         </p>
                     </div>
-                    <Link href={requisitions().url} className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700 transition">
+                    <Link href={requisitions().url} className="bg-gray-800 dark:bg-sidebar-accent text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-sidebar-border transition-colors border border-gray-700 dark:border-sidebar-border">
                         Cancel & Back
                     </Link>
                 </div>
 
-                <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-white dark:bg-[oklch(0.145_0_0)]">
+                <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-white dark:bg-sidebar">
                     <div className="h-full overflow-y-auto p-6">
-                        <div className="w-full max-w-6xl mx-auto bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg overflow-hidden">
+                        <div className="w-full max-w-6xl mx-auto bg-white dark:bg-sidebar rounded-xl border border-sidebar-border shadow-lg overflow-hidden">
 
                             {/* Summary Banner */}
-                            <div className="p-6 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-b border-sidebar-border/70 flex justify-between items-center">
-                                <div>
-                                    <h2 className="text-lg font-bold text-cyan-900 dark:text-cyan-100">Adjustment Mode</h2>
-                                    <p className="text-sm text-cyan-700 dark:text-cyan-300">
-                                        Modify the quantities below. Max limit is the requested quantity.
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-xs text-gray-500 uppercase">Original Total</div>
-                                    <div className="text-lg font-semibold text-gray-500 line-through decoration-red-500">
-                                        ₱{originalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            <div className="p-6 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-b border-sidebar-border">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-cyan-900 dark:text-cyan-100">Adjustment Mode</h2>
+                                        <p className="text-sm text-cyan-700 dark:text-cyan-300">
+                                            Modify the quantities below. Max limit is the requested quantity.
+                                        </p>
                                     </div>
-                                    <div className="text-xs text-green-600 uppercase mt-1 font-bold">New Approved Total</div>
-                                    <div className="text-2xl font-bold text-green-600">
-                                        ₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    <div className="text-right">
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Original Total</div>
+                                        <div className="text-lg font-semibold text-gray-500 dark:text-gray-400 line-through decoration-red-500">
+                                            ₱{originalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </div>
+                                        <div className="text-xs text-green-600 dark:text-green-400 uppercase mt-1 font-bold">New Approved Total</div>
+                                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                            ₱{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -156,48 +158,50 @@ export default function RequisitionAdjust({
 
                                 {/* 1. READ-ONLY NOTES (From 'notes' column) */}
                                 {serverRequisition.notes && (
-                                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                    <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                                             Original Request Notes
                                         </label>
-                                        <p className="text-gray-800 dark:text-gray-200 text-sm">
+                                        <p className="text-gray-800 dark:text-gray-300 text-sm">
                                             {serverRequisition.notes}
                                         </p>
                                     </div>
                                 )}
 
                                 {/* 2. ITEMS TABLE */}
-                                <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                                <div className="border border-sidebar-border rounded-lg overflow-hidden bg-white dark:bg-sidebar-accent">
                                     <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold uppercase text-xs">
+                                        <thead className="bg-gray-50 dark:bg-sidebar text-gray-700 dark:text-gray-300 font-semibold uppercase text-xs border-b border-sidebar-border">
                                         <tr>
                                             <th className="px-4 py-3">Item Name</th>
                                             <th className="px-4 py-3">Category</th>
-                                            <th className="px-4 py-3 text-right text-gray-500">Requested Qty</th>
-                                            <th className="px-4 py-3 text-right bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300 w-40">
+                                            <th className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">Requested Qty</th>
+                                            <th className="px-4 py-3 text-right bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300 w-40 border-l border-sidebar-border">
                                                 Approved Qty
                                             </th>
                                             <th className="px-4 py-3 text-right">Unit Price</th>
                                             <th className="px-4 py-3 text-right">Approved Total</th>
                                         </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                                        <tbody className="divide-y divide-sidebar-border">
                                         {items.map((item) => {
                                             const rowTotal = (parseFloat(item.approved_quantity.toString()) || 0) * item.unit_price;
                                             const isModified = item.approved_quantity != item.quantity;
 
                                             return (
-                                                <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-sidebar transition-colors">
                                                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                                                         {item.name}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                                                        {item.category || 'Service'}
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-sidebar border border-sidebar-border">
+                                                            {item.category || 'Service'}
+                                                        </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right text-gray-500">
+                                                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                                                         {item.quantity}
                                                     </td>
-                                                    <td className="px-4 py-2 text-right bg-green-50/50 dark:bg-green-900/5">
+                                                    <td className="px-4 py-2 text-right bg-green-50/50 dark:bg-green-900/5 border-l border-sidebar-border/50">
                                                         <input
                                                             type="number"
                                                             min="0"
@@ -205,15 +209,15 @@ export default function RequisitionAdjust({
                                                             step="0.01"
                                                             value={item.approved_quantity}
                                                             onChange={(e) => updateApprovedQuantity(item.id, e.target.value)}
-                                                            className={`w-full text-right rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 focus:ring-green-500 focus:border-green-500 text-sm font-bold ${
-                                                                isModified ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'
+                                                            className={`w-full text-right rounded border-gray-300 dark:border-sidebar-border dark:bg-sidebar focus:ring-green-500 focus:border-green-500 text-sm font-bold ${
+                                                                isModified ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'
                                                             }`}
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">
                                                         ₱{Number(item.unit_price).toLocaleString()}
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
+                                                    <td className="px-4 py-3 text-right font-bold text-green-600 dark:text-green-400">
                                                         ₱{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </td>
                                                 </tr>
@@ -232,24 +236,24 @@ export default function RequisitionAdjust({
                                         rows={3}
                                         value={remarks}
                                         onChange={(e) => setRemarks(e.target.value)}
-                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border-sidebar-border bg-white dark:bg-input text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
                                         placeholder="e.g., Only 5 units in stock, approved partial amount."
                                     />
                                 </div>
 
                                 {/* Actions */}
-                                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                                <div className="pt-4 border-t border-sidebar-border flex justify-end gap-3">
                                     <button
                                         type="button"
                                         onClick={() => window.history.back()}
-                                        className="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                        className="px-6 py-2 rounded-lg border border-sidebar-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 focus:ring-4 focus:ring-green-500/30 transition disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                                        className="px-6 py-2 rounded-lg bg-green-600 dark:bg-green-700 text-white font-medium hover:bg-green-700 dark:hover:bg-green-600 focus:ring-4 focus:ring-green-500/30 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
                                     >
                                         {isSubmitting ? 'Saving...' : 'Confirm Adjustments'}
                                     </button>
