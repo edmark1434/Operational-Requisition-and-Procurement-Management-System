@@ -189,7 +189,8 @@ export default function RequisitionDetailModal({
     const finalSummaryCost = (isServiceRequisition && safeReq.total_cost) ? safeReq.total_cost : displayTotalCost;
 
     const isPending = status.toLowerCase() === 'pending';
-    const isApproved = status.toLowerCase() === 'approved' || status.toLowerCase() === 'partially_approved' || status.toLowerCase() === 'partially approved';
+    const isApproved = status.toLowerCase() === 'approved';
+    const isPartiallyApproved = status.toLowerCase() === 'partially_approved' || status.toLowerCase() === 'partially approved';
     const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup' || status.toLowerCase() === 'awaiting pickup';
     const isReceived = status.toLowerCase() === 'completed';
 
@@ -241,20 +242,10 @@ export default function RequisitionDetailModal({
         onClose();
     };
 
-    const handleMarkItemAsReceived = () => {
-        onStatusUpdate(id, 'completed');
-        onClose();
-    };
-
-    const handleMarkServiceAsReceived = () => {
-        onStatusUpdate(id, 'completed');
-        onClose();
-    };
-
     const handleMarkAsReceived = () => {
         // For Items: Awaiting Pickup -> Ordered
         // For Services: Approved -> completed
-        const newStatus = isServiceRequisition ? 'completed' : 'ordered';
+        const newStatus = isServiceRequisition ? 'completed' : 'completed';
         onStatusUpdate(id, newStatus);
         onClose();
     };
@@ -301,18 +292,17 @@ export default function RequisitionDetailModal({
                     </>
                 );
             }
-            if (isApproved) {
+            if (isApproved || isPartiallyApproved) {
                 return (
                     <button onClick={handleReleaseForPickup} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                         Release for Pickup
                     </button>
                 );
             }
-
             if (isAwaitingPickup) {
                 return (
-                    <button onClick={handleMarkItemAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
-                        Mark as Completed
+                    <button onClick={handleMarkAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                        Mark as Received
                     </button>
                 );
             }
@@ -322,19 +312,14 @@ export default function RequisitionDetailModal({
         if (isServiceRequisition) {
             if (isPending) {
                 return (
-                    <>
-                        <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
-                            Edit Requisition
-                        </button>
-                        <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">
-                            Adjust Requisition
-                        </button>
-                    </>
+                    <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                        Edit Requisition
+                    </button>
                 );
             }
             if (isApproved) {
                 return (
-                    <button onClick={handleMarkServiceAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                    <button onClick={handleMarkAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
                         Mark as Completed
                     </button>
                 );
@@ -357,13 +342,16 @@ export default function RequisitionDetailModal({
                 </>
             );
         }
-        if (isApproved && !isServiceRequisition) {
+
+        // For Items: Show Create Purchase Order when Approved or Partially Approved
+        if (!isServiceRequisition && (isApproved || isPartiallyApproved)) {
             return (
                 <button onClick={handleCreatePurchaseOrder} className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
                     Create Purchase Order
                 </button>
             );
         }
+
         return null;
     };
 
@@ -657,11 +645,7 @@ export default function RequisitionDetailModal({
                                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                                         <div className="flex justify-between items-center">
                                             <div className="flex gap-3">
-                                                <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">Edit Requisition</button>
-                                                {/* FIX: Hide Adjust button for Service requisitions */}
-                                                {!isServiceRequisition && (
-                                                    <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">Adjust Requisition</button>
-                                                )}
+                                                {renderLeftButtons()}
                                             </div>
 
                                             <div className="flex gap-3">
