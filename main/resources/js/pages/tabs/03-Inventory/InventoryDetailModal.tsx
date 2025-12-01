@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { StatusIcons, StockIcons } from './utils/icons';
 import { getStockStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate } from './utils/formatters';
+import { router } from '@inertiajs/react';
+import { toast, Toaster } from 'sonner';
+import { inventory, inventoryDeleteModal } from '@/routes';
 
 interface InventoryDetailModalProps {
     item: any;
@@ -24,9 +27,15 @@ export default function InventoryDetailModal({
         item?.CURRENT_STOCK < 10 ? 'low-stock' : 'in-stock';
 
     const handleDelete = () => {
-        if (item) {
-            onDelete(item.ID);
-        }
+        router.delete(inventoryDeleteModal(item.ID), {
+            onSuccess: () => {
+                toast.success('Item deleted successfully');
+                router.visit(inventory().url);
+            },
+            onError: (err) => {
+                toast('error occurs ' + err);
+            }
+        })
         setShowDeleteConfirm(false);
     };
 
@@ -86,9 +95,12 @@ export default function InventoryDetailModal({
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Category
+                                            Makes & Categories
                                         </label>
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 dark:bg-sidebar text-gray-600 dark:text-gray-400 border border-sidebar-border">
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                                                 {item?.MAKE_NAME || 'Unknown manufacturer'}
+                                            </span>
+                                        <span className="inline-flex items-center px-2.5 py-0.5 ml-2  rounded-full text-xs font-medium bg-gray-50 dark:bg-sidebar text-gray-600 dark:text-gray-400 border border-sidebar-border">
                                         {item?.CATEGORY}
                                     </span>
                                     </div>
@@ -126,7 +138,7 @@ export default function InventoryDetailModal({
                             {/* Supplier Information */}
                             <div className="border-t border-sidebar-border pt-6">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Supplier Information
+                                    Vendor Information
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
@@ -186,7 +198,7 @@ export default function InventoryDetailModal({
                                     </div>
                                 </div>
                             </div>
-
+                            <Toaster/>
                             {/*/!* Manufacturer Information *!/*/}
                             {/*<div className="border-t border-sidebar-border pt-6">*/}
                             {/*    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">*/}
@@ -202,30 +214,6 @@ export default function InventoryDetailModal({
                             {/*    </div>*/}
                             {/*</div>*/}
 
-                            {/* Additional Details */}
-                            <div className="space-y-4 border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Additional Details
-                                </h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Date Added
-                                        </label>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {item?.CREATED_AT ? formatDate(item.CREATED_AT) : 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Last Updated
-                                        </label>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {item?.UPDATED_AT ? formatDate(item.UPDATED_AT) : 'N/A'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 

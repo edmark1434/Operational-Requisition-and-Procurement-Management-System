@@ -56,7 +56,7 @@ export default function Users({usersList,permissions,rolesList,role_perm,success
         if (success) {
             toast(message);
         }
-    }, []); 
+    }, [success]); 
     // Filter users based on search and filters
     useEffect(() => {
         const filtered = users.filter(user => {
@@ -122,11 +122,7 @@ export default function Users({usersList,permissions,rolesList,role_perm,success
                 } : user
             )
         );
-        router.put(usereditStatus(id),{newStatus}, {
-            onSuccess: () => {
-                toast('Status updated successfully!');
-            }
-        })
+        router.put(usereditStatus(id), { newStatus });
     };
 
     return (

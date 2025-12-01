@@ -236,12 +236,6 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
             };
 
             router.put(userUpdate(userId), updatedUserData, {
-                onSuccess: () => {
-                    toast('User updated successfully!');
-                    setTimeout(() => {
-                        router.visit(users().url); // redirect to users list
-                    }, 2000);// redirect to users list
-                },
                 onError: (errors) => {
                     const normalizedErrors: { [key: string]: string } = {};
                     Object.keys(errors).forEach(key => {

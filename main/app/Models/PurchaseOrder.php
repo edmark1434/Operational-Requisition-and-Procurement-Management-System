@@ -40,7 +40,12 @@ class PurchaseOrder extends Model
     /**
      * Relationships
      */
-    public function supplier()
+    public function requisition()
+    {
+        return $this->belongsTo(Requisition::class, 'req_id');
+    }
+
+    public function vendor()
     {
         return $this->belongsTo(Vendor::class, 'vendor_id');
     }

@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Edit3, Save, Trash2, Plus, Check } from 'lucide-react';
 
 // --- Interfaces ---
-interface DatabaseCategory {
-    id: number;
-    name: string;
+interface RequisitionItem {
+    id: string;
+    category: string;
+    categoryId?: number;
+    itemName: string;
+    itemId?: number;
+    quantity: string;
+    approved_qty: string; // <--- ADDED: Approved Quantity field
+    unit_price: string;
+    total: string;
+    isSaved: boolean;
 }
 
 interface DatabaseItem {
@@ -14,28 +22,18 @@ interface DatabaseItem {
     current_stock: number;
 }
 
-interface RequisitionItem {
-    id: string;
-    category: string;
-    categoryId?: number; // Needed to fetch specific items
-    itemName: string;
-    itemId?: number;     // Needed for backend storage
-    quantity: string;
-    unit_price: string;
-    total: string;
-    isSaved: boolean;
-}
-
 interface RequestedItemsProps {
     items: RequisitionItem[];
     validationErrors: any;
-    // We don't need to pass categories/items from parent anymore, we fetch them here
     updateItem: (id: string, field: keyof RequisitionItem, value: string | number) => void;
     saveItem: (id: string) => void;
     removeItem: (id: string) => void;
     addNewItem: () => void;
-    hasError: (itemId: string, field: 'quantity' | 'category' | 'itemName') => boolean;
+    hasError: (id: string, field: string) => boolean;
     editItem: (id: string) => void;
+    // Props from Parent (RequisitionEdit)
+    availableCategories: Array<{ id: number; name: string }>;
+    onFetchItems: (categoryName: string) => Promise<any[]>;
 }
 
 export default function RequestedItems({
@@ -46,106 +44,89 @@ export default function RequestedItems({
                                            removeItem,
                                            addNewItem,
                                            hasError,
-                                           editItem
+                                           editItem,
+                                           availableCategories = [],
+                                           onFetchItems
                                        }: RequestedItemsProps) {
 
-    // --- State for Data Fetching ---
-    const [fetchedCategories, setFetchedCategories] = useState<DatabaseCategory[]>([]);
-    // Cache items: { [categoryId]: [Item1, Item2, ...] } to prevent refetching
-    const [itemCache, setItemCache] = useState<Record<number, DatabaseItem[]>>({});
-    const [loadingItems, setLoadingItems] = useState<boolean>(false);
+    // Store options for each row: { "row_id": [List of DatabaseItems] }
+    const [rowOptions, setRowOptions] = useState<Record<string, DatabaseItem[]>>({});
+    const [loadingState, setLoadingState] = useState<Record<string, boolean>>({});
 
-    // --- 1. Fetch Categories on Mount ---
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await fetch('/requisition/api/categories');
-                if (response.ok) {
-                    const data = await response.json();
-                    setFetchedCategories(data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch categories:", error);
-            }
-        };
-        fetchCategories();
-    }, []);
+    // Track fetched rows to prevent infinite loops
+    const fetchedRows = useRef<Set<string>>(new Set());
 
-    // --- 2. Function to fetch Items by Category ID ---
-    const fetchItemsForCategory = async (categoryId: number) => {
-        // If we already have this category's items in cache, don't fetch again
-        if (itemCache[categoryId]) return;
+    // --- 1. Helper to Fetch Items from Parent ---
+    const loadItemsForRow = async (rowId: string, categoryName: string) => {
+        if (!categoryName || !onFetchItems) return;
 
-        setLoadingItems(true);
+        setLoadingState(prev => ({ ...prev, [rowId]: true }));
         try {
-            const response = await fetch(`/requisition/api/items/${categoryId}`);
-            if (response.ok) {
-                const data = await response.json();
-                setItemCache(prev => ({ ...prev, [categoryId]: data }));
-            }
+            const data = await onFetchItems(categoryName);
+            setRowOptions(prev => ({ ...prev, [rowId]: data }));
         } catch (error) {
             console.error("Failed to fetch items:", error);
         } finally {
-            setLoadingItems(false);
+            setLoadingState(prev => ({ ...prev, [rowId]: false }));
         }
     };
+
+    // --- 2. Initial Load Effect (For Edit Mode) ---
+    useEffect(() => {
+        requisitionItems.forEach(item => {
+            if (item.category && !rowOptions[item.id] && !fetchedRows.current.has(item.id)) {
+                fetchedRows.current.add(item.id);
+                loadItemsForRow(item.id, item.category);
+            }
+        });
+    }, [requisitionItems, rowOptions]);
 
     // --- Handlers ---
 
     // When Category Changes
-    const handleCategoryChange = async (rowId: string, categoryName: string) => {
-        const selectedCat = fetchedCategories.find(c => c.name === categoryName);
-
-        // Update the visual category
+    const handleCategoryChange = (rowId: string, categoryName: string) => {
+        // Update visual category
         updateItem(rowId, 'category', categoryName);
 
-        // Reset item fields because the category changed
+        // Reset item fields
         updateItem(rowId, 'itemName', '');
-        updateItem(rowId, 'itemId', ''); // Reset ID
+        updateItem(rowId, 'itemId', '');
         updateItem(rowId, 'unit_price', '');
         updateItem(rowId, 'total', '');
 
-        if (selectedCat) {
-            // Save the Category ID (hidden) so we can fetch items
-            updateItem(rowId, 'categoryId', selectedCat.id);
-            // Fetch the items for this new category
-            await fetchItemsForCategory(selectedCat.id);
-        }
+        // Fetch items for this row based on new category
+        fetchedRows.current.delete(rowId); // Allow re-fetch
+        loadItemsForRow(rowId, categoryName);
     };
 
-    // When Item Name Changes
-// RequestedItems.tsx
-
-// Inside RequestedItems.tsx
-
-// Change the name of the function to be clearer
-    const handleItemSelection = (rowId: string, selectedId: string, categoryId?: number) => {
-        // 1. If user selected the placeholder "Select Item", clear everything
-        if (!selectedId || !categoryId) {
-            updateItem(rowId, 'itemId', ''); // Clear ID
+    // When Item Selection Changes (Your Logic)
+    const handleItemSelection = (rowId: string, selectedId: string) => {
+        // 1. Handle "Select Item" placeholder
+        if (!selectedId) {
+            updateItem(rowId, 'itemId', '');
             updateItem(rowId, 'itemName', '');
             updateItem(rowId, 'unit_price', '');
             updateItem(rowId, 'total', '');
             return;
         }
 
-        // 2. Get the list of items for this category
-        const availableItems = itemCache[categoryId] || [];
+        // 2. Get list of items for this row
+        const availableItems = rowOptions[rowId] || [];
 
-        // 3. Find the item using the ID (Safe and Accurate!)
-        // We convert .toString() to ensure we compare string-to-string
+        // 3. Find the item object
         const selectedItem = availableItems.find(item => item.id.toString() === selectedId.toString());
 
         if (selectedItem) {
-            // FOUND IT! Save the ID and the Name
-            updateItem(rowId, 'itemId', selectedItem.id.toString());
-            updateItem(rowId, 'itemName', selectedItem.name); // We save the name for display
-            updateItem(rowId, 'unit_price', selectedItem.unit_price.toString());
+            updateItem(rowId, 'itemId', selectedItem.id);
+            updateItem(rowId, 'itemName', selectedItem.name);
+            updateItem(rowId, 'unit_price', selectedItem.unit_price);
 
-            // Optional: Recalculate total if quantity exists
-            // (You can add that logic here if you want)
-        } else {
-            console.error("Critical Error: Selected ID exists in dropdown but not in cache.");
+            // Recalculate total immediately if quantity exists
+            const currentItem = requisitionItems.find(i => i.id === rowId);
+            if (currentItem && currentItem.quantity) {
+                const total = (parseFloat(currentItem.quantity) * selectedItem.unit_price).toFixed(2);
+                updateItem(rowId, 'total', total);
+            }
         }
     };
 
@@ -158,7 +139,7 @@ export default function RequestedItems({
 
         if (quantityValue && item.unit_price) {
             const quantity = parseFloat(quantityValue) || 0;
-            const unitPrice = parseFloat(item.unit_price) || 0;
+            const unitPrice = parseFloat(item.unit_price.toString()) || 0;
             const total = (quantity * unitPrice).toFixed(2);
             updateItem(itemId, 'total', total);
         } else {
@@ -191,8 +172,9 @@ export default function RequestedItems({
 
                 <div className={`space-y-3 overflow-y-auto pr-2 ${requisitionItems.length > 2 ? 'max-h-96' : ''}`}>
                     {requisitionItems.map((item, index) => {
-                        // Get items specifically for this row's category ID
-                        const dropdownItems = item.categoryId ? (itemCache[item.categoryId] || []) : [];
+                        // Get items specifically for this row
+                        const dropdownItems = rowOptions[item.id] || [];
+                        const isLoading = loadingState[item.id];
 
                         return (
                             <div
@@ -251,7 +233,7 @@ export default function RequestedItems({
                                             disabled={item.isSaved}
                                         >
                                             <option value="">Select Category</option>
-                                            {fetchedCategories.map(cat => (
+                                            {availableCategories.map(cat => (
                                                 <option key={cat.id} value={cat.name}>
                                                     {cat.name}
                                                 </option>
@@ -262,20 +244,18 @@ export default function RequestedItems({
                                     {/* 2. Item Select (Dynamic based on Category) */}
                                     <div>
                                         <select
-                                            // Use itemId as the value. If it's empty, show placeholder
+                                            // Value is the ID. Use itemId if available.
                                             value={item.itemId || ""}
-                                            // Pass the ID (e.target.value) to our new function
-                                            onChange={(e) => handleItemSelection(item.id, e.target.value, item.categoryId)}
+                                            onChange={(e) => handleItemSelection(item.id, e.target.value)}
                                             className="w-full px-2 py-1 text-sm border rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-input border-gray-300 dark:border-sidebar-border text-gray-900 dark:text-white"
                                             required
-                                            disabled={item.isSaved || !item.category}
+                                            disabled={item.isSaved || !item.category || isLoading}
                                         >
                                             <option value="">
-                                                {item.category ? 'Select Item Name' : 'Select category first'}
+                                                {isLoading ? 'Loading items...' : (item.category ? 'Select Item Name' : 'Select category first')}
                                             </option>
 
                                             {dropdownItems.map(itemData => (
-                                                // KEY CHANGE: Value is now the ID, not the Name
                                                 <option key={itemData.id} value={itemData.id}>
                                                     {itemData.name}
                                                 </option>
@@ -296,6 +276,16 @@ export default function RequestedItems({
                                             disabled={item.isSaved}
                                         />
                                     </div>
+
+                                    {/* Total Display */}
+                                    {parseFloat(item.total) > 0 && (
+                                        <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            Price: ₱{Number(item.unit_price).toLocaleString()} |
+                                            <span className="font-bold ml-1 text-gray-900 dark:text-white">
+                                                Total: ₱{Number(item.total).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { makesandcategories } from '@/routes';
+import { categoryCreate, makesandcategories } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -20,7 +20,7 @@ export default function CategoryAdd({ auth }: { auth: any }) {
     const [formData, setFormData] = useState({
         NAME: '',
         DESCRIPTION: '',
-        TYPE: 'item'
+        TYPE: 'Items'
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
 
@@ -52,19 +52,10 @@ export default function CategoryAdd({ auth }: { auth: any }) {
 
             // Prepare category data
             const categoryDataToAdd = {
-                CAT_ID: newCategoryId,
                 ...formData,
-                CREATED_AT: new Date().toISOString(),
-                UPDATED_AT: new Date().toISOString()
             };
 
-            console.log('New Category Data:', categoryDataToAdd);
-
-            // In real application, you would send POST request to backend
-            alert('Category added successfully!');
-
-            // Redirect back to makes & categories
-            router.visit(makesandcategories().url);
+            router.post(categoryCreate(), categoryDataToAdd);
         }
     };
 
@@ -83,7 +74,7 @@ export default function CategoryAdd({ auth }: { auth: any }) {
         setFormData({
             NAME: '',
             DESCRIPTION: '',
-            TYPE: 'item'
+            TYPE: 'Items'
         });
         setErrors({});
     };
@@ -187,8 +178,8 @@ export default function CategoryAdd({ auth }: { auth: any }) {
                                                         errors.TYPE ? 'border-red-500' : 'border-sidebar-border'
                                                     }`}
                                                 >
-                                                    <option value="item">Item Category</option>
-                                                    <option value="service">Service Category</option>
+                                                    <option value="Items">Item Category</option>
+                                                    <option value="Services">Service Category</option>
                                                 </select>
                                                 {errors.TYPE && (
                                                     <p className="text-red-500 text-xs mt-1">{errors.TYPE}</p>

@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -13,7 +13,13 @@ import CategoryDetailModal from './components/CategoryDetailModal';
 // Import utilities
 import { transformMakesData, transformCategoriesData } from './utils';
 import { useMakesCategoriesFilters } from './utils/hooks/useMakesCategoriesFilters';
-
+import { toast, Toaster } from 'sonner';
+interface Prop{
+    makeList: any[],
+    categoriesList: any[],
+    success: boolean,
+    message: string
+}
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Makes & Categories',
@@ -21,7 +27,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function MakesAndCategories() {
+export default function MakesAndCategories({makeList,categoriesList,success,message}:Prop) {
     const [makesSearchTerm, setMakesSearchTerm] = useState('');
     const [categoriesSearchTerm, setCategoriesSearchTerm] = useState('');
     const [makeStatusFilter, setMakeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -31,8 +37,8 @@ export default function MakesAndCategories() {
     const [isMakeModalOpen, setIsMakeModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
-    const [makes, setMakes] = useState(transformMakesData());
-    const [categories, setCategories] = useState(transformCategoriesData());
+    const [makes, setMakes] = useState(makeList);
+    const [categories, setCategories] = useState(categoriesList);
 
     const {
         filteredMakes,
@@ -82,7 +88,11 @@ export default function MakesAndCategories() {
         setCategoriesSearchTerm('');
         setCategoryTypeFilter('all');
     };
-
+    useEffect(() => {
+        if (success) {
+            toast(message);
+        }
+    }, []);
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Makes & Categories" />
@@ -223,8 +233,8 @@ export default function MakesAndCategories() {
                                         className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                     >
                                         <option value="all">All Types</option>
-                                        <option value="item">Item Categories</option>
-                                        <option value="service">Service Categories</option>
+                                        <option value="Items">Item Categories</option>
+                                        <option value="Services">Service Categories</option>
                                     </select>
                                 </div>
                             </div>
@@ -263,6 +273,7 @@ export default function MakesAndCategories() {
                     />
                 )}
             </div>
+        <Toaster/>
         </AppLayout>
     );
 }

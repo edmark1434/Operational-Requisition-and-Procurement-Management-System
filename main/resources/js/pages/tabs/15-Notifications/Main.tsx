@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { notifications } from '@/routes';
+import { notifications, notificationsIsRead, notificationsMarkAsAllRead } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -197,9 +197,11 @@ const formatTime = (timestamp: string) => {
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
 };
-
-export default function Notifications() {
-    const [notifications, setNotifications] = useState(notificationsData);
+interface Prop{
+    notificationsList:any[]
+}
+export default function Notifications({notificationsList}:Prop) {
+    const [notifications, setNotifications] = useState(notificationsList);
     const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
     const filteredNotifications = notifications.filter(notification =>
@@ -210,22 +212,24 @@ export default function Notifications() {
 
     const handleNotificationClick = (notification: any) => {
         // Mark as read
-        setNotifications(prev =>
-            prev.map(n =>
-                n.id === notification.id ? { ...n, isRead: true } : n
-            )
-        );
-
-        // Redirect to the appropriate page
-        if (notification.redirectTo) {
-            router.visit(notification.redirectTo);
-        }
+        router.put(notificationsIsRead(notification.id), {},{
+            onSuccess: () => {
+                setNotifications(prev =>
+                    prev.map(n =>
+                    n.id === notification.id ? { ...n, isRead: true } : n));
+            }
+        })
+        
     };
 
     const markAllAsRead = () => {
-        setNotifications(prev =>
-            prev.map(notification => ({ ...notification, isRead: true }))
+        router.put(notificationsMarkAsAllRead(), {},{
+            onSuccess: () => {
+                setNotifications(prev =>
+                prev.map(notification => ({ ...notification, isRead: true }))
         );
+            }
+        })
     };
 
     return (
@@ -236,9 +240,9 @@ export default function Notifications() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {/* <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             System alerts and activity updates
-                        </p>
+                        </p> */}
                     </div>
                     {unreadCount > 0 && (
                         <button
@@ -298,9 +302,9 @@ export default function Notifications() {
                         {filteredNotifications.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 px-4">
                                 <div className="text-gray-400 dark:text-gray-600 mb-4">
-                                    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {/* <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                    </svg>
+                                    </svg> */}
                                 </div>
                                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                                     No notifications found
@@ -325,39 +329,23 @@ export default function Notifications() {
                                         onClick={() => handleNotificationClick(notification)}
                                     >
                                         <div className="flex items-start gap-4">
-                                            <div className={`flex-shrink-0 p-2 rounded-lg ${getTypeColor(notification.type)} bg-white dark:bg-sidebar border border-sidebar-border`}>
+                                            {/* <div className={`flex-shrink-0 p-2 rounded-lg ${getTypeColor(notification.type)} bg-white dark:bg-sidebar border border-sidebar-border`}>
                                                 {NotificationIcons[notification.type as keyof typeof NotificationIcons]}
-                                            </div>
+                                            </div> */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between mb-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <h4 className="font-medium text-gray-900 dark:text-white">
-                                                            {notification.title}
-                                                        </h4>
-                                                        {!notification.isRead && (
-                                                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                        {formatTime(notification.timestamp)}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                                <p className="text-md text-gray-600 dark:text-gray-400 mb-2">
                                                     {notification.message}
                                                 </p>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                                        {notification.referenceId}
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                                        {formatTime(notification.timestamp)}
                                                     </span>
                                                     <div className="flex items-center gap-2">
                                                         {!notification.isRead && (
                                                             <span className="text-xs text-blue-600 dark:text-blue-400">
-                                                                Click to view
+                                                                Click to Unread
                                                             </span>
                                                         )}
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                            → {notification.redirectTo.replace('/', '')}
-                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>

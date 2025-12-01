@@ -10,9 +10,10 @@ class AuditLog extends Model
     use HasFactory;
     protected $table = 'audit_log';
     protected $fillable = [
-        'type',
+        'type_id',
         'description',
         'user_id',
+        'created_at'
     ];
     public $timestamps = false;
 
@@ -20,15 +21,7 @@ class AuditLog extends Model
     {
         return $this->belongsTo(User::class,'user_id');
     }
-   public const TYPES = ['Requisition Approval',
-               'Requisition Rejection',
-               'Requisition Change',
-               'Setting Change',
-               'Supplier Update',
-               'Permission Update',
-               'Requisition Delivery',
-               'Return Rejection',
-               'Return Delivery',
-               'Item Infor Change'
-            ];
+    public function type(){
+        return $this->belongsTo(AuditLogType::class, 'type_id');
+    }
 }

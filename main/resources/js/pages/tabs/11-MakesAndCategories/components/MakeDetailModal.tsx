@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { getStatusColor } from '../utils/styleutils';
+import { router } from '@inertiajs/react';
+import { makedeleteModel, makesandcategories } from '@/routes';
+import { toast } from 'sonner';
 
 interface MakeDetailModalProps {
     make: any;
@@ -22,9 +25,12 @@ export default function MakeDetailModal({
     const statusText = make?.IS_ACTIVE ? 'Active' : 'Inactive';
 
     const handleDelete = () => {
-        if (make) {
-            onDelete(make.ID);
-        }
+        router.delete(makedeleteModel(make.ID), {
+            onSuccess: () => {
+                toast('Make deleted successfully');
+                router.visit(makesandcategories.url());
+            }
+        })
         setShowDeleteConfirm(false);
     };
 

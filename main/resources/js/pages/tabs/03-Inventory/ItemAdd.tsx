@@ -1,6 +1,6 @@
 // ItemAdd.tsx
 import AppLayout from '@/layouts/app-layout';
-import { inventory } from '@/routes';
+import { inventory, inventoryCreate } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -8,6 +8,7 @@ import CATEGORY_OPTIONS from '@/pages/datasets/category';
 import SUPPLIER_OPTIONS from '@/pages/datasets/supplier';
 import itemsData from "@/pages/datasets/items";
 import categorySuppliers from '@/pages/datasets/category_supplier'; // Import the mapping
+import { toast, Toaster } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -19,8 +20,11 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/inventory/add',
     },
 ];
-
-export default function ItemAdd({ auth }: { auth: any }) {
+interface Prop{
+    auth: any,
+    CATEGORY_OPTIONS:any[]
+}
+export default function ItemAdd({ auth,CATEGORY_OPTIONS }: Prop) {
     const [formData, setFormData] = useState({
         NAME: '',
         BARCODE: '',
@@ -132,23 +136,18 @@ export default function ItemAdd({ auth }: { auth: any }) {
 
             // Prepare item data
             const itemData = {
-                ITEM_ID: newItemId,
                 ...formData,
                 UNIT_PRICE: parseFloat(formData.UNIT_PRICE),
                 CURRENT_STOCK: parseInt(formData.CURRENT_STOCK),
                 CATEGORY_ID: CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY)?.CAT_ID || 1,
                 SUPPLIER_ID: parseInt(formData.SUPPLIER_ID),
-                CREATED_AT: new Date().toISOString(),
-                UPDATED_AT: new Date().toISOString()
             };
 
-            console.log('New Item Data:', itemData);
-
-            // In real application, you would send POST request to backend
-            alert('Item added successfully!');
-
-            // Redirect back to inventory list
-            router.visit(inventory().url);
+            router.post(inventoryCreate(), itemData, {
+                onError: (err) => {
+                    toast('error occurs ' + err);
+                }
+            })
         }
     };
 
@@ -534,6 +533,7 @@ export default function ItemAdd({ auth }: { auth: any }) {
                     </div>
                 </div>
             </div>
+            <Toaster/>
         </AppLayout>
     );
 }

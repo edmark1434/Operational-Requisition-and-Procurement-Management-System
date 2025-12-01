@@ -1,34 +1,28 @@
-export const getStatusColor = (status: string | undefined | null) => {
-    // 1. Safety Check: If status is missing, return a default gray color
-    if (!status) return 'bg-gray-100 text-gray-800 border-gray-200';
-
-    // 2. Now it is safe to use toLowerCase()
+export const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-        case 'pending':
-            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
         case 'approved':
-            return 'bg-green-100 text-green-800 border-green-200';
+            return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800';
+        case 'pending':
+            return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+        case 'draft':
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
+        case 'declined':
         case 'rejected':
-            return 'bg-red-100 text-red-800 border-red-200';
-        // ... add your other cases here ...
+            return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800';
         default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
     }
 };
 
-export const getPriorityColor = (priority: string | undefined | null) => {
-    // 1. Safety Check: If priority is missing, return default gray
-    if (!priority) return 'bg-gray-100 text-gray-800 border-gray-200';
-
-    // 2. Now safe to lowercase
+export const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
         case 'high':
-            return 'bg-red-100 text-red-800 border-red-200'; // or your preferred colors
+            return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
         case 'normal':
-            return 'bg-blue-100 text-blue-800 border-blue-200';
+            return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
         case 'low':
-            return 'bg-gray-100 text-gray-800 border-gray-200';
+            return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800';
         default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
     }
 };

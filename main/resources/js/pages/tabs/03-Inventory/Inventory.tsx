@@ -1,8 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-
+import { Toaster, toast } from 'sonner';
 // Import datasets
 import itemsData from '@/pages/datasets/items';
 import categoriesData from '@/pages/datasets/category';
@@ -23,14 +23,18 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/inventory',
     },
 ];
-
-export default function Inventory() {
+interface Prop{
+    item: any[],
+    success: boolean,
+    message:string
+}
+export default function Inventory({ item, success, message }: Prop) {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedItem, setSelectedItem] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [inventory, setInventory] = useState(transformInventoryData());
+    const [inventory, setInventory] = useState(item || []);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
     const {
@@ -53,7 +57,11 @@ export default function Inventory() {
         setIsDetailModalOpen(false);
         setSelectedItem(null);
     };
-
+    useEffect(() => {
+        if (success) {
+            toast(message);
+       } 
+    },[])
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Inventory" />
@@ -111,6 +119,7 @@ export default function Inventory() {
                     />
                 )}
             </div>
+            <Toaster/>
         </AppLayout>
     );
 }

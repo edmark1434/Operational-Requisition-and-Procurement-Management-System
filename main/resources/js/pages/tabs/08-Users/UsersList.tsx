@@ -41,11 +41,11 @@ export default function UsersList({ users, isLoading, onUserClick }: UsersListPr
     return (
         <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
             {/* Table Header */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <div className="grid grid-cols-11 gap-4 px-6 py-3 bg-gray-50 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <div className="col-span-3">User</div>
                 <div className="col-span-3">Username</div>
                 <div className="col-span-3">Date Created</div>
-                <div className="col-span-3">Actions</div>
+                <div className="col-span-2">Actions</div>
             </div>
 
             {/* Table Body */}
@@ -53,7 +53,7 @@ export default function UsersList({ users, isLoading, onUserClick }: UsersListPr
                 {users.map((user) => (
                     <div
                         key={user.id}
-                        className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
+                        className="grid grid-cols-11 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-sidebar transition-colors cursor-pointer"
                         onClick={() => onUserClick(user)}
                     >
                         {/* User Info */}
@@ -63,14 +63,14 @@ export default function UsersList({ users, isLoading, onUserClick }: UsersListPr
                                     <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 {/* Status Dot */}
-                                <div
+                                {/* <div
                                     className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-sidebar ${
                                         user.status === 'active'
                                             ? 'bg-green-500'
                                             : 'bg-red-500'
                                     }`}
                                     title={user.status === 'active' ? 'Active User' : 'Inactive User'}
-                                />
+                                /> */}
                             </div>
                             <div className="min-w-0">
                                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -81,14 +81,14 @@ export default function UsersList({ users, isLoading, onUserClick }: UsersListPr
 
                      
                         {/* Username */}
-                        <div className="col-span-2 flex items-center">
+                        <div className="col-span-3 flex items-center">
                             <span className="text-sm text-gray-600 dark:text-gray-300 font-mono">
                                 @{user.username}
                             </span>
                         </div>
 
                         {/* Date Created */}
-                        <div className="col-span-2 flex items-center">
+                        <div className="col-span-3 flex items-center">
                             <div className="flex items-center space-x-2">
                                 <Calendar className="w-4 h-4 text-gray-400" />
                                 <span className="text-sm text-gray-600 dark:text-gray-300">
