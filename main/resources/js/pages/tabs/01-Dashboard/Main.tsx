@@ -201,6 +201,38 @@ export default function Dashboard({requisitions,deliveries,returns,reworks,purch
                 </div>
 
                 {/* Main Content Grid */}
+                {/* Inventory Alerts */}
+                <div className="bg-white dark:bg-sidebar rounded-xl border border-sidebar-border p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                        Inventory Alerts
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400 mr-4" />
+                            <div>
+                                <p className="font-medium text-red-800 dark:text-red-200">Out of Stock</p>
+                                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{outOfStockItems}</p>
+                                <p className="text-sm text-red-600 dark:text-red-400">items need restocking</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400 mr-4" />
+                            <div>
+                                <p className="font-medium text-orange-800 dark:text-orange-200">Low Stock</p>
+                                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{lowStockItems}</p>
+                                <p className="text-sm text-orange-600 dark:text-orange-400">items running low</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <Package className="h-8 w-8 text-green-600 dark:text-green-400 mr-4" />
+                            <div>
+                                <p className="font-medium text-green-800 dark:text-green-200">Total Inventory</p>
+                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{totalItems}</p>
+                                <p className="text-sm text-green-600 dark:text-green-400">items in system</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Recent Requisitions */}
                     <div className="bg-white dark:bg-sidebar rounded-xl border border-sidebar-border p-6">
@@ -400,39 +432,6 @@ export default function Dashboard({requisitions,deliveries,returns,reworks,purch
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Inventory Alerts */}
-                <div className="bg-white dark:bg-sidebar rounded-xl border border-sidebar-border p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                        Inventory Alerts
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                            <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400 mr-4" />
-                            <div>
-                                <p className="font-medium text-red-800 dark:text-red-200">Out of Stock</p>
-                                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{outOfStockItems}</p>
-                                <p className="text-sm text-red-600 dark:text-red-400">items need restocking</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                            <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400 mr-4" />
-                            <div>
-                                <p className="font-medium text-orange-800 dark:text-orange-200">Low Stock</p>
-                                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{lowStockItems}</p>
-                                <p className="text-sm text-orange-600 dark:text-orange-400">items running low</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                            <Package className="h-8 w-8 text-green-600 dark:text-green-400 mr-4" />
-                            <div>
-                                <p className="font-medium text-green-800 dark:text-green-200">Total Inventory</p>
-                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{totalItems}</p>
-                                <p className="text-sm text-green-600 dark:text-green-400">items in system</p>
-                            </div>
                         </div>
                     </div>
                 </div>
