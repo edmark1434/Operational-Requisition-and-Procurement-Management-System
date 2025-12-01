@@ -195,7 +195,7 @@ export default function PurchaseOrderForm() {
         REFERENCE_NO: '',
         REQUISITION_IDS: [] as string[],
         SUPPLIER_ID: '',
-        PAYMENT_TYPE: 'cash',
+        PAYMENT_TYPE: 'Cash',
         REMARKS: '',
         ORDER_TYPE: '', // Add order type to form data
         ITEMS: [] as RequisitionItem[],
@@ -358,23 +358,23 @@ export default function PurchaseOrderForm() {
             newErrors.PAYMENT_TYPE = 'Please select a payment type';
         }
 
-        if (formData.ORDER_TYPE === 'items' && formData.ITEMS.length === 0) {
+        if (formData.ORDER_TYPE === 'Items' && formData.ITEMS.length === 0) {
             newErrors.ITEMS = 'No items selected for purchase';
         }
 
-        if (formData.ORDER_TYPE === 'services' && formData.SERVICES.length === 0) {
+        if (formData.ORDER_TYPE === 'Services' && formData.SERVICES.length === 0) {
             newErrors.SERVICES = 'No services selected for purchase';
         }
 
         // Validate supplier payment method compatibility
         if (selectedSupplier) {
-            if (formData.PAYMENT_TYPE === 'cash' && !selectedSupplier.allows_cash) {
+            if (formData.PAYMENT_TYPE === 'Cash' && !selectedSupplier.allows_cash) {
                 newErrors.PAYMENT_TYPE = 'Selected supplier does not accept cash payments';
             }
-            if (formData.PAYMENT_TYPE === 'disbursement' && !selectedSupplier.allows_disbursement) {
+            if (formData.PAYMENT_TYPE === 'Disbursement' && !selectedSupplier.allows_disbursement) {
                 newErrors.PAYMENT_TYPE = 'Selected supplier does not accept disbursement payments';
             }
-            if (formData.PAYMENT_TYPE === 'store_credit' && !selectedSupplier.allows_store_credit) {
+            if (formData.PAYMENT_TYPE === 'Store Credit' && !selectedSupplier.allows_store_credit) {
                 newErrors.PAYMENT_TYPE = 'Selected supplier does not accept store credit';
             }
         }
@@ -441,18 +441,18 @@ export default function PurchaseOrderForm() {
 
         // Reset payment type if incompatible with new supplier or if deselecting
         if (vendor) {
-            if (formData.PAYMENT_TYPE === 'cash' && !vendor.allows_cash) {
+            if (formData.PAYMENT_TYPE === 'Cash' && !vendor.allows_cash) {
                 setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
             }
-            if (formData.PAYMENT_TYPE === 'disbursement' && !vendor.allows_disbursement) {
+            if (formData.PAYMENT_TYPE === 'Disbursement' && !vendor.allows_disbursement) {
                 setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
             }
-            if (formData.PAYMENT_TYPE === 'store_credit' && !vendor.allows_store_credit) {
+            if (formData.PAYMENT_TYPE === 'Store Credit' && !vendor.allows_store_credit) {
                 setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
             }
         } else {
             // If deselecting supplier, reset payment type
-            setFormData(prev => ({ ...prev, PAYMENT_TYPE: 'cash' }));
+            setFormData(prev => ({ ...prev, PAYMENT_TYPE: 'Cash' }));
         }
     };
 
@@ -566,14 +566,16 @@ export default function PurchaseOrderForm() {
         };
 
         console.log(JSON.stringify(purchaseOrderData));
-        // router.post(orderpost().url, purchaseOrderData);
-        alert('Purchase order added successfully!');
-
-        // Close preview and redirect
-        setShowPreview(false);
-
-        // Redirect back to purchases list
-        router.visit('/purchases');
+        router.post(orderpost().url, purchaseOrderData, {
+            onSuccess: () => {
+                alert('Purchase order added successfully!');
+                setShowPreview(false);
+                router.visit('/purchases');
+            },
+            onError: (error: any) => {
+                console.log(error);
+            }
+        });
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -605,7 +607,7 @@ export default function PurchaseOrderForm() {
                 REFERENCE_NO: '',
                 REQUISITION_IDS: [],
                 SUPPLIER_ID: '',
-                PAYMENT_TYPE: 'cash',
+                PAYMENT_TYPE: 'Cash',
                 REMARKS: '',
                 ORDER_TYPE: '',
                 ITEMS: [],

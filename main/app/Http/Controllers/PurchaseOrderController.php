@@ -20,7 +20,7 @@ class PurchaseOrderController extends Controller
             'REQUISITION_IDS' => ['required', 'array'],
             'REQUISITION_IDS.*' => ['integer', 'exists:requisition,id'],
             'SUPPLIER_ID' => ['required', 'integer', 'exists:vendor,id'],
-            'PAYMENT_TYPE' => ['required', 'string', 'in:cash,disbursement,store credit'],
+            'PAYMENT_TYPE' => ['required', 'string', 'in:Cash,Disbursement,Store Credit'],
             'ORDER_TYPE' => ['required', 'string', 'in:Items,Services'],
             'TOTAL_COST' => ['required', 'numeric', 'min:0'],
             'REMARKS' => ['nullable', 'string'],
@@ -71,8 +71,8 @@ class PurchaseOrderController extends Controller
                 $createdOrderService = OrderService::query()->create($orderService);
 
                 RequisitionOrderService::query()->create([
-                    'po_item_id' => $createdOrderService->id,
-                    'req_item_id' => $reqService['REQ_SERVICE_ID'],
+                    'po_service_id' => $createdOrderService->id,
+                    'req_service_id' => $reqService['REQ_SERVICE_ID'],
                 ]);
             }
         }

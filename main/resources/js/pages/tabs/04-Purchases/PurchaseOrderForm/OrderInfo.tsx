@@ -89,9 +89,9 @@ export default function OrderInfo({
                     disabled={!selectedSupplier}
                 >
                     <option value="">Select payment type</option>
-                    {selectedSupplier?.allows_cash && <option value="cash">Cash</option>}
-                    {selectedSupplier?.allows_disbursement && <option value="disbursement">Disbursement</option>}
-                    {selectedSupplier?.allows_store_credit && <option value="store_credit">Store Credit</option>}
+                    {selectedSupplier?.allows_cash && <option value="Cash">Cash</option>}
+                    {selectedSupplier?.allows_disbursement && <option value="Disbursement">Disbursement</option>}
+                    {selectedSupplier?.allows_store_credit && <option value="Store Credit">Store Credit</option>}
                 </select>
                 {errors.PAYMENT_TYPE && (
                     <p className="text-red-500 text-xs mt-1">{errors.PAYMENT_TYPE}</p>
