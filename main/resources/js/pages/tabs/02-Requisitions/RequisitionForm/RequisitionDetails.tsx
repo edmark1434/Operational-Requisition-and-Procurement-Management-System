@@ -29,6 +29,8 @@ export default function RequisitionDetails({
         }).format(amount);
     };
 
+    const isItemsType = type === 'items';
+
     return (
         <div className="p-4 border border-gray-200 dark:border-sidebar-border rounded-lg bg-gray-50 dark:bg-sidebar">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -71,23 +73,25 @@ export default function RequisitionDetails({
                     </div>
                 </div>
 
-                {/* Grand Total Display - AUTOMATICALLY UPDATED */}
-                <div>
-                    <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
-                        Grand Total Cost
-                    </label>
-                    <div className="relative">
-                        <input
-                            type="text"
-                            readOnly
-                            value={formatCurrency(totalAmount)}
-                            className="w-full px-3 py-3 text-lg font-bold text-green-600 border border-gray-300 dark:border-sidebar-border rounded-lg bg-gray-100 dark:bg-sidebar-accent cursor-not-allowed"
-                        />
+                {/* Grand Total Display - HIDDEN IF TYPE IS 'SERVICES' */}
+                {isItemsType && (
+                    <div>
+                        <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
+                            Grand Total Cost
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                readOnly
+                                value={formatCurrency(totalAmount)}
+                                className="w-full px-3 py-3 text-lg font-bold text-green-600 border border-gray-300 dark:border-sidebar-border rounded-lg bg-gray-100 dark:bg-sidebar-accent cursor-not-allowed"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Calculated automatically based on Item Price × Quantity.
+                        </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                        Calculated automatically based on Item Price × Quantity.
-                    </p>
-                </div>
+                )}
 
                 {/* Notes */}
                 <div>

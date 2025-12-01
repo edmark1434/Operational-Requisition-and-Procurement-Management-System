@@ -25,6 +25,7 @@ interface RequisitionEditProps {
     initialItems: RequisitionItem[];
     initialServices: RequisitionService[];
     dbCategories: Array<{ id: number; name: string }>;
+    systemServices: any[]; // 👈 Add this
 }
 
 interface RequisitionItem {
@@ -70,7 +71,8 @@ export default function RequisitionEdit({
                                             serverRequisition,
                                             initialItems,
                                             initialServices,
-                                            dbCategories = []
+                                            dbCategories = [],
+                                            systemServices = [] // 👈 Destructure
                                         }: RequisitionEditProps) {
 
     // --- STATE ---
@@ -417,7 +419,7 @@ export default function RequisitionEdit({
                                                 addNewService={addNewService}
                                                 hasError={hasError}
                                                 editService={editService}
-                                                systemServices={[]}
+                                                systemServices={systemServices}
                                             />
                                         )}
                                     </div>

@@ -9,6 +9,7 @@ interface RequisitionItem {
     itemName: string;
     itemId?: number;
     quantity: string;
+    approved_qty: string; // <--- ADDED: Approved Quantity field
     unit_price: string;
     total: string;
     isSaved: boolean;
