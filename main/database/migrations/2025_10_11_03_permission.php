@@ -29,6 +29,7 @@ return new class extends Migration
                 ('Approve / Reject Requisition', 'Requisitions'),
                 ('Mark Requisition for Pickup', 'Requisitions'),
                 ('Receive Requisition', 'Requisitions'),
+
                 ('View Purchase Orders', 'Purchase Orders'),
                 ('Merge Purchase Orders', 'Purchase Orders'),
                 ('Update Purchase Order', 'Purchase Orders'),

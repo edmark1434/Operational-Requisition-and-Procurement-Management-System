@@ -70,11 +70,11 @@ const formatHourlyRate = (rate: number | string) => {
     }).format(value) + " / hr";
 };
 
-const { props } = usePage();
-const permissionsList = props.user_permission as string[];
-
 // Component: DeclineReasonModal
 function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
+
     const [reason, setReason] = useState('');
     return (
         <Transition appear show={isOpen} as={Fragment}>
@@ -130,6 +130,9 @@ export default function RequisitionDetailModal({
                                                    onClose,
                                                    onStatusUpdate,
                                                }: RequisitionDetailModalProps) {
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
+
     const [showDeclineModal, setShowDeclineModal] = useState(false);
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);

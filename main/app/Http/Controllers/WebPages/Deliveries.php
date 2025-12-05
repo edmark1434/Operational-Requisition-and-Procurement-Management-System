@@ -34,9 +34,9 @@ class Deliveries extends Controller
             'reworks' => Rework::query()->where('status', 'Issued')->get(),
 
             'orderItems' => OrderItem::with('item')->get(),
-            'orderServices' => OrderService::with('service', 'item')->get(),
+            'orderServices' => OrderService::with('service')->get(),
             'returnItems' => ReturnItem::with('item')->get(),
-            'reworkService' => ReworkService::with('service', 'item')->get(),
+            'reworkService' => ReworkService::with('service')->get(),
 
             'types' => Delivery::TYPES,
             'statuses' => Delivery::STATUS,
