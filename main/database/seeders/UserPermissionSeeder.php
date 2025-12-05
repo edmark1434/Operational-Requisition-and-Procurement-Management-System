@@ -24,6 +24,9 @@ class UserPermissionSeeder extends Seeder
             ['user_id' => 1, 'perm_id' => 13],
             ['user_id' => 1, 'perm_id' => 14],
             ['user_id' => 1, 'perm_id' => 16],
+            ['user_id' => 1, 'perm_id' => 34],
+            ['user_id' => 1, 'perm_id' => 35],
+            ['user_id' => 1, 'perm_id' => 37],
 
             // User 2
             ['user_id' => 2, 'perm_id' => 1],
@@ -39,6 +42,10 @@ class UserPermissionSeeder extends Seeder
             ['user_id' => 2, 'perm_id' => 18],
             ['user_id' => 2, 'perm_id' => 23],
             ['user_id' => 2, 'perm_id' => 24],
+            ['user_id' => 2, 'perm_id' => 34],
+            ['user_id' => 2, 'perm_id' => 36],
+            ['user_id' => 2, 'perm_id' => 38],
+            ['user_id' => 2, 'perm_id' => 39],
 
             // User 3
             ['user_id' => 3, 'perm_id' => 1],
@@ -62,8 +69,12 @@ class UserPermissionSeeder extends Seeder
             ['user_id' => 3, 'perm_id' => 31],
             ['user_id' => 3, 'perm_id' => 32],
             ['user_id' => 3, 'perm_id' => 33],
+            ['user_id' => 3, 'perm_id' => 34],
+            ['user_id' => 3, 'perm_id' => 38],
+            ['user_id' => 3, 'perm_id' => 39],
 
             // User 4
+            ['user_id' => 4, 'perm_id' => 1],
             ['user_id' => 4, 'perm_id' => 2],
             ['user_id' => 4, 'perm_id' => 5],
         ]);

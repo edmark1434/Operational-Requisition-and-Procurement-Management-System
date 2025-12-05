@@ -50,7 +50,7 @@ const allNavItems = {
             title: 'Services',
             href: services(),
             icon: HandPlatter,
-            requiredPermission: 'View Items',
+            requiredPermission: 'View Services',
         },
     ],
 
@@ -83,7 +83,7 @@ const allNavItems = {
             title: 'Reworks',
             href: reworks(),
             icon: Waypoints,
-            requiredPermission: 'View Returns',
+            requiredPermission: 'View Reworks',
         },
     ],
 
@@ -92,7 +92,7 @@ const allNavItems = {
             title: 'Vendors',
             href: suppliers(),
             icon: Container,
-            requiredPermission: 'View Suppliers',
+            requiredPermission: 'View Vendors',
         },
         {
             title: 'Contacts',

@@ -52,8 +52,8 @@ return new class extends Migration
                 ('View Categories', 'Categories'),
                 ('Manage Categories', 'Categories'),
 
-                ('View Suppliers', 'Suppliers'),
-                ('Manage Suppliers', 'Suppliers'),
+                ('View Vendors', 'Vendors'),
+                ('Manage Vendors', 'Vendors'),
 
                 ('View Users', 'Users'),
                 ('Create User', 'Users'),
@@ -65,7 +65,15 @@ return new class extends Migration
                 ('Manage Roles', 'Roles and Permissions'),
 
                 ('View Settings', 'Settings'),
-                ('Update Settings', 'Settings');
+                ('Update Settings', 'Settings'),
+
+                ('View Reworks', 'Reworks'),
+                ('Create Rework', 'Reworks'),
+                ('Issue Rework', 'Reworks'),
+                ('Mark Rework as Completed', 'Reworks'),
+
+                ('View Services', 'Services'),
+                ('Manage Services', 'Services');
             END;
             $$;
         ");
