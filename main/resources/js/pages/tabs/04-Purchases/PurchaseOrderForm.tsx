@@ -565,7 +565,6 @@ export default function PurchaseOrderForm() {
             }))
         };
 
-        console.log(JSON.stringify(purchaseOrderData));
         router.post(orderpost().url, purchaseOrderData, {
             onSuccess: () => {
                 alert('Purchase order added successfully!');

@@ -14,9 +14,9 @@ return new class extends Migration
     {
         Schema::create('delivery_item', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('deliver_id')->nullable();
-            $table->unsignedBigInteger('item_id')->nullable();
-            $table->foreign('deliver_id')->references('id')->on('delivery')->onDelete('set null');
+            $table->unsignedBigInteger('delivery_id');
+            $table->unsignedBigInteger('item_id');
+            $table->foreign('delivery_id')->references('id')->on('delivery')->onDelete('set null');
             $table->foreign('item_id')->references('id')->on('item')->onDelete('set null');
             $table->integer('quantity')->default(0);
             $table->decimal('unit_price', 15, 2)->default(0);

@@ -34,18 +34,13 @@ Follow these steps to set up the project locally.
 #### 1. Clone the Repository
 > git clone https://github.com/edmark1434/Operational-Requisition-and-Procurement-Management-System.git
 
-#### 2. Backend Setup (Laravel)
+#### 2. Initial Setup
 > - composer install
-> - composer require inertiajs/inertia-laravel
-> - php artisan inertia:middleware
-> - Add .env file. Premade .env is currently named .env.example
-> - php artisan key:generate - To generate a key
-
-#### 3. Frontend Setup (React + Inertia)
 > - npm install
-> - npm install --save-dev @vitejs/plugin-react
-> - npm install @inertia/react
-> - npm install sonner
+> - Add .env file — Just rename .env.example
+> - php artisan key:generate
+> - php artisan migrate:fresh --seed
+> - php artisan storage:link
 
 #### 4. Start the Development
 > - php artisan serve

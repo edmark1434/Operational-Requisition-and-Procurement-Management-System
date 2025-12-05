@@ -15,6 +15,7 @@ return new class extends Migration
     {
         Schema::create('returns', function (Blueprint $table) {
             $table->id();
+            $table->string('ref_no')->unique();
             $table->timestamp('created_at')->useCurrent();
             $table->date('return_date');
             $table->enum('status',Returns::STATUS)->default('Pending');
