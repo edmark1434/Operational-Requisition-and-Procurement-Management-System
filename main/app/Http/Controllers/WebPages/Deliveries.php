@@ -12,6 +12,7 @@ use App\Models\Returns;
 use App\Models\Rework;
 use App\Models\ReworkService;
 use App\Models\Service;
+use App\Models\Vendor;
 use Inertia\Inertia;
 
 use Illuminate\Http\Request;
@@ -29,19 +30,21 @@ class Deliveries extends Controller
     }
     public function store(){
         return Inertia::render($this->base_path .'/DeliveryAdd', [
-            'purchaseOrders' => PurchaseOrder::query()->where('status', 'Issued')->get(),
-            'returns' => Returns::query()->where('status', 'Issued')->get(),
-            'reworks' => Rework::query()->where('status', 'Issued')->get(),
+            'purchaseOrders' => PurchaseOrder::with('vendor')->where('status', 'Issued')->get(),
+            'returns' => Returns::with('originalDelivery')->where('status', 'Issued')->get(),
+            'reworks' => Rework::with('originalDelivery')->where('status', 'Issued')->get(),
 
             'orderItems' => OrderItem::with('item')->get(),
-            'orderServices' => OrderService::with('service', 'item')->get(),
+            'orderServices' => OrderService::with('service')->get(),
             'returnItems' => ReturnItem::with('item')->get(),
-            'reworkService' => ReworkService::with('service', 'item')->get(),
+            'reworkService' => ReworkService::with('service')->get(),
 
             'types' => Delivery::TYPES,
             'statuses' => Delivery::STATUS,
             'items' => Item::all(),
-            'services' => Service::all()
+            'services' => Service::all(),
+            'vendors' => Vendor::all(),
+            'deliveries' => Delivery::all(),
         ]);
     }
     public function edit($id){

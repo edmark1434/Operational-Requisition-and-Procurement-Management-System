@@ -565,7 +565,6 @@ export default function PurchaseOrderForm() {
             }))
         };
 
-        console.log(JSON.stringify(purchaseOrderData));
         router.post(orderpost().url, purchaseOrderData, {
             onSuccess: () => {
                 alert('Purchase order added successfully!');
@@ -663,7 +662,6 @@ export default function PurchaseOrderForm() {
 
                 {/* Form Container */}
                 <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:bg-sidebar">
-                    {JSON.stringify(formData)}
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-7xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">

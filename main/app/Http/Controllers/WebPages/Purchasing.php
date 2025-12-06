@@ -97,7 +97,7 @@ class Purchasing extends Controller
             'vendorCategories' => CategoryVendor::with('vendor', 'category')->get(),
             'purchaseOrders' => PurchaseOrder::query()->whereNotIn('status', ['Issued', 'Delivered', 'Received'])->get(),
             'orderItems' => OrderItem::with('item')->get(),
-            'orderServices' => OrderService::with('service', 'item')->get(),
+            'orderServices' => OrderService::with('service')->get(),
             'requisitionOrderItems' => RequisitionOrderItem::with('req_item', 'po_item')->get(),
             'requisitionOrderServices' => RequisitionOrderService::with('req_service', 'po_service')->get(),
             'categories' => Category::all(),

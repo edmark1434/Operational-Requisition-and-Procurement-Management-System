@@ -15,6 +15,7 @@ return new class extends Migration
     {
         Schema::create('reworks', function (Blueprint $table) {
             $table->id();
+            $table->string('ref_no')->unique();
             $table->dateTime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->enum('status', Rework::STATUS);
             $table->text('remarks');

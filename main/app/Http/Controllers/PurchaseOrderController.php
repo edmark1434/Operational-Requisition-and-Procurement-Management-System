@@ -44,8 +44,8 @@ class PurchaseOrderController extends Controller
             'remarks' => $validated['REMARKS'],
             'vendor_id' => $validated['SUPPLIER_ID'],
         ];
-        PurchaseOrder::query()->create($finalPO);
-        $poId = PurchaseOrder::query()->latest()->first()->id;
+        $po = PurchaseOrder::query()->create($finalPO);
+        $poId = $po->id;
 
         if ($validated['ORDER_TYPE'] === 'Items') {
             foreach ($validated['ITEMS'] as $reqItem) {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\Requisition\RequisitionController;
 use App\Http\Controllers\ServiceController;
@@ -58,6 +59,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('purchases',[Purchasing::class,'index'])->name('purchases');
     Route::get('purchases/create',[Purchasing::class,"create"])->name('PurchaseOrderForm');
     Route::get('purchases/{purchaseId}/edit',[Purchasing::class,"edit"])->name('PurchaseOrderEdit');
+
     Route::post('purchases/add',[PurchaseOrderController::class,"post"])->name('orderpost');
     Route::put('purchases/{id}/edit',[PurchaseOrderController::class,"put"])->name('orderput');
     Route::delete('purchases/{id}/delete',[PurchaseOrderController::class,"delete"])->name('orderdelete');
@@ -75,6 +77,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('deliveries',[Deliveries::class,'index'])->name('delivery');
     Route::get('deliveries/add',[Deliveries::class,"store"])->name('deliveryadd');
     Route::get('deliveries/{id}/edit',[Deliveries::class,"edit"])->name('deliveryedit');
+
+    Route::post('deliveries/add',[DeliveryController::class,"post"])->name('deliverypost');
+    Route::put('deliveries/{id}/edit',[DeliveryController::class,"put"])->name('deliveryput');
+    Route::delete('deliveries/{id}/delete',[DeliveryController::class,"delete"])->name('deliverydelete');
 
     // --- RETURNS (UPDATED) ---
     Route::get('returns',[Returns::class,'index'])->name('returns'); // List view

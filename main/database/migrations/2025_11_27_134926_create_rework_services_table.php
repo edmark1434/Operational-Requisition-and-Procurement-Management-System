@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('rework_id')->constrained('reworks')->cascadeOnUpdate();
             $table->foreignId('service_id')->constrained('services')->cascadeOnUpdate();
-            $table->foreignId('item_id')->nullable()->constrained('item')->cascadeOnUpdate();
         });
     }
 

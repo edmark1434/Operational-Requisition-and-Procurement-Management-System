@@ -14,10 +14,10 @@ class OrderService extends Model
     protected $fillable = ['po_id', 'service_id'];
 
     public function purchase_order(){
-        $this->belongsTo(PurchaseOrder::class, 'po_id');
+        return $this->belongsTo(PurchaseOrder::class, 'po_id');
     }
     public function service(){
-        $this->belongsTo(Service::class, 'service_id');
+        return $this->belongsTo(Service::class, 'service_id');
     }
     public $timestamps = false;
 }

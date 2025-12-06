@@ -62,25 +62,6 @@ export const getAvailablePurchaseOrders = () => {
     });
 };
 
-export const getPurchaseOrderItems = (poId: number) => {
-    const purchaseOrder = purchaseOrdersData.find(po => po.ID === poId);
-    if (!purchaseOrder) return [];
-
-    return purchaseOrder.ITEMS.map(item => {
-        // Use ITEM_ID to find the item in itemsData
-        const itemData = itemsData.find(i => i.ITEM_ID === item.ITEM_ID);
-        return {
-            ID: item.ID,
-            ITEM_ID: item.ITEM_ID,
-            ITEM_NAME: itemData?.NAME || item.NAME || 'Unknown Item',
-            QUANTITY_ORDERED: item.QUANTITY,
-            UNIT_PRICE: item.UNIT_PRICE,
-            BARCODE: itemData?.BARCODE || '',
-            CATEGORY: itemData?.CATEGORY_ID || 0
-        };
-    });
-};
-
 // Remove or comment out getAvailableSuppliers since it's not used
 // export const getAvailableSuppliers = () => {
 //     return suppliersData.map(supplier => ({

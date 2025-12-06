@@ -13,6 +13,7 @@ class Delivery extends Model
     use HasFactory;
     protected $table = 'delivery';
     protected $fillable = [
+        'ref_no',
         'type',
         'delivery_date',
         'total_cost',
