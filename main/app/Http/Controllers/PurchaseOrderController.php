@@ -86,6 +86,58 @@ class PurchaseOrderController extends Controller
         return back();
     }
 
+    public function updateStatus(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string'
+        ]);
+
+        $po = PurchaseOrder::findOrFail($id);
+        $oldStatus = $po->status;
+
+        // --- FIX: Map Frontend values to Database Allowed Values ---
+        // Key = What React sends
+        // Value = What your Database/Model allows (Must match public const STATUS)
+        $statusMap = [
+            'pending_approval'    => 'Pending',   // <--- This fixes your error
+            'merged'              => 'Merged',
+            'issued'              => 'Issued',
+            'rejected'            => 'Rejected',
+            'cancelled'           => 'Cancelled',
+            'delivered'           => 'Delivered',
+            'received'            => 'Received',
+
+            // NOTE: Your Model/DB does NOT have 'Partially Delivered' in the allowed list.
+            // You must either add it to your DB constraint or map it to 'Delivered' here.
+            'partially_delivered' => 'Delivered',
+        ];
+
+        // check if the status sent is valid
+        if (!array_key_exists($validated['status'], $statusMap)) {
+            // Fallback: If it's already a valid capitalized status, just use it
+            if (in_array($validated['status'], PurchaseOrder::STATUS)) {
+                $cleanStatus = $validated['status'];
+            } else {
+                return back()->withErrors(['status' => 'Status not recognized by the database.']);
+            }
+        } else {
+            $cleanStatus = $statusMap[$validated['status']];
+        }
+
+        // Update with the clean, DB-safe string
+        $po->update([
+            'status' => $cleanStatus
+        ]);
+
+        AuditLog::create([
+            'description' => "Purchase Order {$po->ref_no} status updated from '{$oldStatus}' to '{$cleanStatus}'",
+            'user_id' => auth()->id(),
+            'type_id' => 8,
+        ]);
+
+        return back()->with('success', 'Purchase Order status updated successfully.');
+    }
+
     public function put(Request $request, $id)
     {
         $validated = $request->validate([
