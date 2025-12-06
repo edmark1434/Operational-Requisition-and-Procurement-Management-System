@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Dialog, Transition } from '@headlessui/react';
 import { X } from 'lucide-react';
 
