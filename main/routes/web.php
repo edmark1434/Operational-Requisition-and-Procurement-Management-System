@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('purchases/add',[PurchaseOrderController::class,"post"])->name('orderpost');
     Route::put('purchases/{id}/edit',[PurchaseOrderController::class,"put"])->name('orderput');
     Route::delete('purchases/{id}/delete',[PurchaseOrderController::class,"delete"])->name('orderdelete');
+    Route::put('purchases/{id}/status', [PurchaseOrderController::class, 'updateStatus'])->name('purchases.updateStatus');
 
     // SUPPLIERS
     Route::get('suppliers',[SupplierController::class,'index'])->name('suppliers');
