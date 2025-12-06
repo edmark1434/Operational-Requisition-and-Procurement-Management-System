@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
 import { formatCurrency, formatDate } from './utils/formatters';
 import { getStatusColor, getStatusDisplayName } from './utils/purchaseCalculations';
+import { router } from "@inertiajs/react";
 
 interface PurchaseDetailModalProps {
     purchase: any;
@@ -23,18 +25,41 @@ export default function PurchaseDetailModal({
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // 1. Define safePurchase to prevent crashes during close animation
+    const safePurchase = purchase || {};
+
     const handleDelete = () => {
-        if (purchase) {
-            onDelete(purchase.ID);
+        if (safePurchase.ID) {
+            onDelete(safePurchase.ID);
         }
         setShowDeleteConfirm(false);
     };
 
     const handleStatusChange = (newStatus: string) => {
-        if (purchase) {
-            onStatusChange(purchase.ID, newStatus);
-        }
+        if (!safePurchase.ID) return;
+
+        // --- OPTIMISTIC UPDATE START ---
+
+        // 1. Close the dropdown IMMEDIATELY (Don't wait for server)
         setShowStatusDropdown(false);
+
+        // 2. Update the parent UI IMMEDIATELY
+        onStatusChange(safePurchase.ID, newStatus);
+
+        // 3. If you want to close the ENTIRE modal on click, uncomment the line below:
+        // onClose();
+
+        // --- OPTIMISTIC UPDATE END ---
+
+        // 4. Send request in background (Fire and Forget)
+        router.put(`/purchases/${safePurchase.ID}/status`, { status: newStatus }, {
+            preserveScroll: true,
+            // We removed onSuccess because we already updated the UI above.
+            onError: (errors) => {
+                console.error("Status update failed", errors);
+                // Optional: You could add a toast here saying "Update failed"
+            }
+        });
     };
 
     // Close dropdown when clicking outside
@@ -51,8 +76,6 @@ export default function PurchaseDetailModal({
         };
     }, []);
 
-    if (!isOpen || !purchase) return null;
-
     const statusOptions = [
         { value: 'pending_approval', label: 'Pending Approval', description: 'Automatically created when requisition is approved' },
         { value: 'merged', label: 'Merged', description: 'When merged with other purchase orders' },
@@ -65,384 +88,415 @@ export default function PurchaseDetailModal({
 
     // Get items or services based on order type
     const getOrderItems = () => {
-        if (purchase.ORDER_TYPE === 'services') {
-            return purchase.SERVICES || [];
+        if (safePurchase.ORDER_TYPE === 'services') {
+            return safePurchase.SERVICES || [];
         }
-        return purchase.ITEMS || [];
+        return safePurchase.ITEMS || [];
     };
 
     const orderItems = getOrderItems();
-    const isServiceOrder = purchase.ORDER_TYPE === 'services';
+    const isServiceOrder = safePurchase.ORDER_TYPE === 'services';
 
     return (
         <>
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-sidebar-border">
-                    {/* Header - Sticky */}
-                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                    {purchase?.REFERENCE_NO}
-                                </h2>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Purchase Order Details
-                                    </p>
-                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                        isServiceOrder
-                                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                    }`}>
-                                        {isServiceOrder ? 'Services' : 'Items'}
-                                    </span>
-                                </div>
-                            </div>
-                            <button
-                                onClick={onClose}
-                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
+            <Transition appear show={isOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={onClose}>
+                    {/* Backdrop Animation */}
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4 text-center">
+                            {/* Modal Panel Animation */}
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
                             >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+                                <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-xl bg-white dark:bg-sidebar text-left align-middle shadow-xl transition-all border border-sidebar-border flex flex-col max-h-[90vh]">
 
-                    {/* Content - Scrollable */}
-                    <div className="flex-1 overflow-y-auto">
-                        <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
-                            {/* Order Summary */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Status
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(purchase?.STATUS)}`}>
-                                                <PurchaseStatusIcon status={purchase?.STATUS} />
-                                                {getStatusDisplayName(purchase?.STATUS)}
+                                    {/* Header - Sticky */}
+                                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                                    {safePurchase.REFERENCE_NO}
+                                                </h2>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                        Purchase Order Details
+                                                    </p>
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                        isServiceOrder
+                                                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                    }`}>
+                                                        {isServiceOrder ? 'Services' : 'Items'}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="relative" ref={dropdownRef}>
-                                                <button
-                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                    </svg>
-                                                    Change Status
-                                                </button>
+                                            <button
+                                                onClick={onClose}
+                                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
+                                            >
+                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
 
-                                                {showStatusDropdown && (
-                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
-                                                        <div className="p-3">
-                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
-                                                                Update Status
+                                    {/* Content - Scrollable */}
+                                    <div className="flex-1 overflow-y-auto">
+                                        <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
+                                            {/* Order Summary */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Status
+                                                        </label>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(safePurchase.STATUS)}`}>
+                                                                <PurchaseStatusIcon status={safePurchase.STATUS} />
+                                                                {getStatusDisplayName(safePurchase.STATUS)}
                                                             </div>
-                                                            <div className="max-h-48 overflow-y-auto pr-1">
-                                                                {statusOptions.map((status) => (
-                                                                    <button
-                                                                        key={status.value}
-                                                                        onClick={() => handleStatusChange(status.value)}
-                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
-                                                                            purchase?.STATUS === status.value
-                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                                                                                : 'border border-transparent'
-                                                                        }`}
-                                                                    >
-                                                                        <div className="flex items-center gap-3 flex-1">
-                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
-                                                                                purchase?.STATUS === status.value
-                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
-                                                                                    : 'bg-gray-300 dark:bg-gray-600'
-                                                                            }`}>
-                                                                                {purchase?.STATUS === status.value && (
-                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                                    </svg>
-                                                                                )}
+                                                            <div className="relative" ref={dropdownRef}>
+                                                                <button
+                                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                                    </svg>
+                                                                    Change Status
+                                                                </button>
+
+                                                                {showStatusDropdown && (
+                                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                                        <div className="p-3">
+                                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                                Update Status
                                                                             </div>
-                                                                            <div className="flex-1">
-                                                                                <div className="font-medium text-gray-900 dark:text-white">
-                                                                                    {status.label}
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                                                                    {status.description}
-                                                                                </div>
+                                                                            <div className="max-h-48 overflow-y-auto pr-1">
+                                                                                {statusOptions.map((status) => (
+                                                                                    <button
+                                                                                        key={status.value}
+                                                                                        onClick={() => handleStatusChange(status.value)}
+                                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                                            safePurchase.STATUS === status.value
+                                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                                : 'border border-transparent'
+                                                                                        }`}
+                                                                                    >
+                                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                                                                                safePurchase.STATUS === status.value
+                                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                                            }`}>
+                                                                                                {safePurchase.STATUS === status.value && (
+                                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                                    </svg>
+                                                                                                )}
+                                                                                            </div>
+                                                                                            <div className="flex-1">
+                                                                                                <div className="font-medium text-gray-900 dark:text-white">
+                                                                                                    {status.label}
+                                                                                                </div>
+                                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                                    {status.description}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </button>
+                                                                                ))}
                                                                             </div>
+
+                                                                            {statusOptions.length > 4 && (
+                                                                                <div className="mt-2 pt-2 border-t border-sidebar-border">
+                                                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                                                                                        Scroll for more options
+                                                                                    </p>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
-                                                                    </button>
-                                                                ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Reference Number
+                                                        </label>
+                                                        <p className="text-sm text-gray-900 dark:text-white font-mono font-medium">
+                                                            {safePurchase.REFERENCE_NO}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Order Date
+                                                        </label>
+                                                        <p className="text-sm text-gray-900 dark:text-white">
+                                                            {safePurchase.CREATED_AT ? formatDate(safePurchase.CREATED_AT) : 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Total Amount
+                                                        </label>
+                                                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                                            {formatCurrency(safePurchase.TOTAL_COST || 0)}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Payment Type
+                                                        </label>
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                            {safePurchase.PAYMENT_TYPE ? safePurchase.PAYMENT_TYPE.charAt(0).toUpperCase() + safePurchase.PAYMENT_TYPE.slice(1) : 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            {isServiceOrder ? 'Services Count' : 'Items Count'}
+                                                        </label>
+                                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                            {orderItems.length} {isServiceOrder ? 'services' : 'items'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                                            {statusOptions.length > 4 && (
-                                                                <div className="mt-2 pt-2 border-t border-sidebar-border">
-                                                                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-                                                                        Scroll for more options
-                                                                    </p>
-                                                                </div>
+                                            {/* Supplier Information */}
+                                            <div className="border-t border-sidebar-border pt-6">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                                    Supplier Information
+                                                </h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Supplier Name
+                                                        </label>
+                                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                            {safePurchase.SUPPLIER_NAME || 'No supplier assigned'}
+                                                        </p>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                            {safePurchase.SUPPLIER_EMAIL}
+                                                        </p>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                            {safePurchase.SUPPLIER_CONTACT}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Payment Methods
+                                                        </label>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {safePurchase.ALLOWS_CASH && (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                                    Cash
+                                                                </span>
+                                                            )}
+                                                            {safePurchase.ALLOWS_DISBURSEMENT && (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                                    Disbursement
+                                                                </span>
+                                                            )}
+                                                            {safePurchase.ALLOWS_STORE_CREDIT && (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                                                    Store Credit
+                                                                </span>
                                                             )}
                                                         </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Requisition Information */}
+                                            <div className="border-t border-sidebar-border pt-6">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                                    Requisition Information
+                                                </h3>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
+                                                        <p className="font-medium">{safePurchase.REQUESTOR}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Priority:</span>
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                            safePurchase.PRIORITY === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                safePurchase.PRIORITY === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                        }`}>
+                                                            {safePurchase.PRIORITY}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Requisition Date:</span>
+                                                        <p>{safePurchase.REQUISITION_DATE ? formatDate(safePurchase.REQUISITION_DATE) : 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
+                                                        <p>{orderItems.length}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Items/Services List */}
+                                            <div className="border-t border-sidebar-border pt-6">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                                    Order {isServiceOrder ? 'Services' : 'Items'}
+                                                </h3>
+                                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                                        <div className="col-span-6">{isServiceOrder ? 'Service' : 'Item'}</div>
+                                                        <div className="col-span-2 text-right">{isServiceOrder ? 'Hours' : 'Quantity'}</div>
+                                                        <div className="col-span-2 text-right">{isServiceOrder ? 'Hourly Rate' : 'Unit Price'}</div>
+                                                        <div className="col-span-2 text-right">Total</div>
+                                                    </div>
+                                                    <div className="divide-y divide-sidebar-border">
+                                                        {orderItems.map((item: any) => (
+                                                            <div key={item.ID} className="grid grid-cols-12 gap-4 px-4 py-3">
+                                                                <div className="col-span-6">
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                        {item.NAME}
+                                                                    </p>
+                                                                    {isServiceOrder && item.DESCRIPTION && (
+                                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                            {item.DESCRIPTION}
+                                                                        </p>
+                                                                    )}
+                                                                    {!isServiceOrder && (
+                                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                            {item.CATEGORY}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                                <div className="col-span-2 text-right">
+                                                                    <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                                        {item.QUANTITY}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="col-span-2 text-right">
+                                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                                        {formatCurrency(item.UNIT_PRICE)}
+                                                                        {isServiceOrder && '/hr'}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="col-span-2 text-right">
+                                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                                        {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {/* Total Row */}
+                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                                        <div className="col-span-8"></div>
+                                                        <div className="col-span-4 text-right">
+                                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Grand Total:</p>
+                                                            <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                                {formatCurrency(safePurchase.TOTAL_COST || 0)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Additional Information */}
+                                            <div className="border-t border-sidebar-border pt-6">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                                    Additional Information
+                                                </h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Created Date
+                                                        </label>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                            {safePurchase.CREATED_AT ? formatDate(safePurchase.CREATED_AT) : 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Last Updated
+                                                        </label>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                            {safePurchase.UPDATED_AT ? formatDate(safePurchase.UPDATED_AT) : 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {safePurchase.REMARKS && (
+                                                    <div className="mt-4">
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Remarks
+                                                        </label>
+                                                        <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-sidebar-accent p-3 rounded-lg">
+                                                            {safePurchase.REMARKS}
+                                                        </p>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Reference Number
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white font-mono font-medium">
-                                            {purchase?.REFERENCE_NO}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Order Date
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white">
-                                            {purchase?.CREATED_AT ? formatDate(purchase.CREATED_AT) : 'N/A'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Total Amount
-                                        </label>
-                                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                            {formatCurrency(purchase?.TOTAL_COST || 0)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Payment Type
-                                        </label>
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                            {purchase?.PAYMENT_TYPE?.charAt(0).toUpperCase() + purchase?.PAYMENT_TYPE?.slice(1)}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            {isServiceOrder ? 'Services Count' : 'Items Count'}
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {orderItems.length} {isServiceOrder ? 'services' : 'items'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* Supplier Information */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Supplier Information
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Supplier Name
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {purchase?.SUPPLIER_NAME || 'No supplier assigned'}
-                                        </p>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                            {purchase?.SUPPLIER_EMAIL}
-                                        </p>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {purchase?.SUPPLIER_CONTACT}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Payment Methods
-                                        </label>
-                                        <div className="flex flex-wrap gap-1">
-                                            {purchase?.ALLOWS_CASH && (
-                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                    Cash
-                                                </span>
-                                            )}
-                                            {purchase?.ALLOWS_DISBURSEMENT && (
-                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                    Disbursement
-                                                </span>
-                                            )}
-                                            {purchase?.ALLOWS_STORE_CREDIT && (
-                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                                    Store Credit
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Requisition Information */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Requisition Information
-                                </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div>
-                                        <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
-                                        <p className="font-medium">{purchase?.REQUESTOR}</p>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600 dark:text-gray-400">Priority:</span>
-                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                            purchase?.PRIORITY === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                purchase?.PRIORITY === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                        }`}>
-                                            {purchase?.PRIORITY}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600 dark:text-gray-400">Requisition Date:</span>
-                                        <p>{purchase?.REQUISITION_DATE ? formatDate(purchase.REQUISITION_DATE) : 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
-                                        <p>{orderItems.length}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Items/Services List */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Order {isServiceOrder ? 'Services' : 'Items'}
-                                </h3>
-                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
-                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                        <div className="col-span-6">{isServiceOrder ? 'Service' : 'Item'}</div>
-                                        <div className="col-span-2 text-right">{isServiceOrder ? 'Hours' : 'Quantity'}</div>
-                                        <div className="col-span-2 text-right">{isServiceOrder ? 'Hourly Rate' : 'Unit Price'}</div>
-                                        <div className="col-span-2 text-right">Total</div>
-                                    </div>
-                                    <div className="divide-y divide-sidebar-border">
-                                        {orderItems.map((item: any) => (
-                                            <div key={item.ID} className="grid grid-cols-12 gap-4 px-4 py-3">
-                                                <div className="col-span-6">
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {item.NAME}
-                                                    </p>
-                                                    {isServiceOrder && item.DESCRIPTION && (
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                            {item.DESCRIPTION}
-                                                        </p>
-                                                    )}
-                                                    {!isServiceOrder && (
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                            {item.CATEGORY}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <div className="col-span-2 text-right">
-                                                    <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                                        {item.QUANTITY}
-                                                    </p>
-                                                </div>
-                                                <div className="col-span-2 text-right">
-                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                        {formatCurrency(item.UNIT_PRICE)}
-                                                        {isServiceOrder && '/hr'}
-                                                    </p>
-                                                </div>
-                                                <div className="col-span-2 text-right">
-                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                                        {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
-                                                    </p>
-                                                </div>
+                                    {/* Footer with Actions */}
+                                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
+                                        <div className="flex justify-between items-center">
+                                            <button
+                                                onClick={() => setShowDeleteConfirm(true)}
+                                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Delete Order
+                                            </button>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={onClose}
+                                                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
+                                                >
+                                                    Close
+                                                </button>
+                                                <button
+                                                    onClick={onEdit}
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit Order
+                                                </button>
                                             </div>
-                                        ))}
-                                    </div>
-                                    {/* Total Row */}
-                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
-                                        <div className="col-span-8"></div>
-                                        <div className="col-span-4 text-right">
-                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Grand Total:</p>
-                                            <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                                {formatCurrency(purchase?.TOTAL_COST || 0)}
-                                            </p>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* Additional Information */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Additional Information
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Created Date
-                                        </label>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {purchase?.CREATED_AT ? formatDate(purchase.CREATED_AT) : 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Last Updated
-                                        </label>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {purchase?.UPDATED_AT ? formatDate(purchase.UPDATED_AT) : 'N/A'}
-                                        </p>
-                                    </div>
-                                </div>
-                                {purchase?.REMARKS && (
-                                    <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Remarks
-                                        </label>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-sidebar-accent p-3 rounded-lg">
-                                            {purchase.REMARKS}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
                         </div>
                     </div>
-
-                    {/* Footer with Actions */}
-                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
-                        <div className="flex justify-between items-center">
-                            <button
-                                onClick={() => setShowDeleteConfirm(true)}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Delete Order
-                            </button>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={onClose}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
-                                >
-                                    Close
-                                </button>
-                                <button
-                                    onClick={onEdit}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Edit Order
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                </Dialog>
+            </Transition>
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
@@ -453,7 +507,7 @@ export default function PurchaseDetailModal({
                                 Delete Purchase Order
                             </h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Are you sure you want to delete "{purchase?.REFERENCE_NO}"? This action cannot be undone.
+                                Are you sure you want to delete "{safePurchase.REFERENCE_NO}"? This action cannot be undone.
                             </p>
                         </div>
                         <div className="p-6 flex justify-end gap-3">
