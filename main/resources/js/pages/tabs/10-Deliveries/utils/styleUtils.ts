@@ -1,6 +1,10 @@
 // Deliveries Status Colors
-export const getDeliveriesStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+// Update type to allow null/undefined just in case
+export const getDeliveriesStatusColor = (status: string | null | undefined) => {
+    // Safety check: use empty string if status is missing
+    const safeStatus = (status || '').toLowerCase();
+
+    switch (safeStatus) {
         case 'with returns':
             return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
         case 'received':
