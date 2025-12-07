@@ -18,14 +18,14 @@ class ReturnsController extends Controller
         // Fetch valid deliveries (Item Purchase + Received)
         $deliveries = Delivery::where('type', 'Item Purchase')
             ->where('status', 'Received')
-            ->with(['purchaseOrder.supplier'])
+            ->with(['purchaseOrder.vendor'])
             ->orderBy('delivery_date', 'desc')
             ->get()
             ->map(function ($delivery) {
                 return [
                     'id' => $delivery->id,
                     'reference_no' => $delivery->receipt_no ?? 'DEL-'.$delivery->id,
-                    'supplier_name' => $delivery->purchaseOrder->supplier->name ?? 'Unknown Supplier',
+                    'vendor_name' => $delivery->purchaseOrder->supplier->name ?? 'Unknown Vendor',
                     'delivery_date' => $delivery->delivery_date,
                 ];
             });
