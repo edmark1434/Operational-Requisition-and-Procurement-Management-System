@@ -519,7 +519,7 @@ export default function PurchaseOrderForm() {
             .reduce((total: number, item: RequisitionItem) => total + (item.quantity * item.item.unit_price), 0);
 
         const servicesTotal = formData.SERVICES
-            .reduce((total: number, service: RequisitionService) => total + (service.service.hourly_rate), 0);
+            .reduce((total: number, service: RequisitionService) => total + (parseFloat(String(service.service.hourly_rate))), 0);
 
         return itemsTotal + servicesTotal;
     };
@@ -536,7 +536,8 @@ export default function PurchaseOrderForm() {
         e.preventDefault();
 
         if (validateForm()) {
-            setShowPreview(true);
+            // Show preview instead of directly submitting
+            //  setShowPreview(true);
             handleConfirmSubmit();
         }
     };
@@ -647,7 +648,7 @@ export default function PurchaseOrderForm() {
         <AppLayout breadcrumbs={updatedBreadcrumbs}>
             <Head title={isEditMode ? "Edit Purchase Order" : "Create Purchase Order"} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {JSON.stringify(bestSupplier)}
+                {JSON.stringify(formData.SERVICES)}
                 {'Selected: ' + formData.SUPPLIER_ID + ' ' + JSON.stringify(selectedSupplier)}
                 {/* Header */}
                 <div className="flex items-center justify-between">
