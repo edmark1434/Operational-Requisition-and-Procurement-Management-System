@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Permission;
 use App\Models\AuditLog;
 use App\Models\Vendor;
+use App\Models\Make;
 use App\Models\UserPermission;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -108,8 +109,10 @@ class Inventory extends Controller
                 "TYPE" => $categ->type,
             ];
         });
+        $makes = Make::where('is_active',true)->get();
         return Inertia::render($this->base_path . '/ItemAdd', [
             'CATEGORY_OPTIONS' => $categoryOptions,
+            'MAKE_OPTIONS' => $makes,
             'categorySuppliers' => $categorySupplier,
             'SUPPLIER_OPTIONS' => $vendor,
             'itemsData' => $inventory
@@ -123,6 +126,7 @@ class Inventory extends Controller
             'unit_price' => $request->input('UNIT_PRICE'),
             'current_stock' => $request->input('CURRENT_STOCK'),
             'category_id' => $request->input('CATEGORY_ID'),
+            'make_id' => $request->input('MAKE_ID'),
             'vendor_id' => $request->input('SUPPLIER_ID')        
         ]);
         if($request->input('CURRENT_STOCK') <= 10){
@@ -162,6 +166,7 @@ class Inventory extends Controller
                 'TYPE' => $category->type,
             ];
         });
+        $makes = Make::where('is_active',true)->get();
         return Inertia::render($this->base_path .'/ItemEdit', [
             'itemId' => (int)$id,
             'item' => [
@@ -188,7 +193,8 @@ class Inventory extends Controller
                 'ALLOWS_DISBURSEMENT' => optional($item->vendor)->allows_disbursement ?? false,
                 'ALLOWS_STORE_CREDIT' => optional($item->vendor)->allows_store_credit ?? false,
             ],
-            "CATEGORY_OPTIONS" => $categoryOptions
+            "CATEGORY_OPTIONS" => $categoryOptions,
+            "MAKE_OPTIONS" => $makes
         ]);
     }
     public function update(Request $request,$id){
@@ -199,6 +205,7 @@ class Inventory extends Controller
             'unit_price' => $request->input('UNIT_PRICE'),
             'current_stock' => $request->input('CURRENT_STOCK'),
             'category_id' => $request->input('CATEGORY_ID'),
+            'make_id' => $request->input('MAKE_ID'),
             'vendor_id' => $request->input('SUPPLIER_ID')        
         ]);
         if($request->input('CURRENT_STOCK') < 10){

@@ -13,7 +13,8 @@ interface ItemEditProps {
     auth: any;
     itemId: number;
     item: any,
-    CATEGORY_OPTIONS:any[]
+    CATEGORY_OPTIONS:any[],
+    MAKE_OPTIONS: any[]
 }
 
 const breadcrumbs = (itemId: number): BreadcrumbItem[] => [
@@ -27,7 +28,7 @@ const breadcrumbs = (itemId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEditProps) {
+export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS, MAKE_OPTIONS }: ItemEditProps) {
     const [formData, setFormData] = useState({
         NAME: '',
         BARCODE: '',
@@ -35,7 +36,7 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
         UNIT_PRICE: 0,
         CURRENT_STOCK: 0,
         DIMENSIONS: '',
-        MAKE_ID: 1,
+        MAKE_ID: 0,
         SUPPLIER_ID: '',
         SUPPLIER_NAME: '',
         SUPPLIER_EMAIL: '',
@@ -218,14 +219,14 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
                                                         </label>
                                                         <select
                                                             required
-                                                            value={formData.CATEGORY}
-                                                            onChange={(e) => handleInputChange('CATEGORY', e.target.value)}
+                                                            value={formData.MAKE_ID}
+                                                            onChange={(e) => handleInputChange('MAKE_ID', e.target.value)}
                                                             className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
                                                         >
-                                                            <option value="">Select a category</option>
-                                                            {CATEGORY_OPTIONS.map(category => (
-                                                                <option key={category.CAT_ID} value={category.NAME}>
-                                                                    {category.NAME}
+                                                            <option value="">Select a make</option>
+                                                            {MAKE_OPTIONS.map(make => (
+                                                                <option key={make.id} value={make.id}>
+                                                                    {make.name}
                                                                 </option>
                                                             ))}
                                                         </select>

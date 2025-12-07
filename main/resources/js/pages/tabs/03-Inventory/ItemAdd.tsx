@@ -23,9 +23,10 @@ interface Prop{
     CATEGORY_OPTIONS: any[],
     categorySuppliers: any[],
     SUPPLIER_OPTIONS: any[],
-    itemsData: any[]
+    itemsData: any[],
+    MAKE_OPTIONS: any[]
 }
-export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLIER_OPTIONS,itemsData }: Prop) {
+export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLIER_OPTIONS,itemsData, MAKE_OPTIONS }: Prop) {
     const [formData, setFormData] = useState({
         NAME: '',
         BARCODE: '',
@@ -33,7 +34,7 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
         UNIT_PRICE: '',
         CURRENT_STOCK: '',
         DIMENSIONS: '',
-        MAKE_ID: 1,
+        MAKE_ID: 0,
         SUPPLIER_ID: '',
         SUPPLIER_NAME: '',
         SUPPLIER_EMAIL: '',
@@ -93,9 +94,9 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
             newErrors.CATEGORY = 'Category is required';
         }
 
-        // if (!formData.MAKE_ID) {
-        //     newErrors.CATEGORY = 'Make is required';
-        // }
+        if (!formData.MAKE_ID) {
+            newErrors.MAKE_ID = 'Make is required';
+        }
 
         if (!formData.UNIT_PRICE || parseFloat(formData.UNIT_PRICE) <= 0) {
             newErrors.UNIT_PRICE = 'Unit price must be greater than 0';
@@ -176,7 +177,7 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
             UNIT_PRICE: '',
             CURRENT_STOCK: '',
             DIMENSIONS: '',
-            MAKE_ID: 1,
+            MAKE_ID: 0,
             SUPPLIER_ID: '',
             SUPPLIER_NAME: '',
             SUPPLIER_EMAIL: '',
@@ -307,16 +308,16 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
                                                     </label>
                                                     <select
                                                         required
-                                                        value={formData.CATEGORY} // Note: This still duplicates Category based on your uploaded file
-                                                        onChange={(e) => handleInputChange('CATEGORY', e.target.value)}
+                                                        value={formData.MAKE_ID} 
+                                                        onChange={(e) => handleInputChange('MAKE_ID', e.target.value)}
                                                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                                            errors.CATEGORY ? 'border-red-500' : 'border-sidebar-border'
+                                                            errors.MAKE_ID ? 'border-red-500' : 'border-sidebar-border'
                                                         }`}
                                                     >
                                                         <option value="">Select Make</option>
-                                                        {CATEGORY_OPTIONS.map(category => (
-                                                            <option key={category.CAT_ID} value={category.NAME}>
-                                                                {category.NAME}
+                                                        {MAKE_OPTIONS.map(make => (
+                                                            <option key={make.id} value={make.id}>
+                                                                {make.name}
                                                             </option>
                                                         ))}
                                                     </select>
