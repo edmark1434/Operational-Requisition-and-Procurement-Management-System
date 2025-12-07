@@ -52,29 +52,51 @@ class Purchasing extends Controller
                     'ORDER_TYPE'     => $type,                   // items / services
                     'REMARKS'        => $po->remarks,
 
-                    // -------------------------------
-                    // ITEMS: requisition → requisition_items → item
-                    // -------------------------------
-                    'ITEMS' => $type === 'items' && $po->orderItems->isNotEmpty()
-                        ? $po->orderItems->map(function ($orderItem) {
-                            $reqItem = $orderItem->requisition_order_item->req_item ?? null;
-                            return [
-                                'ID'          => $reqItem->id ?? null,
-                                'ITEM_ID'     => $reqItem->item->id ?? null,
-                                'NAME'        => $reqItem->item->name ?? null,
-                                'QUANTITY'    => $reqItem->quantity,
-                                'UNIT_PRICE'  => $reqItem->item->unit_price ?? null,
-                                'CATEGORY_ID' => $reqItem->item->category_id ?? null,
-                                'SELECTED'    => true,
-                                'REQUISITION_DATE' => $reqItem->requisition->created_at ?? null,
-                                'REQUISITION_ID' => $reqItem->req_id ?? null,
-                                'REQUESTOR' => $reqItem->requisition->requestor ?? null,
-                                'PRIORITY' => $reqItem->requisition->priority ?? null,
-                            ];
-                        })->toArray()
-                        : [],
-                ];
-            });
+                // -------------------------------
+                // ITEMS: requisition → requisition_items → item
+                // -------------------------------
+                'ITEMS' => $type === 'items' && $po->orderItems->isNotEmpty()
+                    ? $po->orderItems->map(function ($orderItem) {
+                        $reqItem = $orderItem->requisition_order_item->req_item ?? null;
+                        return [
+                            'ID'          => $reqItem->id ?? null,
+                            'ITEM_ID'     => $reqItem->item->id ?? null,
+                            'NAME'        => $reqItem->item->name ?? null,
+                            'QUANTITY'    => $reqItem->quantity,
+                            'UNIT_PRICE'  => $reqItem->item->unit_price ?? null,
+                            'CATEGORY_ID' => $reqItem->item->category_id ?? null,
+                            'SELECTED'    => true,
+                            'REQUISITION_DATE' => $reqItem->requisition->created_at ?? null,
+                            'REQUISITION_ID' => $reqItem->req_id ?? null,
+                            'REQUESTOR' => $reqItem->requisition->requestor ?? null,
+                            'PRIORITY' => $reqItem->requisition->priority ?? null,
+                        ];
+                    })->toArray()
+                    : [],
+
+                // -------------------------------
+                // SERVICES: order_service → service
+                // -------------------------------
+                'SERVICES' => $type === 'services' && $po->orderServices->isNotEmpty()
+                    ? $po->orderServices->map(function ($orderService) {
+                        $reqService = $orderService->requisition_order_service->req_service ?? null;
+                        return [
+                            'ID'           => $reqService->id,
+                            'SERVICE_ID'   => $reqService->service->id,
+                            'NAME'         => $reqService->service->name,
+                            'DESCRIPTION'  => $reqService->service->description,
+                            'HOURLY_RATE'  => $reqService->service->hourly_rate,
+                            'CATEGORY_ID'  => $reqService->service->category_id,
+                            'SELECTED'     => true,
+                            'REQUESTION_ID' => $reqService->req_id ?? null,
+                            'REQUISITION_DATE' => $reqService->requisition->created_at ?? null,
+                            'REQUESTOR' => $reqService->requisition->requestor ?? null,
+                            'PRIORITY' => $reqService->requisition->priority ?? null,
+                        ];
+                    })->toArray()
+                    : [],
+            ];
+        });
 
         return Inertia::render($this->base_path . '/Purchases', [
             'purchaseOrdersData' => $purchases->values()->toArray()  // ensure plain array
