@@ -98,7 +98,7 @@ export default function OrderInfo({
                 )}
                 {!selectedSupplier && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Select a supplier to see available payment options
+                        Select a vendor to see available payment options
                     </p>
                 )}
             </div>
