@@ -19,16 +19,28 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/returns',
     },
 ];
-
-export default function Returns() {
+interface Props{
+    returnsData: any[],
+    returnsItemData: any[],
+    deliveriesData: any[],
+    suppliersData: any[],
+    itemsData: any[],
+}
+export default function Returns({
+    returnsData,
+    returnsItemData,
+    deliveriesData,
+    suppliersData,
+    itemsData,
+}: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [dateFilter, setDateFilter] = useState('All');
     const [selectedReturn, setSelectedReturn] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [returns, setReturns] = useState(transformReturnsData());
+    const [returns, setReturns] = useState(() => transformReturnsData(returnsData, returnsItemData, deliveriesData, suppliersData, itemsData));
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
-
+    console.log('Returns:', returns);
     const {
         filteredReturns,
         statuses,

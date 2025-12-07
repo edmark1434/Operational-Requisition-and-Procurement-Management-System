@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Delivery;
+use App\Models\ReturnDelivery;
 use App\Models\ReturnItem;
 
 class Returns extends Model
@@ -20,7 +20,6 @@ class Returns extends Model
         'return_date',
         'status',
         'remarks',
-        'delivery_id'
     ];
 
     protected $casts = [
@@ -33,16 +32,16 @@ class Returns extends Model
      */
     public function originalDelivery()
     {
-        return $this->belongsToMany(Delivery::class, 'return_delivery', 'return_id', 'old_delivery_id');
+        return $this->hasOne(ReturnDelivery::class,  'return_id');
     }
 
     public function newDelivery()
     {
-        return $this->belongsToMany(Delivery::class, 'return_delivery', 'return_id', 'new_delivery_id');
+        return $this->hasOne(ReturnDelivery::class, 'return_id', 'new_delivery_id');
     }
 
     public function return_item()
     {
-        return $this->belongsTo(ReturnItem::class, 'return_id');
+        return $this->hasOne(ReturnItem::class, 'return_id');
     }
 }
