@@ -19,13 +19,17 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/reworks',
     },
 ];
-
-export default function Reworks() {
+interface Props{
+    reworkServiceData: any[];
+    reworksData: any[];
+    serviceData: any[];
+}
+export default function Reworks({reworkServiceData, reworksData, serviceData}: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedRework, setSelectedRework] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [reworks, setReworks] = useState(transformReworksData());
+    const [reworks, setReworks] = useState(transformReworksData(reworkServiceData, reworksData, serviceData));
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
     const {

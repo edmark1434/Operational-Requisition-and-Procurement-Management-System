@@ -25,7 +25,7 @@ class Service extends Model
         return $this->hasMany(RequisitionService::class, 'service_id');
     }
     public function order_service(){
-        return $this->hasMany(OrderService::class, 'service_id');
+        return $this->hasOne(OrderService::class, 'service_id');
     }
     public function delivery_service(){
         return $this->hasMany(DeliveryService::class, 'service_id');
