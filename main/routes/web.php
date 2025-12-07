@@ -20,6 +20,8 @@ use App\Http\Controllers\WebPages\Notifications;
 use App\Http\Controllers\WebPages\Contact;
 use App\Http\Controllers\WebPages\Services;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ReworksController;
+
 use Inertia\Inertia;
 use App\Models\Requisition;
 
@@ -146,6 +148,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reworks',[Reworks::class,'index'])->name('reworks');
     Route::get('reworks/add',[Reworks::class,"store"])->name('reworksadd');
     Route::get('reworks/{id}/edit',[Reworks::class,"edit"])->name('reworksedit');
+
+
+    Route::get('reworks', [Reworks::class, 'index'])->name('reworks');
+
+// 2. Add Form (Uses Logic Controller)
+    Route::get('reworks/add', [ReworksController::class, 'create'])->name('reworks.add');
+
+// 3. Store Action (Uses Logic Controller)
+    Route::post('reworks', [ReworksController::class, 'store'])->name('reworks.store');
+
+// 4. API to fetch Services for a specific Delivery (Used by Frontend AJAX)
+    Route::get('/api/reworks/delivery/{id}/services', [ReworksController::class, 'getDeliveryServices']);
 
     // CONTACTS
     Route::get('contacts',[Contact::class,'index'])->name('contacts');
