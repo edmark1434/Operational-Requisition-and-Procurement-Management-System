@@ -30,7 +30,7 @@ export default function RequisitionPreviewModal({
 
     // Helper to format USD rate
     const formatHourlyRate = (rate: number | string) => {
-        const value = parseFloat(rate.toString() || 0);
+        const value = parseFloat(rate.toString() || "0");
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
@@ -134,9 +134,11 @@ export default function RequisitionPreviewModal({
                                     <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
                                         #
                                     </th>
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                                        {isServiceRequisition ? 'Qty' : 'Quantity'}
-                                    </th>
+                                    {!isServiceRequisition && (
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                                            Quantity
+                                        </th>
+                                    )}
                                     <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         {isServiceRequisition ? 'Job/Service Details' : 'Item Name'}
                                     </th>
@@ -164,9 +166,6 @@ export default function RequisitionPreviewModal({
                                                 <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-sidebar border border-sidebar-border rounded text-xs">
                                                     {index + 1}
                                                 </span>
-                                            </td>
-                                            <td className="py-3 px-4 text-sm font-bold text-blue-600 dark:text-blue-400">
-                                                1
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div>

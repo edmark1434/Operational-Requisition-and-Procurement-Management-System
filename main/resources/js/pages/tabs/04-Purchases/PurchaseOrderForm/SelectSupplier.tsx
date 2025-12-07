@@ -32,19 +32,20 @@ export default function SelectSupplier({
     const [activeTab, setActiveTab] = useState<'suggested' | 'all'>('suggested');
 
     const applySuggestion = (supplierId: string) => {
-        onSupplierChange(supplierId);
+        if (formData.SUPPLIER_ID === supplierId) onSupplierChange('');
+        else onSupplierChange(supplierId);
     };
 
     // Update empty state message based on order type
     const getEmptyStateMessage = () => {
         if (!formData.ORDER_TYPE) {
-            return "Please select an order type first to see supplier suggestions";
+            return "Please select an order type first to see vendor suggestions";
         }
 
-        if (formData.ORDER_TYPE === 'items') {
-            return "Select an item from a requisition first to see supplier suggestions";
-        } else if (formData.ORDER_TYPE === 'services') {
-            return "Select a service from a requisition first to see supplier suggestions";
+        if (formData.ORDER_TYPE === 'Items') {
+            return "Select an item from a requisition first to see vendor suggestions";
+        } else if (formData.ORDER_TYPE === 'Services') {
+            return "Select a service from a requisition first to see vendor suggestions";
         }
 
         return "Select items or services from a requisition first";
@@ -55,7 +56,7 @@ export default function SelectSupplier({
         try {
             return getSupplierCategories(categories, vendorCategories, supplierId, formData.ORDER_TYPE);
         } catch (error) {
-            console.error('Error getting supplier categories:', error);
+            console.error('Error getting vendor categories:', error);
             return [];
         }
     };
@@ -85,7 +86,7 @@ export default function SelectSupplier({
         return "Item Vendor";
     };
 
-    const filterVendors = (vendors: SuggestedVendor[]) => {
+    const filterVendors = (vendors: Vendor[]) => {
         return vendors
             .filter(vendor => {
                 const type = computeType(vendor);
@@ -100,13 +101,78 @@ export default function SelectSupplier({
 
                 return displayTypes.includes(type);
             })
+            .sort((a, b) => {
+                const typeA = computeType(a);
+                const typeB = computeType(b);
+
+                const itemOrder = {
+                    "Item Vendor": 1,
+                    "Mixed Vendor": 2,
+                    "Service Vendor": 3
+                };
+
+                const serviceOrder = {
+                    "Service Vendor": 1,
+                    "Mixed Vendor": 2,
+                    "Item Vendor": 3
+                };
+
+                const orderMap = formData.ORDER_TYPE === "Items"
+                    ? itemOrder
+                    : serviceOrder;
+
+                return orderMap[typeA] - orderMap[typeB];
+            })
+    }
+
+    const filterSuggestedVendors = (vendors: SuggestedVendor[]) => {
+        return vendors
+            .filter(vendor => {
+                const type = computeType(vendor);
+
+                const typesForItems = ["Item Vendor", "Mixed Vendor"];
+                const typesForServices = ["Mixed Vendor", "Service Vendor"];
+
+
+                const displayTypes = formData.ORDER_TYPE === "Items"
+                    ? typesForItems
+                    : typesForServices;
+
+                return displayTypes.includes(type);
+            })
+            .sort((a, b) => {
+                if (a.matchPercentage !== b.matchPercentage) {
+                    return b.matchPercentage - a.matchPercentage;
+                }
+
+                const typeA = computeType(a);
+                const typeB = computeType(b);
+
+                const itemOrder = {
+                    "Item Vendor": 1,
+                    "Mixed Vendor": 2,
+                    "Service Vendor": 3
+                };
+
+                const serviceOrder = {
+                    "Service Vendor": 1,
+                    "Mixed Vendor": 2,
+                    "Item Vendor": 3
+                };
+
+                const orderMap = formData.ORDER_TYPE === "Items"
+                    ? itemOrder
+                    : serviceOrder;
+
+                return orderMap[typeA] - orderMap[typeB];
+            })
     }
 
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Select Supplier <span className="text-red-500">*</span>
+                    Select Vendor <span className="text-red-500">*</span>
                 </h3>
                 {formData.SUPPLIER_ID && (
                     <button
@@ -127,7 +193,7 @@ export default function SelectSupplier({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                         </svg>
                         <p className="text-yellow-700 dark:text-yellow-300 text-sm">
-                            Please select an Order Type first to see supplier suggestions
+                            Please select an order type first to see vendor suggestions
                         </p>
                     </div>
                 </div>
@@ -157,7 +223,7 @@ export default function SelectSupplier({
                                     : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                         >
-                            All {formData.ORDER_TYPE === 'Items' ? 'Item' : 'Service'} Suppliers ({ filterVendors(suggestedSuppliers).length > 0 ? filterVendors(suggestedSuppliers).length : suppliersData.length })
+                            All {formData.ORDER_TYPE === 'Items' ? 'Item' : 'Service'} Vendors ({ filterVendors(suppliersData).length })
                         </button>
                     </div>
 
@@ -165,16 +231,16 @@ export default function SelectSupplier({
                     <div className="max-h-96 overflow-y-auto space-y-3">
                         {activeTab === 'suggested' ? (
                             <>
-                                {suggestedSuppliers.length > 0 ? (
+                                {suggestedSuppliers.filter(suggestion => suggestion.matchPercentage === 100).length > 0 ? (
                                     suggestedSuppliers
-                                        .filter(suggestion => suggestion.matchPercentage >= 67)
+                                        .filter(suggestion => suggestion.matchPercentage === 100)
                                         .map((suggestion, index) => (
                                             <SupplierCard
                                                 key={suggestion.vendor.id}
                                                 supplier={suggestion.vendor}
                                                 isSelected={formData.SUPPLIER_ID === suggestion.vendor.id.toString()}
                                                 onSelect={() => applySuggestion(suggestion.vendor.id.toString())}
-                                                isBestMatch={index === 0}
+                                                isBestMatch={index === 0 && suggestion.matchPercentage === 100}
                                                 matchPercentage={suggestion.matchPercentage}
                                                 categories={categories}
                                                 matchingCategories={suggestion.matchingCategories}
@@ -187,47 +253,21 @@ export default function SelectSupplier({
                                         <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <p className="text-sm">{getEmptyStateMessage()}</p>
+                                        <p className="text-sm text-pretty">{getEmptyStateMessage()}</p>
                                     </div>
                                 )}
                             </>
                         ) : (
                             <>
                                 {suggestedSuppliers.length > 0 ? (
-                                    filterVendors(suggestedSuppliers)
-                                        .sort((a, b) => {
-                                            if (a.matchPercentage !== b.matchPercentage) {
-                                                return b.matchPercentage - a.matchPercentage;
-                                            }
-
-                                            const typeA = computeType(a);
-                                            const typeB = computeType(b);
-
-                                            const itemOrder = {
-                                                "Item Vendor": 1,
-                                                "Mixed Vendor": 2,
-                                                "Service Vendor": 3
-                                            };
-
-                                            const serviceOrder = {
-                                                "Service Vendor": 1,
-                                                "Mixed Vendor": 2,
-                                                "Item Vendor": 3
-                                            };
-
-                                            const orderMap = formData.ORDER_TYPE === "Items"
-                                                ? itemOrder
-                                                : serviceOrder;
-
-                                            return orderMap[typeA] - orderMap[typeB];
-                                        })
+                                    filterSuggestedVendors(suggestedSuppliers)
                                         .map((suggestion, index) => (
                                             <SupplierCard
                                                 key={suggestion.vendor.id}
                                                 supplier={suggestion.vendor}
                                                 isSelected={formData.SUPPLIER_ID === suggestion.vendor.id.toString()}
                                                 onSelect={() => applySuggestion(suggestion.vendor.id.toString())}
-                                                isBestMatch={index === 0}
+                                                isBestMatch={index === 0 && suggestion.matchPercentage === 100}
                                                 matchPercentage={suggestion.matchPercentage}
                                                 categories={categories}
                                                 matchingCategories={suggestion.matchingCategories}
