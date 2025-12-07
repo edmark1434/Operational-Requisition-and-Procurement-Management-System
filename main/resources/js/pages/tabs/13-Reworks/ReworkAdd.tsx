@@ -3,66 +3,58 @@ import { reworks } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import reworksData from '@/pages/datasets/reworks';
-import serviceData from '@/pages/datasets/service';
+import axios from 'axios';
 import deliveryData from '@/pages/datasets/delivery';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Reworks',
-        href: reworks().url,
-    },
-    {
-        title: 'Add New Rework',
-        href: '/reworks/add',
-    },
+    { title: 'Reworks', href: reworks().url },
+    { title: 'Create Rework', href: '/reworks/add' },
 ];
 
 export default function ReworkAdd({ auth }: { auth: any }) {
+    // Form State
     const [formData, setFormData] = useState({
-        // Default to today in background, but hidden from UI
+        DELIVERY_ID: '',
+        REFERENCE_NO: '',
         CREATED_AT: new Date().toISOString().split('T')[0],
         STATUS: 'pending',
         REMARKS: '',
-        DELIVERY_ID: '',
-        SUPPLIER_NAME: '',
-        SERVICES: [] as any[]
+        SUPPLIER_NAME: ''
     });
 
-    const [errors, setErrors] = useState<{[key: string]: string}>({});
-    const [availableServices, setAvailableServices] = useState<any[]>([]);
+    // Services selected for rework
+    const [selectedServices, setSelectedServices] = useState<Array<{
+        SERVICE_ID: number;
+        SERVICE_NAME: string;
+        QUANTITY: number;
+        UNIT_PRICE: number;
+    }>>([]);
+
+    // Data States
     const [availableDeliveries, setAvailableDeliveries] = useState<any[]>([]);
-    const [selectedServiceId, setSelectedServiceId] = useState('');
+    const [availableServices, setAvailableServices] = useState<any[]>([]);
+    const [isLoadingServices, setIsLoadingServices] = useState(false);
+    const [errors, setErrors] = useState<{[key: string]: string}>({});
 
     useEffect(() => {
-        setAvailableServices(serviceData.filter(service => service.IS_ACTIVE));
         setAvailableDeliveries(deliveryData);
+
+        const timestamp = new Date().getTime();
+        setFormData(prev => ({ ...prev, REFERENCE_NO: `RW-DRAFT-${timestamp}`.slice(0, 18) }));
     }, []);
 
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
-
-        if (!formData.DELIVERY_ID.trim()) {
-            newErrors.DELIVERY_ID = 'Please select a delivery';
-        }
-
-        if (!formData.SUPPLIER_NAME.trim()) {
-            newErrors.SUPPLIER_NAME = 'Supplier name is required';
-        }
-
-        if (!formData.REMARKS.trim()) {
-            newErrors.REMARKS = 'Remarks are required';
-        }
-
-        if (formData.SERVICES.length === 0) {
-            newErrors.SERVICES = 'At least one service is required';
-        }
+        if (!formData.DELIVERY_ID) newErrors.DELIVERY_ID = 'Delivery reference is required';
+        if (!formData.REMARKS.trim()) newErrors.REMARKS = 'Remarks are required';
+        if (selectedServices.length === 0) newErrors.services = 'At least one service must be selected';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleDeliveryChange = (deliveryId: string) => {
+    // 1. Fetch Services when Delivery is selected
+    const handleDeliveryChange = async (deliveryId: string) => {
         const selectedDelivery = availableDeliveries.find(d => d.ID.toString() === deliveryId);
 
         setFormData(prev => ({
@@ -71,109 +63,106 @@ export default function ReworkAdd({ auth }: { auth: any }) {
             SUPPLIER_NAME: selectedDelivery?.SUPPLIER_NAME || ''
         }));
 
-        if (errors.DELIVERY_ID) {
-            setErrors(prev => ({ ...prev, DELIVERY_ID: '' }));
-        }
-    };
+        // Reset lists
+        setSelectedServices([]);
+        setAvailableServices([]);
+        if (errors.DELIVERY_ID) setErrors(prev => ({ ...prev, DELIVERY_ID: '' }));
 
-    const handleAddService = () => {
-        if (!selectedServiceId) return;
+        if (!deliveryId) return;
 
-        const service = availableServices.find(s => s.ID.toString() === selectedServiceId);
-        if (service && !formData.SERVICES.some(s => s.SERVICE_ID.toString() === selectedServiceId)) {
-            const newService = {
-                SERVICE_ID: parseInt(selectedServiceId),
-                NAME: service.NAME,
-                DESCRIPTION: service.DESCRIPTION,
-                QUANTITY: 1,
-                UNIT_PRICE: service.HOURLY_RATE
-            };
+        setIsLoadingServices(true);
 
-            setFormData(prev => ({
-                ...prev,
-                SERVICES: [...prev.SERVICES, newService]
-            }));
-
-            setSelectedServiceId('');
-
-            if (errors.SERVICES) {
-                setErrors(prev => ({ ...prev, SERVICES: '' }));
+        try {
+            // Fetch items/services associated with this delivery
+            const response = await axios.get(`/api/delivery/${deliveryId}/items`);
+            if (Array.isArray(response.data)) {
+                setAvailableServices(response.data);
             }
+        } catch (error) {
+            console.error("Failed to load delivery services", error);
+            // Optional: alert("Could not load services for this delivery.");
+        } finally {
+            setIsLoadingServices(false);
         }
     };
 
+    // 2. Add Service (Fixed Quantity = 1)
+    const handleAddService = (service: any) => {
+        const existing = selectedServices.find(s => s.SERVICE_ID === service.item_id);
+
+        if (!existing) {
+            setSelectedServices(prev => [...prev, {
+                SERVICE_ID: service.item_id,
+                SERVICE_NAME: service.item_name,
+                QUANTITY: 1, // Fixed to 1
+                UNIT_PRICE: Number(service.unit_price)
+            }]);
+        }
+        if (errors.services) setErrors(prev => ({ ...prev, services: '' }));
+    };
+
+    // 3. Remove Service
     const handleRemoveService = (serviceId: number) => {
-        setFormData(prev => ({
-            ...prev,
-            SERVICES: prev.SERVICES.filter(s => s.SERVICE_ID !== serviceId)
-        }));
+        setSelectedServices(prev => prev.filter(s => s.SERVICE_ID !== serviceId));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
         if (validateForm()) {
-            const newReworkId = Math.max(...reworksData.map(rework => rework.ID), 0) + 1;
-
-            const reworkDataToAdd = {
-                ID: newReworkId,
-                ...formData,
-                DELIVERY_ID: parseInt(formData.DELIVERY_ID),
-                CREATED_AT: formData.CREATED_AT
+            const payload = {
+                delivery_id: formData.DELIVERY_ID,
+                remarks: formData.REMARKS,
+                services: selectedServices.map(s => ({
+                    service_id: s.SERVICE_ID,
+                    quantity: s.QUANTITY
+                }))
             };
+            console.log('Submitting Rework:', payload);
 
-            console.log('New Rework Data:', reworkDataToAdd);
-            alert('Rework added successfully!');
+            // In a real app: await axios.post('/reworks', payload);
+            alert('Rework created successfully!');
             router.visit(reworks().url);
         }
     };
 
     const handleInputChange = (field: string, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-
-        if (errors[field]) {
-            setErrors(prev => ({ ...prev, [field]: '' }));
-        }
+        setFormData(prev => ({ ...prev, [field]: value }));
+        if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
     };
 
     const handleReset = () => {
-        setFormData({
-            CREATED_AT: new Date().toISOString().split('T')[0],
-            STATUS: 'pending',
-            REMARKS: '',
+        if (selectedServices.length > 0 && !window.confirm('Reset form? All selections will be cleared.')) return;
+
+        setFormData(prev => ({
+            ...prev,
             DELIVERY_ID: '',
-            SUPPLIER_NAME: '',
-            SERVICES: []
-        });
+            REMARKS: '',
+            STATUS: 'pending'
+        }));
+        setSelectedServices([]);
+        setAvailableServices([]);
         setErrors({});
-        setSelectedServiceId('');
     };
 
     const handleCancel = () => {
-        if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-            router.visit(reworks().url);
-        }
+        if (selectedServices.length > 0 && !window.confirm('Are you sure you want to cancel? Unsaved changes will be lost.')) return;
+        router.visit(reworks().url);
     };
 
-    const calculateTotalCost = () => {
-        return formData.SERVICES.reduce((total, service) =>
-            total + (service.UNIT_PRICE * service.QUANTITY), 0
-        );
+    const getTotalValue = () => {
+        return selectedServices.reduce((total, s) => total + (s.QUANTITY * s.UNIT_PRICE), 0);
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Add New Rework" />
+            <Head title="Create Rework" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {/* Header */}
+                {/* Top Bar */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Add New Rework</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create Rework</h1>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Create a new rework request
+                            Request rework for services (e.g., repairs, installations)
                         </p>
                     </div>
                     <Link
@@ -184,34 +173,35 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                     </Link>
                 </div>
 
-                {/* Form Container */}
-                <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-white dark:bg-[oklch(0.145_0_0)]">
+                {/* Main Form Container */}
+                <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:bg-sidebar">
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
-                            <div className="w-full max-w-4xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                {/* Header Section */}
+                            <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
+
+                                {/* Form Header */}
                                 <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                        New Rework Details
+                                        New Rework Request
                                     </h2>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Fill in the details below to create a new rework request
+                                        Select a service delivery and specify what needs rework
                                     </p>
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6">
                                     <div className="space-y-8">
+
                                         {/* Basic Information */}
                                         <div className="space-y-6">
                                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
                                                 Basic Information
                                             </h3>
 
-                                            {/* Changed grid-cols to 1 since Created Date was removed */}
                                             <div className="grid grid-cols-1 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Delivery <span className="text-red-500">*</span>
+                                                        Service Delivery Reference <span className="text-red-500">*</span>
                                                     </label>
                                                     <select
                                                         required
@@ -221,11 +211,10 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                             errors.DELIVERY_ID ? 'border-red-500' : 'border-sidebar-border'
                                                         }`}
                                                     >
-                                                        <option value="">Select a delivery</option>
+                                                        <option value="">Select a service delivery</option>
                                                         {availableDeliveries.map(delivery => (
                                                             <option key={delivery.ID} value={delivery.ID}>
-                                                                Delivery #{delivery.ID} - {delivery.SUPPLIER_NAME}
-                                                                {delivery.PO_ID && ` (PO: ${delivery.PO_ID})`}
+                                                                {delivery.REFERENCE_NO} - {delivery.SUPPLIER_NAME} - {new Date(delivery.DELIVERY_DATE).toLocaleDateString()}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -235,43 +224,147 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                    Supplier Name <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={formData.SUPPLIER_NAME}
-                                                    onChange={(e) => handleInputChange('SUPPLIER_NAME', e.target.value)}
-                                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                                        errors.SUPPLIER_NAME ? 'border-red-500' : 'border-sidebar-border'
-                                                    }`}
-                                                    placeholder="Supplier name will auto-populate when delivery is selected"
-                                                    readOnly
-                                                />
-                                                {errors.SUPPLIER_NAME && (
-                                                    <p className="text-red-500 text-xs mt-1">{errors.SUPPLIER_NAME}</p>
+                                            {/* Delivery Details Card */}
+                                            {formData.DELIVERY_ID && (
+                                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
+                                                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                                        Delivery Information
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Supplier:</span>
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                {formData.SUPPLIER_NAME}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Request Date:</span>
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                {formData.CREATED_AT}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Services Selection */}
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between items-center">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                                    Services to Rework
+                                                </h3>
+                                                {formData.DELIVERY_ID && (
+                                                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                        {availableServices.length} services available
+                                                    </span>
                                                 )}
                                             </div>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                    Status <span className="text-red-500">*</span>
-                                                </label>
-                                                <select
-                                                    required
-                                                    value={formData.STATUS}
-                                                    onChange={(e) => handleInputChange('STATUS', e.target.value)}
-                                                    className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                >
-                                                    <option value="pending">Pending</option>
-                                                    <option value="in_progress">In Progress</option>
-                                                    <option value="completed">Completed</option>
-                                                    <option value="cancelled">Cancelled</option>
-                                                </select>
-                                            </div>
+                                            {errors.services && (
+                                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                                                    <p className="text-sm text-red-600 dark:text-red-400">{errors.services}</p>
+                                                </div>
+                                            )}
 
+                                            {/* Available Services List */}
+                                            {formData.DELIVERY_ID && (
+                                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
+                                                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                                                        Available Services from Delivery
+                                                    </h4>
+                                                    {isLoadingServices ? (
+                                                        <div className="text-center py-4 text-sm text-gray-500 flex flex-col items-center">
+                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
+                                                            <span>Loading services...</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                                                            {availableServices.length === 0 ? (
+                                                                <p className="text-sm text-gray-500 italic">No services found in this delivery.</p>
+                                                            ) : (
+                                                                availableServices.map(service => (
+                                                                    <div key={service.item_id} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
+                                                                        <div className="flex-1">
+                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{service.item_name}</p>
+                                                                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                                                Available: {service.available_quantity} • Rate: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(service.unit_price)}
+                                                                            </p>
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleAddService(service)}
+                                                                            disabled={selectedServices.some(s => s.SERVICE_ID === service.item_id)}
+                                                                            className="ml-4 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                                                        >
+                                                                            {selectedServices.some(s => s.SERVICE_ID === service.item_id) ? 'Added' : 'Add'}
+                                                                        </button>
+                                                                    </div>
+                                                                ))
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Selected Services List */}
+                                            {selectedServices.length > 0 && (
+                                                <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
+                                                    <div className="bg-gray-50 dark:bg-sidebar-accent px-4 py-3 border-b border-sidebar-border">
+                                                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                                                            Selected Services ({selectedServices.length})
+                                                        </h4>
+                                                    </div>
+                                                    <div className="divide-y divide-sidebar-border">
+                                                        {selectedServices.map((service, index) => (
+                                                            <div key={service.SERVICE_ID} className="p-4 flex justify-between items-center">
+
+                                                                <div className="flex-1">
+                                                                    <p className="font-medium text-gray-900 dark:text-white">
+                                                                        {service.SERVICE_NAME}
+                                                                    </p>
+                                                                    <div className="flex gap-4 mt-1">
+                                                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                                            Rate: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(service.UNIT_PRICE)}
+                                                                        </p>
+                                                                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                                                            Total Value: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(service.UNIT_PRICE)}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveService(service.SERVICE_ID)}
+                                                                    className="ml-4 p-2 text-red-600 hover:text-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                                    title="Remove Service"
+                                                                >
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Total Summary Footer */}
+                                                    <div className="bg-gray-50 dark:bg-sidebar-accent px-4 py-3 border-t border-sidebar-border">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm font-medium text-gray-900 dark:text-white">Total Value:</span>
+                                                            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(getTotalValue())}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Remarks Section */}
+                                        <div className="space-y-6">
+                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
+                                                Additional Information
+                                            </h3>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                     Remarks <span className="text-red-500">*</span>
@@ -280,118 +373,20 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                     required
                                                     value={formData.REMARKS}
                                                     onChange={(e) => handleInputChange('REMARKS', e.target.value)}
+                                                    placeholder="Describe the service defects or reason for rework..."
                                                     rows={3}
                                                     className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
                                                         errors.REMARKS ? 'border-red-500' : 'border-sidebar-border'
                                                     }`}
-                                                    placeholder="Describe the rework requirements..."
                                                 />
                                                 {errors.REMARKS && (
                                                     <p className="text-red-500 text-xs mt-1">{errors.REMARKS}</p>
                                                 )}
                                             </div>
                                         </div>
-
-                                        {/* Services Section */}
-                                        <div className="space-y-6">
-                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-sidebar-border/70 pb-3">
-                                                Services
-                                            </h3>
-
-                                            {/* Add Service Form */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Service
-                                                    </label>
-                                                    <select
-                                                        value={selectedServiceId}
-                                                        onChange={(e) => setSelectedServiceId(e.target.value)}
-                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                    >
-                                                        <option value="">Select a service</option>
-                                                        {availableServices.map(service => (
-                                                            <option key={service.ID} value={service.ID}>
-                                                                {service.NAME} - ${service.HOURLY_RATE}/hr
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                <div className="flex items-end">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleAddService}
-                                                        disabled={!selectedServiceId}
-                                                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                                    >
-                                                        Add Service
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Services List */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                    Selected Services {errors.SERVICES && (
-                                                    <span className="text-red-500 text-xs"> - {errors.SERVICES}</span>
-                                                )}
-                                                </label>
-
-                                                {formData.SERVICES.length === 0 ? (
-                                                    <div className="text-center py-8 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-                                                        No services added yet
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-3">
-                                                        {formData.SERVICES.map((service, index) => (
-                                                            <div key={index} className="flex justify-between items-center p-4 bg-white dark:bg-sidebar rounded-lg border border-sidebar-border">
-                                                                <div className="flex-1">
-                                                                    <h4 className="font-medium text-gray-900 dark:text-white">
-                                                                        {service.NAME}
-                                                                    </h4>
-                                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                                        {service.DESCRIPTION}
-                                                                    </p>
-                                                                    <div className="flex gap-4 mt-2 text-sm">
-                                                                        <span className="text-gray-600 dark:text-gray-400">
-                                                                            Quantity: {service.QUANTITY}
-                                                                        </span>
-                                                                        <span className="text-gray-600 dark:text-gray-400">
-                                                                            Rate: ${service.UNIT_PRICE}/hr
-                                                                        </span>
-                                                                        <span className="font-semibold text-gray-900 dark:text-white">
-                                                                            Total: ${(service.UNIT_PRICE * service.QUANTITY).toFixed(2)}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveService(service.SERVICE_ID)}
-                                                                    className="ml-4 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                                                >
-                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Total Cost */}
-                                            {formData.SERVICES.length > 0 && (
-                                                <div className="text-right p-4 bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
-                                                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                                                        Total Cost: ${calculateTotalCost().toFixed(2)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
 
-                                    {/* Action Buttons */}
+                                    {/* Action Buttons (Sticky Footer) */}
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
                                         <div className="flex gap-3 justify-between">
                                             <div className="flex gap-3">
@@ -430,12 +425,12 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                 </div>
                                             </div>
 
-                                            {/* Add Rework Button */}
+                                            {/* Submit Button */}
                                             <button
                                                 type="submit"
                                                 className="flex-1 max-w-xs bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
                                             >
-                                                Add Rework
+                                                Submit Rework Request
                                             </button>
                                         </div>
                                     </div>

@@ -45,7 +45,12 @@ export default function PreviewModal({
     };
 
     // Safe access to requisition data
-    const getRequisitionData = () => {
+    const getRequisitionData: {
+        REQUESTOR: string,
+        PRIORITY: string,
+        CREATED_AT: string,
+        ITEMS: RequisitionItem[]
+    } = () => {
         if (!selectedRequisition || selectedRequisition.length === 0) {
             return {
                 REQUESTOR: 'N/A',
@@ -56,16 +61,14 @@ export default function PreviewModal({
         }
 
         // For multiple requisitions, show summary
-        if (selectedRequisition.length > 1) {
+        if (selectedRequisition.length > 0) {
             return {
                 REQUESTOR: `${selectedRequisition.length} Requisitions`,
                 PRIORITY: 'Multiple',
                 CREATED_AT: selectedRequisition[0]?.created_at || new Date().toISOString(),
-                ITEMS: selectedRequisition.flatMap(req => req.ITEMS || [])
+                ITEMS: selectedRequisition.flatMap(req => selectedItems.filter(i => i.req_id === req.id) || [])
             };
         }
-
-        return selectedRequisition[0];
     };
 
     const requisitionData = getRequisitionData();
@@ -156,7 +159,7 @@ export default function PreviewModal({
                                         Supplier Name
                                     </label>
                                     <p className="text-base font-medium text-gray-900 dark:text-white">
-                                        {selectedSupplier?.NAME}
+                                        {selectedSupplier?.name}
                                     </p>
                                 </div>
                                 <div>
@@ -164,10 +167,10 @@ export default function PreviewModal({
                                         Contact Information
                                     </label>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {selectedSupplier?.EMAIL}
+                                        {selectedSupplier?.email}
                                     </p>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {selectedSupplier?.CONTACT_NUMBER}
+                                        {selectedSupplier?.contact_number ?? 'N/A'}
                                     </p>
                                 </div>
                             </div>
@@ -176,17 +179,17 @@ export default function PreviewModal({
                                     Accepted Payment Methods
                                 </label>
                                 <div className="flex flex-wrap gap-2">
-                                    {selectedSupplier?.ALLOWS_CASH && (
+                                    {selectedSupplier?.allows_cash && (
                                         <span className="inline-flex items-center px-3 py-1 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                             Cash
                                         </span>
                                     )}
-                                    {selectedSupplier?.ALLOWS_DISBURSEMENT && (
+                                    {selectedSupplier?.allows_disbursement && (
                                         <span className="inline-flex items-center px-3 py-1 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                             Disbursement
                                         </span>
                                     )}
-                                    {selectedSupplier?.ALLOWS_STORE_CREDIT && (
+                                    {selectedSupplier?.allows_store_credit && (
                                         <span className="inline-flex items-center px-3 py-1 rounded text-sm bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                                             Store Credit
                                         </span>

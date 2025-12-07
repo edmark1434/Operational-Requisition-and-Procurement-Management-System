@@ -170,7 +170,7 @@ export default function RequestedItems({
                     </div>
                 )}
 
-                <div className={`space-y-3 overflow-y-auto pr-2 ${requisitionItems.length > 2 ? 'max-h-96' : ''}`}>
+                <div className={`space-y-3 overflow-y-auto pr-2 ${requisitionItems.length > 2 ? 'max-h-138' : ''}`}>
                     {requisitionItems.map((item, index) => {
                         // Get items specifically for this row
                         const dropdownItems = rowOptions[item.id] || [];

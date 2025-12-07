@@ -1,4 +1,10 @@
-import {Category, Requisition, RequisitionItem, RequisitionService} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import {
+    Category,
+    Requisition,
+    RequisitionItem,
+    RequisitionOrderItem,
+    RequisitionService
+} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
 
 interface OrderItemsProps {
     formData: {
@@ -11,6 +17,7 @@ interface OrderItemsProps {
     onUpdateItemQuantity: (itemId: number, quantity: number) => void;
     requisitionItems: RequisitionItem[];
     categories: Category[];
+    requisitionOrderItems: RequisitionOrderItem[];
 }
 
 export default function OrderItems({
@@ -21,7 +28,8 @@ export default function OrderItems({
                                        onToggleItemSelection,
                                        onUpdateItemQuantity,
                                        requisitionItems,
-                                       categories
+                                       categories,
+                                       requisitionOrderItems,
                                    }: OrderItemsProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -109,8 +117,10 @@ export default function OrderItems({
                         return (
                             <div
                                 key={item.id}
-                                className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors ${
-                                    formData.ITEMS.some(i => i.id === item.id)
+                                className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors
+                                ${requisitionOrderItems.some(i => i.req_item_id === item.id)
+                                    ? 'opacity-50 bg-neutral-100 dark:bg-neutral-900 font-normal pointer-events-none cursor-not-allowed'
+                                    : formData.ITEMS.some(i => i.id === item.id)
                                         ? 'bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100 dark:hover:bg-blue-900/20'
                                         : 'hover:bg-gray-50 dark:hover:bg-sidebar'
                                 }`}
@@ -118,6 +128,7 @@ export default function OrderItems({
                                 {/* Select Checkbox */}
                                 <div className="col-span-1">
                                     <input
+                                        disabled={requisitionOrderItems.some(i => i.req_item_id === item.id)}
                                         type="checkbox"
                                         checked={formData.ITEMS.some(i => i.id === item.id) || false}
                                         onChange={() => onToggleItemSelection(item.id)}

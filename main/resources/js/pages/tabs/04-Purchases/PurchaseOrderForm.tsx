@@ -27,6 +27,7 @@ import PreviewModal from './PurchaseOrderForm/PreviewModal';
 // Import UI components
 import { Button } from '@/components/ui/button';
 import {orderpost, servicepost} from "@/routes";
+import {X} from "lucide-react";
 
 interface PageProps {
     purchaseId?: number;
@@ -209,6 +210,7 @@ export default function PurchaseOrderForm() {
     const [bestSupplier, setBestSupplier] = useState<SuggestedVendor | null>(null);
     const [originalQuantities, setOriginalQuantities] = useState<{[key: number]: number}>({});
     const [showPreview, setShowPreview] = useState(false);
+    const [vendorIsInvalid, setVendorIsInvalid] = useState<boolean>(false);
 
     // Load data based on mode
     useEffect(() => {
@@ -245,16 +247,21 @@ export default function PurchaseOrderForm() {
                 formData.ORDER_TYPE,
             );
             const best = suggestions[0];
-            setSuggestedSuppliers(suggestions);
-            setBestSupplier(best);
 
-            // Auto-select best supplier if no supplier is selected yet
-            if (!formData.SUPPLIER_ID && best) {
+            if (best && best.matchPercentage === 100) {
                 handleSupplierChange(best.vendor.id.toString());
+                setBestSupplier(best);
             }
+            else {
+                handleSupplierChange('');
+                setBestSupplier(null);
+            }
+
+            setSuggestedSuppliers(suggestions);
         } else {
             setSuggestedSuppliers([]);
             setBestSupplier(null);
+            handleSupplierChange('');
         }
     }, [formData.ITEMS, formData.SERVICES, formData.ORDER_TYPE]); // Added ORDER_TYPE dependency
 
@@ -266,6 +273,7 @@ export default function PurchaseOrderForm() {
             const reqServices = requisitionServices.filter(rs => selectedRequisitions.map(req => req.id).includes(rs.req_id));
             if (reqItems) {
                 reqItems.forEach((item: any) => {
+                    item.quantity = item.approved_qty || item.quantity;
                     originalQty[item.id] = item.quantity;
                 });
             }
@@ -351,7 +359,11 @@ export default function PurchaseOrderForm() {
         }
 
         if (!formData.SUPPLIER_ID) {
-            newErrors.SUPPLIER_ID = 'Please select a supplier';
+            newErrors.SUPPLIER_ID = 'Please select a vendor';
+        }
+
+        if (vendorIsInvalid) {
+            newErrors.SUPPLIER_ID = 'Please select another vendor';
         }
 
         if (!formData.PAYMENT_TYPE) {
@@ -369,13 +381,13 @@ export default function PurchaseOrderForm() {
         // Validate supplier payment method compatibility
         if (selectedSupplier) {
             if (formData.PAYMENT_TYPE === 'Cash' && !selectedSupplier.allows_cash) {
-                newErrors.PAYMENT_TYPE = 'Selected supplier does not accept cash payments';
+                newErrors.PAYMENT_TYPE = 'Selected vendor does not accept cash payments';
             }
             if (formData.PAYMENT_TYPE === 'Disbursement' && !selectedSupplier.allows_disbursement) {
-                newErrors.PAYMENT_TYPE = 'Selected supplier does not accept disbursement payments';
+                newErrors.PAYMENT_TYPE = 'Selected vendor does not accept disbursement payments';
             }
             if (formData.PAYMENT_TYPE === 'Store Credit' && !selectedSupplier.allows_store_credit) {
-                newErrors.PAYMENT_TYPE = 'Selected supplier does not accept store credit';
+                newErrors.PAYMENT_TYPE = 'Selected vendor does not accept store credit';
             }
         }
 
@@ -424,35 +436,26 @@ export default function PurchaseOrderForm() {
     };
 
     const handleSupplierChange = (supplierId: string) => {
-        // Toggle selection - if clicking the same supplier, deselect it
-        if (formData.SUPPLIER_ID === supplierId) {
-            setFormData(prev => ({ ...prev, SUPPLIER_ID: '' }));
-            setSelectedSupplier(null);
-        } else {
-            setFormData(prev => ({ ...prev, SUPPLIER_ID: supplierId }));
-            setSelectedSupplier(vendors.find(v => v.id.toString() === supplierId) || null);
-        }
+        const vendor = vendors.find(v => v.id.toString() === supplierId) || null;
+
+        setSelectedSupplier(vendor); // null if deselecting
+
+        setFormData(prev => ({
+            ...prev,
+            SUPPLIER_ID: supplierId || '',
+            PAYMENT_TYPE: vendor
+                ? (vendor.allows_cash && prev.PAYMENT_TYPE === 'Cash'
+                    ? 'Cash'
+                    : vendor.allows_disbursement && prev.PAYMENT_TYPE === 'Disbursement'
+                        ? 'Disbursement'
+                        : vendor.allows_store_credit && prev.PAYMENT_TYPE === 'Store Credit'
+                            ? 'Store Credit'
+                            : '')
+                : '',
+        }));
 
         if (errors.SUPPLIER_ID) {
             setErrors(prev => ({ ...prev, SUPPLIER_ID: '' }));
-        }
-
-        const vendor = vendors.find(v => v.id.toString() === supplierId) || null;
-
-        // Reset payment type if incompatible with new supplier or if deselecting
-        if (vendor) {
-            if (formData.PAYMENT_TYPE === 'Cash' && !vendor.allows_cash) {
-                setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
-            }
-            if (formData.PAYMENT_TYPE === 'Disbursement' && !vendor.allows_disbursement) {
-                setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
-            }
-            if (formData.PAYMENT_TYPE === 'Store Credit' && !vendor.allows_store_credit) {
-                setFormData(prev => ({ ...prev, PAYMENT_TYPE: '' }));
-            }
-        } else {
-            // If deselecting supplier, reset payment type
-            setFormData(prev => ({ ...prev, PAYMENT_TYPE: 'Cash' }));
         }
     };
 
@@ -516,7 +519,7 @@ export default function PurchaseOrderForm() {
             .reduce((total: number, item: RequisitionItem) => total + (item.quantity * item.item.unit_price), 0);
 
         const servicesTotal = formData.SERVICES
-            .reduce((total: number, service: RequisitionService) => total + (service.service.hourly_rate), 0);
+            .reduce((total: number, service: RequisitionService) => total + (parseFloat(String(service.service.hourly_rate))), 0);
 
         return itemsTotal + servicesTotal;
     };
@@ -635,10 +638,18 @@ export default function PurchaseOrderForm() {
         ]
         : breadcrumbs;
 
+    useEffect(() => {
+        setVendorIsInvalid(
+            !!formData.SUPPLIER_ID && (suggestedSuppliers.find(s => s.vendor.id === parseInt(formData.SUPPLIER_ID))?.matchPercentage !== 100)
+        );
+    }, [formData.SUPPLIER_ID, suggestedSuppliers]);
+
     return (
         <AppLayout breadcrumbs={updatedBreadcrumbs}>
             <Head title={isEditMode ? "Edit Purchase Order" : "Create Purchase Order"} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                {JSON.stringify(formData.SERVICES)}
+                {'Selected: ' + formData.SUPPLIER_ID + ' ' + JSON.stringify(selectedSupplier)}
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -673,7 +684,7 @@ export default function PurchaseOrderForm() {
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
                                         {isEditMode
                                             ? `Update purchase order ${currentPurchase?.ref_no}`
-                                            : 'Select order type, approved requisitions and supplier to create a purchase order'
+                                            : 'Select order type, approved requisitions and vendor to create a purchase order'
                                         }
                                     </p>
                                     {!isEditMode && formData.REQUISITION_IDS.length > 1 && (
@@ -716,7 +727,7 @@ export default function PurchaseOrderForm() {
                                         </div>
 
                                         {/* Right Column - Requisition, Items/Services, and Additional Info */}
-                                        <div className="xl:col-span-2 space-y-6">
+                                        <div className="xl:col-span-2 space-y-6 h-full">
                                             {/* Approved Requisitions Selection */}
                                             <SelectApprovedRequisition
                                                 formData={formData}
@@ -742,6 +753,7 @@ export default function PurchaseOrderForm() {
                                                     onUpdateItemQuantity={updateItemQuantity}
                                                     requisitionItems={requisitionItems}
                                                     categories={categories}
+                                                    requisitionOrderItems={requisitionOrderItems}
                                                 />
                                             )}
 
@@ -754,60 +766,61 @@ export default function PurchaseOrderForm() {
                                                     onToggleServiceSelection={toggleServiceSelection}
                                                     requisitionServices={requisitionServices}
                                                     categories={categories}
+                                                    requisitionOrderServices={requisitionOrderServices}
                                                 />
                                             )}
 
-                                            {/* Selected Supplier Display */}
-                                            {selectedSupplier && (
-                                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
-                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                            </svg>
-                                                            Selected Supplier
-                                                        </h3>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleSupplierChange('')}
-                                                            className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                                                        >
-                                                            Change Supplier
-                                                        </button>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <p className="font-bold text-lg text-blue-800 dark:text-blue-200">{selectedSupplier.name}</p>
-                                                            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                                                                <strong>Email:</strong> {selectedSupplier.email}
-                                                            </p>
-                                                            <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                                <strong>Phone:</strong> {selectedSupplier.contact_number}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Payment Methods:</p>
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {selectedSupplier.allows_cash && (
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                                        Cash
-                                                                    </span>
-                                                                )}
-                                                                {selectedSupplier.allows_disbursement && (
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                                        Disbursement
-                                                                    </span>
-                                                                )}
-                                                                {selectedSupplier.allows_store_credit && (
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                                                        Store Credit
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
+                                            {/*/!* Selected Supplier Display *!/*/}
+                                            {/*{selectedSupplier && (*/}
+                                            {/*    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">*/}
+                                            {/*        <div className="flex items-center justify-between mb-3">*/}
+                                            {/*            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">*/}
+                                            {/*                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">*/}
+                                            {/*                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />*/}
+                                            {/*                </svg>*/}
+                                            {/*                Selected Vendor*/}
+                                            {/*            </h3>*/}
+                                            {/*            <button*/}
+                                            {/*                type="button"*/}
+                                            {/*                onClick={() => handleSupplierChange('')}*/}
+                                            {/*                className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"*/}
+                                            {/*            >*/}
+                                            {/*                <X size={18}/>*/}
+                                            {/*            </button>*/}
+                                            {/*        </div>*/}
+                                            {/*        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">*/}
+                                            {/*            <div>*/}
+                                            {/*                <p className="font-bold text-lg text-blue-800 dark:text-blue-200">{selectedSupplier.name}</p>*/}
+                                            {/*                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">*/}
+                                            {/*                    <strong>Email:</strong> {selectedSupplier.email}*/}
+                                            {/*                </p>*/}
+                                            {/*                <p className="text-sm text-blue-700 dark:text-blue-300">*/}
+                                            {/*                    <strong>Phone:</strong> {selectedSupplier.contact_number ?? 'N/A'}*/}
+                                            {/*                </p>*/}
+                                            {/*            </div>*/}
+                                            {/*            <div>*/}
+                                            {/*                <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Payment Methods:</p>*/}
+                                            {/*                <div className="flex flex-wrap gap-1">*/}
+                                            {/*                    {selectedSupplier.allows_cash && (*/}
+                                            {/*                        <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">*/}
+                                            {/*                            Cash*/}
+                                            {/*                        </span>*/}
+                                            {/*                    )}*/}
+                                            {/*                    {selectedSupplier.allows_disbursement && (*/}
+                                            {/*                        <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">*/}
+                                            {/*                            Disbursement*/}
+                                            {/*                        </span>*/}
+                                            {/*                    )}*/}
+                                            {/*                    {selectedSupplier.allows_store_credit && (*/}
+                                            {/*                        <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">*/}
+                                            {/*                            Store Credit*/}
+                                            {/*                        </span>*/}
+                                            {/*                    )}*/}
+                                            {/*                </div>*/}
+                                            {/*            </div>*/}
+                                            {/*        </div>*/}
+                                            {/*    </div>*/}
+                                            {/*)}*/}
 
                                             <AdditionalInfo
                                                 formData={formData}
@@ -815,6 +828,24 @@ export default function PurchaseOrderForm() {
                                             />
                                         </div>
                                     </div>
+
+                                    { vendorIsInvalid && (
+                                        <div className="mt-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                                            <div className="flex items-center">
+                                                <svg className="w-8 h-8 text-red-600 dark:text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                                </svg>
+                                                <p className="text-red-700 dark:text-red-300 text-sm">
+                                                    Selected vendor cannot provide all selected items based on their available categories (
+                                                    {
+                                                        suggestedSuppliers.find(s => s.vendor.id === parseInt(formData.SUPPLIER_ID))?.matchPercentage
+                                                            ? `only ${suggestedSuppliers.find(s => s.vendor.id === parseInt(formData.SUPPLIER_ID))?.matchPercentage}% of`
+                                                            : 'no'
+                                                    } items match)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Action Buttons */}
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
