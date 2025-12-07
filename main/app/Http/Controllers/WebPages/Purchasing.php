@@ -73,26 +73,6 @@ class Purchasing extends Controller
                             ];
                         })->toArray()
                         : [],
-
-                    // -------------------------------
-                    // SERVICES: order_service → service
-                    // -------------------------------
-                    'SERVICES' => $type === 'services' && $po->orderServices->isNotEmpty()
-                        ? $po->orderServices->requisition_order_service->req_service->map(function ($os) {
-                            return [
-                                'ID'           => $os->id,
-                                'SERVICE_ID'   => $os->service->id,
-                                'NAME'         => $os->service->name,
-                                'DESCRIPTION'  => $os->service->description,
-                                'HOURLY_RATE'  => $os->service->hourly_rate,
-                                'CATEGORY_ID'  => $os->service->category_id,
-                                'SELECTED'     => true,
-                                'REQUESTION_ID' => $os->req_id ?? null,
-                                'REQUESTOR' => $os->requisition->requestor ?? null,
-                                'PRIORITY' => $os->requisition->priority ?? null,
-                            ];
-                        })->toArray()
-                        : [],
                 ];
             });
 
