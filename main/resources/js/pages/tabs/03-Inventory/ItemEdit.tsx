@@ -76,7 +76,7 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
                 console.log(err);
             }
         });
-        
+
     };
 
     const handleInputChange = (field: string, value: any) => {
@@ -160,6 +160,7 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
                                                     Basic Information
                                                 </h3>
 
+                                                {/* Row 1: Name and Barcode */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -190,6 +191,7 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
                                                     </div>
                                                 </div>
 
+                                                {/* Row 2: Category and Make */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -209,6 +211,29 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
                                                             ))}
                                                         </select>
                                                     </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                            Make *
+                                                        </label>
+                                                        <select
+                                                            required
+                                                            value={formData.CATEGORY}
+                                                            onChange={(e) => handleInputChange('CATEGORY', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
+                                                        >
+                                                            <option value="">Select a category</option>
+                                                            {CATEGORY_OPTIONS.map(category => (
+                                                                <option key={category.CAT_ID} value={category.NAME}>
+                                                                    {category.NAME}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* Row 3: Unit Price and Current Stock */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                             Unit Price *
@@ -224,9 +249,7 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
                                                             placeholder="0.00"
                                                         />
                                                     </div>
-                                                </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                             Current Stock *
@@ -241,18 +264,20 @@ export default function ItemEdit({ auth, itemId,item,CATEGORY_OPTIONS }: ItemEdi
                                                             placeholder="0"
                                                         />
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            Dimensions
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.DIMENSIONS}
-                                                            onChange={(e) => handleInputChange('DIMENSIONS', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                            placeholder="e.g., 30cm x 15cm x 5cm"
-                                                        />
-                                                    </div>
+                                                </div>
+
+                                                {/* Row 4: Dimensions (Full Width) */}
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Dimensions
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.DIMENSIONS}
+                                                        onChange={(e) => handleInputChange('DIMENSIONS', e.target.value)}
+                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
+                                                        placeholder="e.g., 30cm x 15cm x 5cm"
+                                                    />
                                                 </div>
                                             </div>
 
