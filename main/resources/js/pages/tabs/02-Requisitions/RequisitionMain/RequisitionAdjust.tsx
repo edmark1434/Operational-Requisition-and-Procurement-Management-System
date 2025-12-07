@@ -237,7 +237,7 @@ export default function RequisitionAdjust({
                                         rows={3}
                                         value={remarks}
                                         onChange={(e) => setRemarks(e.target.value)}
-                                        className="w-full rounded-lg border-sidebar-border bg-white dark:bg-input text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border-sidebar-border bg-white dark:bg-input text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-3"
                                         placeholder="e.g., Only 5 units in stock, approved partial amount."
                                     />
                                 </div>
