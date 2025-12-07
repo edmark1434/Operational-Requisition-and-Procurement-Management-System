@@ -109,7 +109,7 @@ class ReworksController extends Controller
                     // Assuming your 'services' are technically 'items' in the DB schema
                     // If you have a strict Service model, change 'item_id' to 'service_id'
                     'service_id' => $s['service_id'],
-                    'item_id' => $s['service_id'],
+                //    'item_id' => $s['service_id'],
                 ]);
             }
 
