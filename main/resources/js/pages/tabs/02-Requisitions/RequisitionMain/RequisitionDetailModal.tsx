@@ -585,7 +585,7 @@ export default function RequisitionDetailModal({
 
                                                                 {showApprovedColumn && (
                                                                     <td className="py-3 px-4 font-bold text-teal-600 bg-teal-50/50 dark:bg-teal-900/5">
-                                                                        {isModified ? appQty : '-'}
+                                                                        {finalQty}
                                                                     </td>
                                                                 )}
                                                                 <td className="py-3 px-4 text-gray-900 dark:text-white">
