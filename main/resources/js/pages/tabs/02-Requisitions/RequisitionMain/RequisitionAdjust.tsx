@@ -22,7 +22,6 @@ interface RequisitionItem {
     itemId?: number;
 }
 
-
 const breadcrumbs = (requisitionId: number): BreadcrumbItem[] => [
     { title: 'RequisitionMain', href: requisitions().url },
     { title: `Adjust Requisition #${requisitionId}`, href: `/requisitions/${requisitionId}/adjust` },
@@ -39,22 +38,26 @@ export default function RequisitionAdjust({
     const [items, setItems] = useState<RequisitionItem[]>(() => {
         return initialItems.map(item => ({
             ...item,
+            // Ensure integer on load
             approved_quantity: item.approved_quantity !== null && item.approved_quantity !== undefined
-                ? item.approved_quantity
-                : item.quantity
+                ? Math.floor(Number(item.approved_quantity))
+                : Math.floor(Number(item.quantity))
         }));
     });
 
-    // STRICTLY fetching from 'remarks' column.
-    // If you see text here, your DB 'remarks' column is not empty.
     const [remarks, setRemarks] = useState(serverRequisition.remarks || '');
-
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // --- LOGIC: CHECK IF ADJUSTMENT IS POSSIBLE ---
+    // If ALL items have a max quantity of 1, we cannot adjust anything (since 0 is not allowed).
+    const isAdjustmentPossible = useMemo(() => {
+        return items.some(item => item.quantity > 1);
+    }, [items]);
 
     // --- CALCULATIONS ---
     const grandTotal = useMemo(() => {
         return items.reduce((sum, item) => {
-            const qty = parseFloat(item.approved_quantity.toString()) || 0;
+            const qty = parseInt(item.approved_quantity.toString()) || 0;
             const price = parseFloat(item.unit_price.toString()) || 0;
             return sum + (qty * price);
         }, 0);
@@ -62,7 +65,7 @@ export default function RequisitionAdjust({
 
     const originalTotal = useMemo(() => {
         return items.reduce((sum, item) => {
-            const qty = parseFloat(item.quantity.toString()) || 0;
+            const qty = parseInt(item.quantity.toString()) || 0;
             const price = parseFloat(item.unit_price.toString()) || 0;
             return sum + (qty * price);
         }, 0);
@@ -78,28 +81,31 @@ export default function RequisitionAdjust({
             return;
         }
 
-        const numValue = parseFloat(value);
-        if (numValue < 0) return;
+        // Force Integer
+        const numValue = parseInt(value, 10);
 
-        // 🛑 PREVENT EXCEEDING ORIGINAL QUANTITY
-        if (numValue > currentItem.quantity) {
-            // Simply do nothing if they try to go higher
-            return;
-        }
+        // Validation: Must be at least 1, and cannot exceed original quantity
+        if (isNaN(numValue) || numValue < 1) return;
+        if (numValue > currentItem.quantity) return;
 
-        setItems(prev => prev.map(item => item.id === id ? { ...item, approved_quantity: value } : item));
+        setItems(prev => prev.map(item => item.id === id ? { ...item, approved_quantity: numValue } : item));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Double check safety
+        if (!isAdjustmentPossible) return;
+
         setIsSubmitting(true);
 
         const payload = {
             items: items.map(item => ({
                 id: item.id,
-                approved_quantity: item.approved_quantity === '' ? 0 : item.approved_quantity
+                // Ensure we send an integer
+                approved_quantity: item.approved_quantity === '' ? 1 : parseInt(item.approved_quantity.toString())
             })),
-            remarks: remarks, // Saves to remarks column
+            remarks: remarks,
             total_amount: grandTotal
         };
 
@@ -157,15 +163,22 @@ export default function RequisitionAdjust({
 
                             <form onSubmit={handleSubmit} className="p-6 space-y-6">
 
-                                {/* 1. READ-ONLY NOTES (From 'notes' column) */}
-                                {serverRequisition.notes && (
-                                    <div className="bg-gray-50 dark:bg-sidebar-accent p-4 rounded-lg border border-sidebar-border">
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-                                            Original Request Notes
-                                        </label>
-                                        <p className="text-gray-800 dark:text-gray-300 text-sm">
-                                            {serverRequisition.notes}
-                                        </p>
+                                {/* WARNING: IF NO ADJUSTMENT POSSIBLE */}
+                                {!isAdjustmentPossible && (
+                                    <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4">
+                                        <div className="flex">
+                                            <div className="flex-shrink-0">
+                                                {/* Icon */}
+                                                <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                            </div>
+                                            <div className="ml-3">
+                                                <p className="text-sm text-orange-700 dark:text-orange-300">
+                                                    <strong>Adjustment Unavailable:</strong> All items have a quantity of 1. Since items cannot be set to zero, no adjustments can be made.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 
@@ -186,8 +199,11 @@ export default function RequisitionAdjust({
                                         </thead>
                                         <tbody className="divide-y divide-sidebar-border">
                                         {items.map((item) => {
-                                            const rowTotal = (parseFloat(item.approved_quantity.toString()) || 0) * item.unit_price;
+                                            const rowTotal = (parseInt(item.approved_quantity.toString()) || 0) * item.unit_price;
                                             const isModified = item.approved_quantity != item.quantity;
+
+                                            // Check if this specific item is locked (qty 1)
+                                            const isItemLocked = item.quantity === 1;
 
                                             return (
                                                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-sidebar transition-colors">
@@ -205,14 +221,15 @@ export default function RequisitionAdjust({
                                                     <td className="px-4 py-2 text-right bg-green-50/50 dark:bg-green-900/5 border-l border-sidebar-border/50">
                                                         <input
                                                             type="number"
-                                                            min="0"
+                                                            min="1" // Minimum is 1
                                                             max={item.quantity}
-                                                            step="0.01"
+                                                            step="1" // Integer only
+                                                            disabled={isItemLocked} // Disable input if qty is 1
                                                             value={item.approved_quantity}
                                                             onChange={(e) => updateApprovedQuantity(item.id, e.target.value)}
                                                             className={`w-full text-right rounded border-gray-300 dark:border-sidebar-border dark:bg-sidebar focus:ring-green-500 focus:border-green-500 text-sm font-bold ${
                                                                 isModified ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'
-                                                            }`}
+                                                            } ${isItemLocked ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''}`}
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">
@@ -228,17 +245,18 @@ export default function RequisitionAdjust({
                                     </table>
                                 </div>
 
-                                {/* 3. ADJUSTMENT REMARKS (Editable, maps to 'remarks') */}
+                                {/* 3. ADJUSTMENT REMARKS */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Adjustment Remarks <span className="text-gray-400 font-normal">(Why are you adjusting this?)</span>
+                                        Adjustment Remarks
                                     </label>
                                     <textarea
                                         rows={3}
                                         value={remarks}
                                         onChange={(e) => setRemarks(e.target.value)}
-                                        className="w-full rounded-lg border-sidebar-border bg-white dark:bg-input text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-3"
-                                        placeholder="e.g., Only 5 units in stock, approved partial amount."
+                                        disabled={!isAdjustmentPossible}
+                                        className="w-full rounded-lg border-sidebar-border bg-white dark:bg-input text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-3 disabled:bg-gray-100 disabled:text-gray-500"
+                                        placeholder={isAdjustmentPossible ? "Reason for adjustment..." : "No adjustments possible."}
                                     />
                                 </div>
 
@@ -251,10 +269,17 @@ export default function RequisitionAdjust({
                                     >
                                         Cancel
                                     </button>
+
+                                    {/* BUTTON LOGIC: Disabled if Submitting OR No Adjustment Possible */}
                                     <button
                                         type="submit"
-                                        disabled={isSubmitting}
-                                        className="px-6 py-2 rounded-lg bg-green-600 dark:bg-green-700 text-white font-medium hover:bg-green-700 dark:hover:bg-green-600 focus:ring-4 focus:ring-green-500/30 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                                        disabled={isSubmitting || !isAdjustmentPossible}
+                                        className={`px-6 py-2 rounded-lg text-white font-medium transition-colors flex items-center gap-2
+                                            ${isSubmitting || !isAdjustmentPossible
+                                            ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                                            : 'bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-500/30'
+                                        }
+                                        `}
                                     >
                                         {isSubmitting ? 'Saving...' : 'Confirm Adjustments'}
                                     </button>
