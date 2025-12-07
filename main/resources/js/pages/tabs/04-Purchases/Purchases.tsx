@@ -31,8 +31,8 @@ export default function Purchases({purchaseOrdersData}:Prop) {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [purchases, setPurchases] = useState(purchaseOrdersData);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
-
-    const {
+    console.log("Purchases Data:", purchases);
+    const { 
         filteredPurchases,
         statuses,
         suppliers,
