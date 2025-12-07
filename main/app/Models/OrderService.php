@@ -19,5 +19,8 @@ class OrderService extends Model
     public function service(){
         return $this->belongsTo(Service::class, 'service_id');
     }
+    public function requisition_order_service(){
+        return $this->hasOne(RequisitionOrderService::class, 'po_service_id');
+    }
     public $timestamps = false;
 }
