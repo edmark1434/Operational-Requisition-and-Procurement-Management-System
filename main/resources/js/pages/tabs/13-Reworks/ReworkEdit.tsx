@@ -5,7 +5,6 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import reworksData from '@/pages/datasets/reworks';
 import serviceData from '@/pages/datasets/service';
-import reworkServiceData from '@/pages/datasets/rework_service';
 import deliveryData from '@/pages/datasets/delivery';
 
 interface ReworkEditProps {
@@ -41,7 +40,6 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
     const [availableDeliveries, setAvailableDeliveries] = useState<any[]>([]);
     const [selectedServiceId, setSelectedServiceId] = useState('');
 
-    // Load rework data on component mount
     useEffect(() => {
         loadReworkData();
         setAvailableServices(serviceData.filter(service => service.IS_ACTIVE));
@@ -52,7 +50,6 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
         setIsLoading(true);
 
         try {
-            // Find the rework to edit
             const rework = reworksData.find(rework => rework.ID === reworkId);
 
             if (!rework) {
@@ -153,7 +150,6 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
         e.preventDefault();
 
         if (validateForm()) {
-            // Prepare updated rework data
             const updatedReworkData = {
                 ...formData,
                 DELIVERY_ID: parseInt(formData.DELIVERY_ID),
@@ -161,11 +157,7 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
             };
 
             console.log('Updated Rework Data:', updatedReworkData);
-
-            // In real application, you would send PATCH request to backend
             alert('Rework updated successfully!');
-
-            // Redirect back to reworks list
             router.visit(reworks().url);
         }
     };
@@ -183,12 +175,8 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
 
     const handleDelete = () => {
         console.log('Deleting rework:', reworkId);
-
-        // In real application, you would send DELETE request to backend
         alert('Rework deleted successfully!');
         setShowDeleteConfirm(false);
-
-        // Redirect back to reworks list
         router.visit(reworks().url);
     };
 
@@ -267,7 +255,8 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                                     Basic Information
                                                 </h3>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {/* Changed grid-cols to 1 since Created Date was removed */}
+                                                <div className="grid grid-cols-1 gap-6">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                             Delivery <span className="text-red-500">*</span>
@@ -291,19 +280,6 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                                                         {errors.DELIVERY_ID && (
                                                             <p className="text-red-500 text-xs mt-1">{errors.DELIVERY_ID}</p>
                                                         )}
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            Created Date <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="date"
-                                                            required
-                                                            value={formData.CREATED_AT}
-                                                            onChange={(e) => handleInputChange('CREATED_AT', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                        />
                                                     </div>
                                                 </div>
 
