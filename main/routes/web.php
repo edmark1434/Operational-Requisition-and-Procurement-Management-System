@@ -10,8 +10,8 @@ use App\Http\Controllers\WebPages\Dashboard;
 use App\Http\Controllers\WebPages\Inventory;
 use App\Http\Controllers\WebPages\Purchasing;
 use App\Http\Controllers\WebPages\Deliveries;
-use App\Http\Controllers\WebPages\Returns; // Keep for Index/Edit
-use App\Http\Controllers\ReturnsController; // <--- NEW: Logic Controller
+use App\Http\Controllers\WebPages\Returns; // Existing View Controller
+use App\Http\Controllers\ReturnsController; // <--- The Logic Controller we just fixed
 use App\Http\Controllers\WebPages\Users;
 use App\Http\Controllers\WebPages\Roles;
 use App\Http\Controllers\WebPages\MakesAndCategories;
@@ -83,16 +83,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('deliveries/{id}/edit',[DeliveryController::class,"put"])->name('deliveryput');
     Route::delete('deliveries/{id}/delete',[DeliveryController::class,"delete"])->name('deliverydelete');
 
-    // --- RETURNS (UPDATED) ---
-    Route::get('returns',[Returns::class,'index'])->name('returns'); // List view
+    // --- RETURNS SECTION ---
+    // 1. Main List
+    Route::get('returns',[Returns::class,'index'])->name('returns');
 
-    // Use ReturnController for Logic (Create form with data, Store, API)
-    Route::get('returns/add',[ReturnsController::class,"create"])->name('returnsadd'); // Loads the form with available deliveries
-    Route::post('returns',[ReturnsController::class,"store"])->name('returns.store'); // Saves the data
-    Route::get('/api/delivery/{id}/items', [ReturnsController::class, 'getDeliveryItems']); // API for dropdown
+    // 2. Add Return Form (Uses ReturnsController for logic)
+    Route::get('returns/add',[ReturnsController::class,"create"])->name('returnsadd');
 
+    // 3. Store Return (Uses ReturnsController logic)
+    Route::post('returns',[ReturnsController::class,"store"])->name('returns.store');
+
+    // 4. API to fetch Items (For the Dropdown)
+    Route::get('/api/delivery/{id}/items', [ReturnsController::class, 'getDeliveryItems']);
+
+    // 5. Edit Page
     Route::get('returns/{id}/edit',[Returns::class,"edit"])->name('returnsedit');
-    // -------------------------
+    // -----------------------
 
     Route::get('audit',[Audit::class,'index'])->name('audit');
 
@@ -158,13 +164,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // --- TEMPORARY FIX ROUTE ---
 Route::get('/fix-references', function () {
     $items = Requisition::whereNull('ref_no')->orWhere('ref_no', '')->get();
-
     foreach ($items as $item) {
         $item->ref_no = 'REQ-' . str_pad($item->id, 6, '0', STR_PAD_LEFT);
         $item->saveQuietly();
     }
-
-    return "SUCCESS: Fixed " . $items->count() . " records. You may now delete this route from web.php.";
+    return "SUCCESS: Fixed " . $items->count() . " records.";
 });
 
 require __DIR__.'/settings.php';

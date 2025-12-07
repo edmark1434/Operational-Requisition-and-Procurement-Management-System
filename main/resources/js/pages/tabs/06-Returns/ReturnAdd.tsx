@@ -12,6 +12,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 interface Props {
     auth: any;
+    // Matches the data sent from ReturnsController::create
     availableDeliveries: Array<{
         id: number;
         reference_no: string;
@@ -21,14 +22,16 @@ interface Props {
 }
 
 export default function ReturnAdd({ auth, availableDeliveries }: Props) {
+    // Form State
     const [formData, setFormData] = useState({
         DELIVERY_ID: '',
         REFERENCE_NO: '',
-        RETURN_DATE: new Date().toISOString().split('T')[0], // Auto-set date
+        RETURN_DATE: new Date().toISOString().split('T')[0], // Defaults to today
         REMARKS: '',
         STATUS: 'pending'
     });
 
+    // Items selected by the user to return
     const [selectedItems, setSelectedItems] = useState<Array<{
         ITEM_ID: number;
         ITEM_NAME: string;
@@ -37,19 +40,24 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
         MAX_QUANTITY: number;
     }>>([]);
 
+    // Items available from the API when a delivery is chosen
     const [availableItems, setAvailableItems] = useState<any[]>([]);
     const [isLoadingItems, setIsLoadingItems] = useState(false);
     const [errors, setErrors] = useState<{[key: string]: string}>({});
 
-    // Generate visual reference number
+    // Generate a visual "Draft" Reference Number
+    // Note: The Backend generates the final official "REF-XXXXXX" upon saving.
     useEffect(() => {
         const timestamp = new Date().getTime();
         const random = Math.floor(Math.random() * 1000);
-        setFormData(prev => ({ ...prev, REFERENCE_NO: `RET-${timestamp}${random}`.slice(0, 15) }));
+        setFormData(prev => ({ ...prev, REFERENCE_NO: `DRAFT-${timestamp}`.slice(0, 15) }));
     }, []);
 
+    // 1. Fetch Items when Delivery is selected
     const handleDeliveryChange = async (deliveryId: string) => {
         setFormData(prev => ({ ...prev, DELIVERY_ID: deliveryId }));
+
+        // Reset items when changing delivery to prevent mixing items
         setSelectedItems([]);
         setAvailableItems([]);
 
@@ -58,7 +66,9 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
         setIsLoadingItems(true);
         try {
             const response = await axios.get(`/api/delivery/${deliveryId}/items`);
-            setAvailableItems(response.data);
+            if (Array.isArray(response.data)) {
+                setAvailableItems(response.data);
+            }
         } catch (error) {
             console.error("Failed to load delivery items", error);
             alert("Could not load items for this delivery.");
@@ -67,6 +77,7 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
         }
     };
 
+    // 2. Add Item to Selection
     const handleAddItem = (item: any) => {
         const existingItem = selectedItems.find(selected => selected.ITEM_ID === item.item_id);
 
@@ -74,31 +85,36 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
             setSelectedItems(prev => [...prev, {
                 ITEM_ID: item.item_id,
                 ITEM_NAME: item.item_name,
-                QUANTITY: 1,
-                UNIT_PRICE: item.unit_price,
-                MAX_QUANTITY: item.available_quantity
+                QUANTITY: 1, // Default quantity
+                UNIT_PRICE: Number(item.unit_price),
+                MAX_QUANTITY: Number(item.available_quantity)
             }]);
         }
     };
 
+    // 3. Remove Item from Selection
     const handleRemoveItem = (itemId: number) => {
         setSelectedItems(prev => prev.filter(item => item.ITEM_ID !== itemId));
     };
 
+    // 4. Handle Quantity Change
     const handleItemQuantityChange = (itemId: number, quantity: number) => {
         setSelectedItems(prev => prev.map(item =>
             item.ITEM_ID === itemId ? { ...item, QUANTITY: quantity } : item
         ));
     };
 
+    // Helper: Calculate Total Value
     const getTotalValue = () => {
         return selectedItems.reduce((total, item) => total + (item.QUANTITY * item.UNIT_PRICE), 0);
     };
 
+    // Helper: Get details of currently selected delivery
     const getSelectedDelivery = () => {
         return availableDeliveries.find(d => d.id.toString() === formData.DELIVERY_ID);
     };
 
+    // 5. Validation Logic
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
         if (!formData.DELIVERY_ID) newErrors.DELIVERY_ID = 'Delivery reference is required';
@@ -113,9 +129,18 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
         return Object.keys(newErrors).length === 0;
     };
 
+    // 6. Submit Data to Backend
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validateForm()) return;
+
+        // ADD THIS LOGGING
+        console.log("Submitting form...", formData, selectedItems);
+
+        if (!validateForm()) {
+            console.log("Validation failed", errors); // See what is missing in console
+            alert("Please check the form for errors (e.g., select a delivery or add items).");
+            return;
+        }
 
         const payload = {
             delivery_id: formData.DELIVERY_ID,
@@ -128,7 +153,12 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
         };
 
         router.post('/returns', payload, {
-            onError: (err: any) => setErrors(err)
+            onSuccess: () => alert('Success!'), // simple feedback
+            onError: (err: any) => {
+                console.error("Server Error:", err);
+                setErrors(err);
+                alert("Server rejected the request. Check console.");
+            }
         });
     };
 
@@ -145,7 +175,7 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
     };
 
     const handleReset = () => {
-        if (selectedItems.length > 0 && !window.confirm('Are you sure you want to reset the form? All selections will be cleared.')) {
+        if (selectedItems.length > 0 && !window.confirm('Reset form? All selections will be cleared.')) {
             return;
         }
 
@@ -187,7 +217,7 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
                         <div className="min-h-full flex items-start justify-center p-6">
                             <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
 
-                                {/* Form Header (Gradient) */}
+                                {/* Form Header */}
                                 <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                         New Return Slip
