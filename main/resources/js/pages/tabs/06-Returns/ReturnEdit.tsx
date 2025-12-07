@@ -41,7 +41,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [deliveries, setDeliveries] = useState<any[]>([]);
 
-    // Load return data on component mount
     useEffect(() => {
         loadReturnData();
         loadDeliveries();
@@ -56,27 +55,23 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
         setIsLoading(true);
 
         try {
-            // Find the return to edit from transformed data
             const returns = transformReturnsData();
             const returnItem = returns.find(r => r.ID === returnId);
 
             if (!returnItem) {
                 console.error(`Return #${returnId} not found`);
                 alert('Return not found!');
-                // router.visit(returns().url);
                 return;
             }
 
-            // Transform return data to match form structure
             setFormData({
                 DELIVERY_ID: returnItem.DELIVERY_ID.toString(),
                 REFERENCE_NO: returnItem.REFERENCE_NO,
-                RETURN_DATE: returnItem.RETURN_DATE.split('T')[0], // Format for date input
+                RETURN_DATE: returnItem.RETURN_DATE.split('T')[0],
                 REMARKS: returnItem.REMARKS || '',
                 STATUS: returnItem.STATUS
             });
 
-            // Transform items data - calculate max quantity from original delivery
             const deliveryItems = getDeliveryItems(returnItem.DELIVERY_ID);
             const itemsWithMaxQuantity = returnItem.ITEMS.map((item: any) => {
                 const deliveryItem = deliveryItems.find((d: any) => d.ITEM_ID === item.ITEM_ID);
@@ -87,7 +82,7 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                     ITEM_NAME: item.ITEM_NAME,
                     QUANTITY: item.QUANTITY,
                     UNIT_PRICE: item.UNIT_PRICE,
-                    MAX_QUANTITY: originalQuantity // Use original delivered quantity as max
+                    MAX_QUANTITY: originalQuantity
                 };
             });
 
@@ -112,11 +107,8 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
             newErrors.items = 'At least one item must be selected for return';
         }
 
-        if (!formData.RETURN_DATE) {
-            newErrors.RETURN_DATE = 'Return date is required';
-        }
+        // Return Date validation removed as requested
 
-        // Validate each selected item
         selectedItems.forEach((item, index) => {
             if (item.QUANTITY <= 0) {
                 newErrors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
@@ -176,17 +168,15 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
         return getDeliveryItems(deliveryId);
     };
 
-    // SINGLE handleSubmit function (removed duplicate)
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         if (validateForm()) {
             const selectedDelivery = getSelectedDelivery();
 
-            // Prepare updated return data
             const updatedReturnData = {
-                ID: returnId, // Include the ID for updates
-                CREATED_AT: formData.RETURN_DATE, // In real app, keep original created_at
+                ID: returnId,
+                CREATED_AT: formData.RETURN_DATE,
                 RETURN_DATE: formData.RETURN_DATE,
                 STATUS: formData.STATUS,
                 REMARKS: formData.REMARKS,
@@ -200,16 +190,8 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
 
             console.log('Updated Return Data:', updatedReturnData);
 
-            // In real application, you would send PATCH request to backend
-            // For now, update the local state
-            const updatedReturns = transformReturnsData().map(returnItem =>
-                returnItem.ID === returnId ? { ...returnItem, ...updatedReturnData } : returnItem
-            );
-
-            // You would need to update your global state here
+            // In real app, PATCH request here
             alert('Return updated successfully!');
-
-            // Redirect back to returns list
             router.visit(returns().url);
         }
     };
@@ -227,12 +209,8 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
 
     const handleDelete = () => {
         console.log('Deleting return:', returnId);
-
-        // In real application, you would send DELETE request to backend
         alert('Return deleted successfully!');
         setShowDeleteConfirm(false);
-
-        // Redirect back to returns list
         router.visit(returns().url);
     };
 
@@ -336,24 +314,8 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            Return Date <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="date"
-                                                            required
-                                                            value={formData.RETURN_DATE}
-                                                            onChange={(e) => handleInputChange('RETURN_DATE', e.target.value)}
-                                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                                                errors.RETURN_DATE ? 'border-red-500' : 'border-sidebar-border'
-                                                            }`}
-                                                        />
-                                                        {errors.RETURN_DATE && (
-                                                            <p className="text-red-500 text-xs mt-1">{errors.RETURN_DATE}</p>
-                                                        )}
-                                                    </div>
+                                                <div className="grid grid-cols-1 gap-6">
+                                                    {/* Return Date Input REMOVED */}
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                             Delivery Reference <span className="text-red-500">*</span>
