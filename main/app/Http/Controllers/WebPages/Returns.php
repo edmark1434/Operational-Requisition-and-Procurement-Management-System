@@ -21,7 +21,7 @@ class Returns extends Controller
                 'RETURN_DATE' => $ret->return_date,
                 'STATUS' => $ret->status,
                 'REMARKS' => $ret->remarks,
-                'DELIVERY_ID' => $ret->originalDelivery?->oldDelivery?->id,
+                'DELIVERY_ID' => $ret->originalDelivery?->old_delivery_id,
                 'SUPPLIER_NAME' => $ret->return_item->item->vendor->name ?? 'Unknown Supplier',
             ];
         });
