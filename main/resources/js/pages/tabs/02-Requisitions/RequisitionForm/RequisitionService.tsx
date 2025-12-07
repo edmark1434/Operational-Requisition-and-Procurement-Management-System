@@ -136,7 +136,7 @@ export default function RequisitionService({
             <div className="p-4 border border-sidebar-border rounded-lg bg-gray-50 dark:bg-sidebar flex-1">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Requested Services (Service Requests: {requisitionServices.length}) 👷
+                        Requested Services ({requisitionServices.length}) 👷
                     </h3>
                     <button
                         type="button"
@@ -154,7 +154,7 @@ export default function RequisitionService({
                     </div>
                 )}
 
-                <div className={`space-y-3 overflow-y-auto pr-2 ${requisitionServices.length > 2 ? 'max-h-96' : ''}`}>
+                <div className={`space-y-3 overflow-y-auto pr-2 ${requisitionServices.length > 2 ? 'max-h-110' : ''}`}>
                     {requisitionServices.map((service, index) => {
 
                         // 1. Normalize IDs
