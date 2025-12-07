@@ -11,7 +11,7 @@ export default function MakesCategoriesStats({ makes, categories }: MakesCategor
     const serviceCategories = categories.filter(cat => cat.TYPE === 'Services').length;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Total Makes */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -20,13 +20,13 @@ export default function MakesCategoriesStats({ makes, categories }: MakesCategor
                 <div className="text-sm text-gray-600 dark:text-gray-400">Total Makes</div>
             </div>
 
-            {/* Active Makes */}
-            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {activeMakes}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Active Makes</div>
-            </div>
+            {/*/!* Active Makes *!/*/}
+            {/*<div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">*/}
+            {/*    <div className="text-2xl font-bold text-green-600 dark:text-green-400">*/}
+            {/*        {activeMakes}*/}
+            {/*    </div>*/}
+            {/*    <div className="text-sm text-gray-600 dark:text-gray-400">Active Makes</div>*/}
+            {/*</div>*/}
 
             {/* Total Categories */}
             <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border p-4">
