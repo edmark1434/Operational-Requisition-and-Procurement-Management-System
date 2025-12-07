@@ -5,7 +5,6 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import reworksData from '@/pages/datasets/reworks';
 import serviceData from '@/pages/datasets/service';
-import reworkServiceData from '@/pages/datasets/rework_service';
 import deliveryData from '@/pages/datasets/delivery';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -21,6 +20,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function ReworkAdd({ auth }: { auth: any }) {
     const [formData, setFormData] = useState({
+        // Default to today in background, but hidden from UI
         CREATED_AT: new Date().toISOString().split('T')[0],
         STATUS: 'pending',
         REMARKS: '',
@@ -35,10 +35,7 @@ export default function ReworkAdd({ auth }: { auth: any }) {
     const [selectedServiceId, setSelectedServiceId] = useState('');
 
     useEffect(() => {
-        // Load available services
         setAvailableServices(serviceData.filter(service => service.IS_ACTIVE));
-
-        // Load available deliveries
         setAvailableDeliveries(deliveryData);
     }, []);
 
@@ -116,10 +113,8 @@ export default function ReworkAdd({ auth }: { auth: any }) {
         e.preventDefault();
 
         if (validateForm()) {
-            // Generate new rework ID
             const newReworkId = Math.max(...reworksData.map(rework => rework.ID), 0) + 1;
 
-            // Prepare rework data
             const reworkDataToAdd = {
                 ID: newReworkId,
                 ...formData,
@@ -128,11 +123,7 @@ export default function ReworkAdd({ auth }: { auth: any }) {
             };
 
             console.log('New Rework Data:', reworkDataToAdd);
-
-            // In real application, you would send POST request to backend
             alert('Rework added successfully!');
-
-            // Redirect back to reworks list
             router.visit(reworks().url);
         }
     };
@@ -216,7 +207,8 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                 Basic Information
                                             </h3>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Changed grid-cols to 1 since Created Date was removed */}
+                                            <div className="grid grid-cols-1 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         Delivery <span className="text-red-500">*</span>
@@ -240,19 +232,6 @@ export default function ReworkAdd({ auth }: { auth: any }) {
                                                     {errors.DELIVERY_ID && (
                                                         <p className="text-red-500 text-xs mt-1">{errors.DELIVERY_ID}</p>
                                                     )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Created Date <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        required
-                                                        value={formData.CREATED_AT}
-                                                        onChange={(e) => handleInputChange('CREATED_AT', e.target.value)}
-                                                        className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white"
-                                                    />
                                                 </div>
                                             </div>
 
