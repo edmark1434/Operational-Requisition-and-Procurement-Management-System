@@ -13,10 +13,10 @@ const formatCurrency = (amount: number) => {
 
 export default function ReturnsStats({ returns }: ReturnsStatsProps) {
     const totalReturns = returns.length;
-    const pendingReturns = returns.filter(r => r.STATUS === 'pending').length;
-    const issuedReturns = returns.filter(r => r.STATUS === 'issued').length;
-    const deliveredReturns = returns.filter(r => r.STATUS === 'delivered').length;
-    const rejectedReturns = returns.filter(r => r.STATUS === 'rejected').length;
+    const pendingReturns = returns.filter(r => r.STATUS === 'Pending').length;
+    const issuedReturns = returns.filter(r => r.STATUS === 'Issued').length;
+    const deliveredReturns = returns.filter(r => r.STATUS === 'Delivered').length;
+    const rejectedReturns = returns.filter(r => r.STATUS === 'Rejected').length;
     const totalValue = returns.reduce((sum, returnItem) => sum + returnItem.TOTAL_VALUE, 0);
 
     return (

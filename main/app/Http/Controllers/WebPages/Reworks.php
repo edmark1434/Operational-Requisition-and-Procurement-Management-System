@@ -41,14 +41,15 @@ class Reworks extends Controller
                 'PO_ID' => $rew->originalDelivery?->oldDelivery?->purchaseOrder?->id,
                 'DELIVERY_ID' => $rew->originalDelivery?->oldDelivery?->id,
                 'SUPPLIER_NAMES' => $rew->rework_service?->service?->vendor?->name,
-                'SERVICES' => $rew->rework_service?->service ? [
-                    [
-                        'ID' => $rew->rework_service->service->id,
-                        'SERVICE_ID' => $rew->rework_service->service->id,
-                        'NAME' => $rew->rework_service->service->name,
-                        'DESCRIPTION' => $rew->rework_service->service->description
-                    ]
-                ] : []
+                'SERVICES' => $rew->rework_services?->map(function($rs) {
+                    $serv = $rs->service;
+                    return [
+                        'ID' => $serv->id,
+                        'SERVICE_ID' => $serv->id,
+                        'NAME' => $serv->name,
+                        'DESCRIPTION' => $serv->description
+                    ];
+                })->toArray() ?? [],
             ];
         });
         return Inertia::render($this->base_path . '/Main',[

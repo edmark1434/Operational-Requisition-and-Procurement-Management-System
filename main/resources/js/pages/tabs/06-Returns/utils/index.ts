@@ -3,18 +3,23 @@ import returnItemsData from '@/pages/datasets/return_items';
 import deliveriesData from '@/pages/datasets/delivery';
 import suppliersData from '@/pages/datasets/supplier';
 import itemsData from '@/pages/datasets/items';
+import { it } from 'node:test';
 
-export const transformReturnsData = () => {
+export const transformReturnsData = (  returnsData: any[] = [],
+    returnItemsData: any[] = [],
+    deliveriesData: any[] = [],
+    suppliersData: any[] = [],
+    itemsData: any[] = []
+) => {
     return returnsData.map(returnItem => {
         const returnItems = returnItemsData.filter(item => item.RETURN_ID === returnItem.ID);
         const delivery = deliveriesData.find(d => d.ID === returnItem.DELIVERY_ID);
         const supplier = suppliersData.find(s => s.NAME === returnItem.SUPPLIER_NAME);
-
         // Calculate total items and value
         const itemsWithDetails = returnItems.map(ri => {
-            const item = itemsData.find(i => i.ITEM_ID === ri.ITEM_ID);
+            const item = itemsData.find(i => i.ID === ri.ITEM_ID);
             const deliveryItem = delivery?.ITEMS.find((d: any) => d.ITEM_ID === ri.ITEM_ID);
-
+            console.log('Item',returnItem);
             return {
                 ID: ri.ID,
                 ITEM_ID: ri.ITEM_ID,
