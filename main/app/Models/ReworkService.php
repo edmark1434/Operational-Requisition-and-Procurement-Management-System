@@ -20,8 +20,5 @@ class ReworkService extends Model
     public function service(){
         return $this->belongsTo(Service::class, 'service_id');
     }
-    public function item(){
-        return $this->belongsTo(Item::class, 'item_id');
-    }
     public $timestamps = false;
 }

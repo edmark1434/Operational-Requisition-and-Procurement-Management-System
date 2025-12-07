@@ -10,7 +10,7 @@ class Rework extends Model
 {
     use HasFactory;
     protected $table = 'reworks';
-    protected $fillable = ['created_at', 'status', 'remarks', 'delivery_id'];
+    protected $fillable = ['ref_no', 'created_at', 'status', 'remarks'];
     public const STATUS = ['Pending','Issued','Rejected','Delivered'];
 
     public function reworkDeliveries()
