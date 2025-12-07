@@ -400,13 +400,13 @@ export default function PurchaseDetailModal({
                                                                 </div>
                                                                 <div className="col-span-2 text-right">
                                                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                                        {formatCurrency(item.UNIT_PRICE)}
+                                                                        {isServiceOrder ? formatCurrency(item.HOURLY_RATE) : formatCurrency(item.UNIT_PRICE)}
                                                                         {isServiceOrder && '/hr'}
                                                                     </p>
                                                                 </div>
                                                                 <div className="col-span-2 text-right">
                                                                     <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                                                        {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
+                                                                        {isServiceOrder ? formatCurrency(item.HOURLY_RATE) :formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
                                                                     </p>
                                                                 </div>
                                                             </div>

@@ -78,18 +78,20 @@ class Purchasing extends Controller
                 // SERVICES: order_service → service
                 // -------------------------------
                 'SERVICES' => $type === 'services' && $po->orderServices->isNotEmpty()
-                    ? $po->orderServices->requisition_order_service->req_service->map(function ($os) {
+                    ? $po->orderServices->map(function ($orderService) {
+                        $reqService = $orderService->requisition_order_service->req_service ?? null;
                         return [
-                            'ID'           => $os->id,
-                            'SERVICE_ID'   => $os->service->id,
-                            'NAME'         => $os->service->name,
-                            'DESCRIPTION'  => $os->service->description,
-                            'HOURLY_RATE'  => $os->service->hourly_rate,
-                            'CATEGORY_ID'  => $os->service->category_id,
+                            'ID'           => $reqService->id,
+                            'SERVICE_ID'   => $reqService->service->id,
+                            'NAME'         => $reqService->service->name,
+                            'DESCRIPTION'  => $reqService->service->description,
+                            'HOURLY_RATE'  => $reqService->service->hourly_rate,
+                            'CATEGORY_ID'  => $reqService->service->category_id,
                             'SELECTED'     => true,
-                            'REQUESTION_ID' => $os->req_id ?? null,
-                            'REQUESTOR' => $os->requisition->requestor ?? null,
-                            'PRIORITY' => $os->requisition->priority ?? null,
+                            'REQUESTION_ID' => $reqService->req_id ?? null,
+                            'REQUISITION_DATE' => $reqService->requisition->created_at ?? null,
+                            'REQUESTOR' => $reqService->requisition->requestor ?? null,
+                            'PRIORITY' => $reqService->requisition->priority ?? null,
                         ];
                     })->toArray()
                     : [],
