@@ -2,7 +2,12 @@ import reworksData from '@/pages/datasets/reworks';
 import reworkServiceData from '@/pages/datasets/rework_service';
 import serviceData from '@/pages/datasets/service';
 
-export const transformReworksData = () => {
+
+export const transformReworksData = (
+    reworkServiceData: any[] = [],
+    reworksData: any[] = [],
+    serviceData: any[] = []
+) => {
     return reworksData.map(rework => {
         // Get associated services from rework_service junction table and include quantity from reworks data
         const associatedServices = reworkServiceData
