@@ -16,15 +16,14 @@ class Returns extends Model
     public $timestamps = false; // you only have created_at
     public const STATUS = ['Pending','Issued','Rejected','Delivered'];
     protected $fillable = [
-        'created_at',
+        'ref_no',
         'return_date',
-        'status',
         'remarks',
+        'status',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
-        'return_date' => 'date',
     ];
 
     /**

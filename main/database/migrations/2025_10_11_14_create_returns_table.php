@@ -17,7 +17,6 @@ return new class extends Migration
             $table->id();
             $table->string('ref_no')->unique();
             $table->timestamp('created_at')->useCurrent();
-            $table->date('return_date');
             $table->enum('status',Returns::STATUS)->default('Pending');
             $table->text('remarks')->nullable();
         });
