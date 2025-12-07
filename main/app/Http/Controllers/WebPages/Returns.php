@@ -16,13 +16,13 @@ class Returns extends Controller
     {
         $returns = \App\Models\Returns::with('return_item.item.vendor','originalDelivery.oldDelivery')->get()->map(function($ret){
             return [
-                    'ID' => $ret->id,
-                    'CREATED_AT' => $ret->created_at,
-                    'RETURN_DATE' => $ret->return_date,
-                    'STATUS' => $ret->status,
-                    'REMARKS' => $ret->remarks,
-                    'DELIVERY_ID' => $ret->originalDelivery?->oldDelivery?->id,
-                    'SUPPLIER_NAME' => $ret->return_item->item->vendor->name ?? 'Unknown Supplier',
+                'ID' => $ret->id,
+                'CREATED_AT' => $ret->created_at,
+                'RETURN_DATE' => $ret->return_date,
+                'STATUS' => $ret->status,
+                'REMARKS' => $ret->remarks,
+                'DELIVERY_ID' => $ret->originalDelivery?->oldDelivery?->id,
+                'SUPPLIER_NAME' => $ret->return_item->item->vendor->name ?? 'Unknown Supplier',
             ];
         });
         $returnsItem = ReturnItem::all()->map(function($ret_item){
@@ -55,7 +55,8 @@ class Returns extends Controller
                         'NAME' => $item?->name,
                         'ITEM_NAME' => $item?->name,
                         'QUANTITY' => $del_item?->quantity ?? 0,
-                        'UNIT_PRICE' => $item?->unit_price,
+
+//                        'QUANTITY' => $item?->requisition_item?->approved_quantity ?? 0,                        'UNIT_PRICE' => $item?->unit_price,
                         'BARCODE' => $item?->barcode,
                         'CATEGORY' => $item?->category?->name,
                     ];
@@ -74,7 +75,7 @@ class Returns extends Controller
             ];
         });
         $inventory = Item::where('is_active', true)->get()->map(function ($item) {
-             return [
+            return [
                 'ID' => $item->id,
                 'BARCODE' => $item->barcode,
                 'NAME' => $item->name,
@@ -84,17 +85,17 @@ class Returns extends Controller
                 'MAKE_ID' => $item->make_id,
                 'CATEGORY_ID' => $item->category_id,
                 'SUPPLIER_ID' => $item->vendor_id,
-                
+
             ];
         });
         return Inertia::render($this->base_path .'/Returns',
-        [
-            'returnsData' => $returns,
-            'returnsItemData' => $returnsItem,
-            'deliveriesData' => $delivery,
-            'suppliersData' => $vendor,
-            'itemsData' => $inventory,
-        ]);
+            [
+                'returnsData' => $returns,
+                'returnsItemData' => $returnsItem,
+                'deliveriesData' => $delivery,
+                'suppliersData' => $vendor,
+                'itemsData' => $inventory,
+            ]);
     }
     public function store(){
         return Inertia::render($this->base_path .'/ReturnAdd');

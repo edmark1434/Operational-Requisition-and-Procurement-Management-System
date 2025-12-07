@@ -21,7 +21,7 @@ use Illuminate\Http\Request;
 class Purchasing extends Controller
 {
     protected $base_path = "tabs/04-Purchases";
-        public function index()
+    public function index()
     {
         $purchases = PurchaseOrder::with(
             'vendor',
@@ -29,28 +29,28 @@ class Purchasing extends Controller
             'orderServices.requisition_order_service.req_service',
             'service.service'
         )
-        ->get()
-        ->map(function ($po) {
+            ->get()
+            ->map(function ($po) {
 
-            // Normalize fields for frontend consistency
-            $type = strtolower(trim($po->type));            // items / services
-            $status = strtolower(trim($po->status));        // pending_approval / approved / completed
+                // Normalize fields for frontend consistency
+                $type = strtolower(trim($po->type));            // items / services
+                $status = strtolower(trim($po->status));        // pending_approval / approved / completed
 
-            return [
-                'ID'             => $po->id,
-                'REFERENCE_NO'   => $po->ref_no,
-                'CREATED_AT'     => $po->created_at,
-                'TOTAL_COST'     => $po->total_cost,
-                'PAYMENT_TYPE'   => $po->payment_type,
-                'STATUS'         => $status,
-                'SUPPLIER_ID'    => $po->vendor_id,
-                'SUPPLIER_NAME'  => $po->vendor->name ?? '',
-                'ALLOWS_CASH'  => $po->vendor->allows_cash ?? '',
-                'ALLOWS_DISBURSEMENT'  => $po->vendor->allows_disbursement ?? '',
-                'ALLOWS_STORE_CREDIT'  => $po->vendor->allows_store_credit ?? '',
-                // 'REQUISITION_ID' => $type === 'items' ? $po->orderItems->requisition_order_item->req_item->req_id ?? null : $po->orderServices->requisition_order_service->req_service->req_id ?? null,
-                'ORDER_TYPE'     => $type,                   // items / services
-                'REMARKS'        => $po->remarks,
+                return [
+                    'ID'             => $po->id,
+                    'REFERENCE_NO'   => $po->ref_no,
+                    'CREATED_AT'     => $po->created_at,
+                    'TOTAL_COST'     => $po->total_cost,
+                    'PAYMENT_TYPE'   => $po->payment_type,
+                    'STATUS'         => $status,
+                    'SUPPLIER_ID'    => $po->vendor_id,
+                    'SUPPLIER_NAME'  => $po->vendor->name ?? '',
+                    'ALLOWS_CASH'  => $po->vendor->allows_cash ?? '',
+                    'ALLOWS_DISBURSEMENT'  => $po->vendor->allows_disbursement ?? '',
+                    'ALLOWS_STORE_CREDIT'  => $po->vendor->allows_store_credit ?? '',
+                    // 'REQUISITION_ID' => $type === 'items' ? $po->orderItems->requisition_order_item->req_item->req_id ?? null : $po->orderServices->requisition_order_service->req_service->req_id ?? null,
+                    'ORDER_TYPE'     => $type,                   // items / services
+                    'REMARKS'        => $po->remarks,
 
                 // -------------------------------
                 // ITEMS: requisition → requisition_items → item
