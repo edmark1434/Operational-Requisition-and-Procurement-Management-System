@@ -17,15 +17,12 @@ class Returns extends Model
     public const STATUS = ['Pending','Issued','Rejected','Delivered'];
     protected $fillable = [
         'created_at',
-        'return_date',
         'status',
-        'remarks',
-        'delivery_id'
+        'remarks'
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
-        'return_date' => 'date',
     ];
 
     /**
