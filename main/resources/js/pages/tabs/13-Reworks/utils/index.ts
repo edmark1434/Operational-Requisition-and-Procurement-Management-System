@@ -33,7 +33,7 @@ export const transformReworksData = (
             STATUS: rework.STATUS,
             REMARKS: rework.REMARKS,
             PO_ID: rework.PO_ID,
-            SUPPLIER_NAME: rework.SUPPLIER_NAME,
+            SUPPLIER_NAME: rework.SUPPLIER_NAMES,
             SERVICES: associatedServices,
             TOTAL_COST: associatedServices.reduce((total, service) => {
                 // Type guard to ensure service is not null

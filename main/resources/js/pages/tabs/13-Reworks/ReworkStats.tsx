@@ -12,10 +12,10 @@ const formatCurrency = (amount: number) => {
 
 export default function ReworkStats({ reworks }: ReworkStatsProps) {
     const totalReworks = reworks.length;
-    const pendingReworks = reworks.filter(rework => rework.STATUS === 'pending').length;
-    const issuedReworks = reworks.filter(rework => rework.STATUS === 'issued').length;
-    const deliveredReworks = reworks.filter(rework => rework.STATUS === 'delivered').length;
-    const rejectedReworks = reworks.filter(rework => rework.STATUS === 'rejected').length;
+    const pendingReworks = reworks.filter(rework => rework.STATUS === 'Pending').length;
+    const issuedReworks = reworks.filter(rework => rework.STATUS === 'Issued').length;
+    const deliveredReworks = reworks.filter(rework => rework.STATUS === 'Delivered').length;
+    const rejectedReworks = reworks.filter(rework => rework.STATUS === 'Rejected').length;
     const totalCost = reworks.reduce((sum, rework) => sum + rework.TOTAL_COST, 0);
 
     return (
