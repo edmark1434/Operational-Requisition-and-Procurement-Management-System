@@ -64,7 +64,7 @@ export default function SupplierCard({
         >
             <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2">
                         <span className="font-semibold text-gray-900 dark:text-white truncate">
                             {supplier.name || ''}
                         </span>
@@ -79,7 +79,7 @@ export default function SupplierCard({
                     </div>
 
                     <p className="text-xs text-gray-600 dark:text-gray-400 truncate mb-2">
-                        {supplier.email}
+                        {supplier.email} <br/> {supplier.contact_number ?? 'N/A'}
                     </p>
 
                     {/* Supplier Type Indicator */}

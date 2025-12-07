@@ -1,4 +1,10 @@
-import {Category, Requisition, RequisitionItem, RequisitionService} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import {
+    Category,
+    Requisition,
+    RequisitionItem,
+    RequisitionOrderService,
+    RequisitionService
+} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
 
 interface OrderServiceProps {
     formData: {
@@ -10,6 +16,7 @@ interface OrderServiceProps {
     onToggleServiceSelection: (serviceId: number) => void;
     requisitionServices: RequisitionService[];
     categories: Category[];
+    requisitionOrderServices: RequisitionOrderService[];
 }
 
 export default function OrderService({
@@ -19,7 +26,8 @@ export default function OrderService({
                                          errors,
                                          onToggleServiceSelection,
                                          requisitionServices,
-                                         categories
+                                         categories,
+                                         requisitionOrderServices
                                      }: OrderServiceProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -93,8 +101,10 @@ export default function OrderService({
                         return (
                             <div
                                 key={service.id}
-                                className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors ${
-                                    formData.SERVICES.some(i => i.id === service.id)
+                                className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors
+                                ${requisitionOrderServices.some(i => i.req_service_id === service.id)
+                                    ? 'opacity-50 bg-neutral-100 dark:bg-neutral-900 font-normal pointer-events-none cursor-not-allowed'
+                                    : formData.SERVICES.some(i => i.id === service.id)
                                         ? 'bg-purple-50 dark:bg-purple-900/10 hover:bg-purple-100 dark:hover:bg-purple-900/20'
                                         : 'hover:bg-gray-50 dark:hover:bg-sidebar'
                                 }`}

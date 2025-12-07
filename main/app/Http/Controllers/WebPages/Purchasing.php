@@ -90,7 +90,7 @@ class Purchasing extends Controller
     }
     public function create(){
         return Inertia::render($this->base_path .'/PurchaseOrderForm', [
-            'requisitions' => Requisition::query()->where('status', 'Approved')->get(),
+            'requisitions' => Requisition::query()->whereIn('status', ['Approved', 'Partially Approved'])->get(),
             'requisitionItems' => RequisitionItem::with('item')->get(),
             'requisitionServices' => RequisitionService::with('service')->get(),
             'vendors' => Vendor::query()->where('is_active', true)->get(),
