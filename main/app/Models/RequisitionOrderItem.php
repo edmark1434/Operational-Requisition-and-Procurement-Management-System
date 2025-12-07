@@ -23,7 +23,7 @@ class RequisitionOrderItem extends Model
     {
         return $this->belongsTo(OrderItem::class, 'po_item_id');
     }
-    
+
 
     public $timestamps = false;
 }

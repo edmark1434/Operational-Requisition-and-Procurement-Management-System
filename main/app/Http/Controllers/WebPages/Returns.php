@@ -54,7 +54,7 @@ class Returns extends Controller
                         'ITEM_ID' => $item?->id,
                         'NAME' => $item?->name,
                         'ITEM_NAME' => $item?->name,
-                        'QUANTITY' => $del_item?->quantity ?? 0,
+                        'QUANTITY' => $item?->requisition_item?->approved_quantity ?? 0,
                         'UNIT_PRICE' => $item?->unit_price,
                         'BARCODE' => $item?->barcode,
                         'CATEGORY' => $item?->category?->name,

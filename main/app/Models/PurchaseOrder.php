@@ -63,12 +63,4 @@ class PurchaseOrder extends Model
     {
         return $this->hasMany(Delivery::class, 'po_id');
     }
-    public function orderItems()
-    {
-        return $this->hasMany(OrderItem::class, 'po_id');
-    }
-    public function orderServices()
-    {
-        return $this->hasMany(OrderService::class, 'po_id');
-    }
 }
