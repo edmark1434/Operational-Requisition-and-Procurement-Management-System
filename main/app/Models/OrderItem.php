@@ -20,8 +20,6 @@ class OrderItem extends Model
     public function item(){
         return $this->belongsTo(Item::class,'item_id');
     }
-    public function requisition_order_item(){
-        return $this->hasOne(RequisitionOrderItem::class, 'po_item_id');
-    }
+
     public $timestamps = false;
 }
