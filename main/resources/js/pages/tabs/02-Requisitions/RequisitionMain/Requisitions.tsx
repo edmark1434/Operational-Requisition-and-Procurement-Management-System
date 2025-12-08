@@ -99,7 +99,29 @@ export default function Requisitions({
     const allCategories = ['All', ...dbCategories];
 
     // --- Handlers ---
-    const handleStatusUpdate = (id: number, newStatus: string, reason?: string) => {
+    const handleStatusUpdate = async (id: number, newStatus: string, reason?: string) => {
+
+        // If awaiting pickup → validate first
+        if (newStatus === 'awaiting_pickup') {
+            console.log("Releasing for pickup");
+
+            try {
+                const response = await fetch(`/requisitions/${id}/release`);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    alert("Error releasing for pickup: " + (result.error || "Unknown error"));
+                    return; // 🚫 STOP HERE — DO NOT UPDATE STATUS
+                }
+
+                alert("Requisition released for pickup successfully.");
+            } catch (err) {
+                alert("Error releasing for pickup: " + err);
+                return; // 🚫 STOP HERE — DO NOT UPDATE STATUS
+            }
+        }
+
+        // 🟢 If we pass the check above, now we can update UI + backend
         setLocalRequisitions(prevItems => prevItems.map(item =>
             item.id === id
                 ? { ...item, status: newStatus, remarks: reason || item.remarks }
@@ -107,19 +129,17 @@ export default function Requisitions({
         ));
 
         if (selectedRequisition && selectedRequisition.id === id) {
-            setSelectedRequisition(prev => prev ? ({
-                ...prev,
-                status: newStatus,
-                remarks: reason || prev.remarks
-            }) : null);
+            setSelectedRequisition(prev =>
+                prev ? { ...prev, status: newStatus, remarks: reason || prev.remarks } : null
+            );
         }
 
         router.put(`/requisitions/${id}/status`, {
             status: newStatus,
-            reason: reason
+            reason
         }, {
             preserveScroll: true,
-            onSuccess: () => { console.log("Synced with server"); },
+            onSuccess: () => console.log("Synced with server"),
             onError: () => {
                 alert("Failed to save status. Reloading page.");
                 router.reload();

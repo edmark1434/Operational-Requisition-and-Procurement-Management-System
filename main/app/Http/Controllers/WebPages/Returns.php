@@ -111,6 +111,7 @@ class Returns extends Controller
         $return = \App\Models\Returns::findOrFail($id);
         $return->status = $status;
         $return->save();
+
         // return response()->json(['message' => 'Return status updated successfully.']);
     }
 }

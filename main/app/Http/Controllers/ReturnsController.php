@@ -8,6 +8,8 @@ use Inertia\Inertia;
 use App\Models\Delivery;
 use App\Models\DeliveryItem;
 use App\Models\Returns;
+use App\Models\ReturnItem;
+use App\Models\Item;
 use Illuminate\Support\Facades\DB;
 
 class ReturnsController extends Controller
@@ -157,11 +159,27 @@ class ReturnsController extends Controller
         $request->validate([
             'status' => 'required|string',
         ]);
-
+        $status = $request->status;
         $return = Returns::findOrFail($id);
         $return->status = $request->status;
         $return->save();
-
+        if($status === 'Issued') {
+            ReturnItem::where('return_id', $id)->get()->map(function($returnItem) {
+                $item = Item::find($returnItem->item_id);
+                if ($item) {
+                    $item->current_stock -= $returnItem->quantity;
+                    $item->save();
+                }
+            });
+        }else if($status === 'Delivered') {
+            ReturnItem::where('return_id', $id)->get()->map(function($returnItem) {
+                $item = Item::find($returnItem->item_id);
+                if ($item) {
+                    $item->current_stock += $returnItem->quantity;
+                    $item->save();
+                }
+            });
+        }
         return back()->with('success', 'Status updated successfully');
     }
 
