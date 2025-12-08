@@ -11,7 +11,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard, requisitions, inventory, purchases,
-    suppliers, delivery, returns, audit, users,
+    suppliers, delivery, returnsIndex, audit, users,
     roles, makesandcategories, services, reworks,
     contacts, notifications
 } from '@/routes';
@@ -75,7 +75,7 @@ const allNavItems = {
         },
         {
             title: 'Returns',
-            href: returns(),
+            href: returnsIndex(),
             icon: SquareArrowDownIcon,
             requiredPermission: 'View Returns',
         },

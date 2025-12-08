@@ -2,16 +2,17 @@ import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-
+import { Toaster, toast } from 'sonner';
 // Import components
 import ReturnsStats from './ReturnsStats';
 import SearchAndFilters from './SearchAndFilters';
 import ReturnsList from './ReturnsList';
 import ReturnsDetailModal from './ReturnsDetailModal';
-
+import { router } from '@inertiajs/react';
 // Import utilities
 import { transformReturnsData } from './utils';
 import { useReturnsFilters } from './hooks';
+import { returnsIndex, reworks } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -61,6 +62,15 @@ export default function Returns({
                     : returnItem
             )
         );
+        router.put(`/returns/${id}/update-status`, { status: newStatus },{
+            onSuccess: () => {
+                toast(`Return ID ${id} status updated to ${newStatus}`);
+                router.visit(returnsIndex.url());
+            },
+            onError: (errors) => {
+                console.error('Error updating status:', errors);
+            }
+        });
         // Close modal immediately after status change
         setIsDetailModalOpen(false);
         setSelectedReturn(null);
@@ -131,6 +141,7 @@ export default function Returns({
                     onStatusChange={handleStatusChange}
                 />
             </div>
+            <Toaster/>
         </AppLayout>
     );
 }
