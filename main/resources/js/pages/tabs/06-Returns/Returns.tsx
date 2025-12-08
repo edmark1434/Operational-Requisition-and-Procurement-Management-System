@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Toaster, toast } from 'sonner';
 import { router } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 
 // Import components
 import ReturnsStats from './ReturnsStats';
@@ -42,6 +43,10 @@ export default function Returns({
     const [dateFilter, setDateFilter] = useState('All');
     const [selectedReturn, setSelectedReturn] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
+
 
     // Initialize state with transformed data
     const [returns, setReturns] = useState(() => transformReturnsData(returnsData, returnsItemData, deliveriesData, suppliersData, itemsData));
@@ -121,6 +126,7 @@ export default function Returns({
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Returns</h1>
+                    { permissionsList.includes('Create Return') &&
                     <Link
                         href="/returns/add"
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -130,6 +136,7 @@ export default function Returns({
                         </svg>
                         Add Return Slip
                     </Link>
+                    }
                 </div>
 
                 {/* Stats */}
