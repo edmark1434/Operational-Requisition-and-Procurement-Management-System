@@ -1,19 +1,21 @@
 import AppLayout from '@/layouts/app-layout';
-import { returns } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { getAvailableDeliveries, getDeliveryItems, transformReturnsData } from './utils';
+import { toast, Toaster } from 'sonner';
 
 interface ReturnEditProps {
     auth: any;
     returnId: number;
+    serverReturnData: any;
+    serverDeliveryItems: any[];
+    serverDeliveries: any[];
 }
 
 const breadcrumbs = (returnId: number): BreadcrumbItem[] => [
     {
         title: 'Returns',
-        href: returns().url,
+        href: '/returns',
     },
     {
         title: `Edit Return #${returnId}`,
@@ -21,14 +23,37 @@ const breadcrumbs = (returnId: number): BreadcrumbItem[] => [
     },
 ];
 
-export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
-    const [formData, setFormData] = useState({
-        DELIVERY_ID: '',
-        REFERENCE_NO: '',
-        RETURN_DATE: '',
-        REMARKS: '',
-        STATUS: 'pending'
+export default function ReturnEdit({
+                                       auth,
+                                       returnId,
+                                       serverReturnData,
+                                       serverDeliveryItems,
+                                       serverDeliveries
+                                   }: ReturnEditProps) {
+
+    // 1. Initialize State DIRECTLY (Fixed for nested Delivery ID)
+    const [formData, setFormData] = useState(() => {
+        // LOGIC FIX: Check for direct ID, otherwise check the 'deliveries' array
+        let initialDeliveryId = '';
+
+        if (serverReturnData?.delivery_id) {
+            initialDeliveryId = String(serverReturnData.delivery_id);
+        } else if (serverReturnData?.deliveries && serverReturnData.deliveries.length > 0) {
+            // Extracts ID from the relation: [{"id":1, ...}]
+            initialDeliveryId = String(serverReturnData.deliveries[0].id);
+        }
+
+        console.log("Resolved Delivery ID:", initialDeliveryId); // Debug Log
+
+        return {
+            DELIVERY_ID: initialDeliveryId,
+            REFERENCE_NO: serverReturnData?.ref_no || '',
+            RETURN_DATE: serverReturnData?.created_at ? serverReturnData.created_at.split('T')[0] : '',
+            REMARKS: serverReturnData?.remarks || '',
+            STATUS: serverReturnData?.status || 'Pending'
+        };
     });
+
     const [selectedItems, setSelectedItems] = useState<Array<{
         ITEM_ID: number;
         ITEM_NAME: string;
@@ -36,110 +61,98 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
         UNIT_PRICE: number;
         MAX_QUANTITY: number;
     }>>([]);
+
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [errors, setErrors] = useState<{[key: string]: string}>({});
-    const [deliveries, setDeliveries] = useState<any[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const deliveries = Array.isArray(serverDeliveries) ? serverDeliveries : [];
+
+    // 2. Initialize Items
     useEffect(() => {
-        loadReturnData();
-        loadDeliveries();
-    }, [returnId]);
+        if (serverReturnData?.items && Array.isArray(serverDeliveryItems)) {
+            const mappedItems = serverReturnData.items.map((savedItem: any) => {
+                const deliveryItem = serverDeliveryItems.find((d: any) => d.item_id == savedItem.item_id);
 
-    const loadDeliveries = () => {
-        const availableDeliveries = getAvailableDeliveries();
-        setDeliveries(availableDeliveries);
-    };
-
-    const loadReturnData = () => {
-        setIsLoading(true);
-
-        try {
-            const returns = transformReturnsData();
-            const returnItem = returns.find(r => r.ID === returnId);
-
-            if (!returnItem) {
-                console.error(`Return #${returnId} not found`);
-                alert('Return not found!');
-                return;
-            }
-
-            setFormData({
-                DELIVERY_ID: returnItem.DELIVERY_ID.toString(),
-                REFERENCE_NO: returnItem.REFERENCE_NO,
-                RETURN_DATE: returnItem.RETURN_DATE.split('T')[0],
-                REMARKS: returnItem.REMARKS || '',
-                STATUS: returnItem.STATUS
-            });
-
-            const deliveryItems = getDeliveryItems(returnItem.DELIVERY_ID);
-            const itemsWithMaxQuantity = returnItem.ITEMS.map((item: any) => {
-                const deliveryItem = deliveryItems.find((d: any) => d.ITEM_ID === item.ITEM_ID);
-                const originalQuantity = deliveryItem?.QUANTITY_DELIVERED || item.QUANTITY;
+                const currentHeldQty = Number(savedItem.quantity);
+                const availableInDelivery = deliveryItem ? Number(deliveryItem.available_quantity) : 0;
+                const totalMax = Math.max(currentHeldQty, availableInDelivery + currentHeldQty);
 
                 return {
-                    ITEM_ID: item.ITEM_ID,
-                    ITEM_NAME: item.ITEM_NAME,
-                    QUANTITY: item.QUANTITY,
-                    UNIT_PRICE: item.UNIT_PRICE,
-                    MAX_QUANTITY: originalQuantity
+                    ITEM_ID: savedItem.item_id,
+                    ITEM_NAME: savedItem.item ? (savedItem.item.item_name || savedItem.item.name) : 'Unknown Item',
+                    QUANTITY: currentHeldQty,
+                    UNIT_PRICE: deliveryItem ? Number(deliveryItem.unit_price) : 0,
+                    MAX_QUANTITY: totalMax
                 };
             });
-
-            setSelectedItems(itemsWithMaxQuantity);
-        } catch (error) {
-            console.error('Error loading return data:', error);
-            alert('Error loading return data!');
-            router.visit(returns().url);
-        } finally {
-            setIsLoading(false);
+            setSelectedItems(mappedItems);
         }
-    };
+    }, [serverReturnData, serverDeliveryItems]);
 
+    // --- Validation ---
     const validateForm = () => {
         const newErrors: {[key: string]: string} = {};
 
-        if (!formData.DELIVERY_ID) {
-            newErrors.DELIVERY_ID = 'Delivery reference is required';
-        }
-
-        if (selectedItems.length === 0) {
-            newErrors.items = 'At least one item must be selected for return';
-        }
-
-        // Return Date validation removed as requested
+        if (!formData.DELIVERY_ID) newErrors.DELIVERY_ID = 'Delivery reference is required';
+        if (selectedItems.length === 0) newErrors.items = 'At least one item must be selected for return';
 
         selectedItems.forEach((item, index) => {
             if (item.QUANTITY <= 0) {
-                newErrors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
+                newErrors[`item_${index}_quantity`] = `${item.ITEM_NAME}: Quantity must be > 0`;
             }
             if (item.QUANTITY > item.MAX_QUANTITY) {
-                newErrors[`item_${index}_quantity`] = `Quantity cannot exceed ${item.MAX_QUANTITY}`;
+                newErrors[`item_${index}_quantity`] = `${item.ITEM_NAME}: Cannot exceed max (${item.MAX_QUANTITY})`;
             }
         });
 
         setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        return newErrors;
     };
 
-    const handleDeliveryChange = (deliveryId: string) => {
-        setFormData(prev => ({ ...prev, DELIVERY_ID: deliveryId }));
+    // --- Submit ---
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const currentErrors = validateForm();
 
-        if (errors.DELIVERY_ID) {
-            setErrors(prev => ({ ...prev, DELIVERY_ID: '' }));
+        if (Object.keys(currentErrors).length === 0) {
+            setIsSubmitting(true);
+            const payload = {
+                remarks: formData.REMARKS,
+                items: selectedItems.map(item => ({
+                    item_id: item.ITEM_ID,
+                    quantity: item.QUANTITY
+                }))
+            };
+
+            router.put(`/returns/${returnId}`, payload, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Return updated successfully!');
+                    setIsSubmitting(false);
+                },
+                onError: (err) => {
+                    console.error("Server Error:", err);
+                    setIsSubmitting(false);
+                    toast.error('Failed to update return.');
+                }
+            });
+        } else {
+            const firstErrorMessage = Object.values(currentErrors)[0];
+            toast.error(`Validation Failed: ${firstErrorMessage}`);
         }
     };
 
+    // --- Helpers ---
     const handleAddItem = (item: any) => {
-        const existingItem = selectedItems.find(selected => selected.ITEM_ID === item.ITEM_ID);
-
+        const existingItem = selectedItems.find(selected => selected.ITEM_ID == item.item_id);
         if (!existingItem) {
             setSelectedItems(prev => [...prev, {
-                ITEM_ID: item.ITEM_ID,
-                ITEM_NAME: item.ITEM_NAME,
+                ITEM_ID: item.item_id,
+                ITEM_NAME: item.item_name,
                 QUANTITY: 1,
-                UNIT_PRICE: item.UNIT_PRICE,
-                MAX_QUANTITY: item.AVAILABLE_QUANTITY
+                UNIT_PRICE: item.unit_price,
+                MAX_QUANTITY: item.available_quantity
             }]);
         }
     };
@@ -159,81 +172,40 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
     };
 
     const getSelectedDelivery = () => {
-        return deliveries.find(d => d.ID.toString() === formData.DELIVERY_ID);
-    };
-
-    const getAvailableItems = () => {
-        if (!formData.DELIVERY_ID) return [];
-        const deliveryId = parseInt(formData.DELIVERY_ID);
-        return getDeliveryItems(deliveryId);
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (validateForm()) {
-            const selectedDelivery = getSelectedDelivery();
-
-            const updatedReturnData = {
-                ID: returnId,
-                CREATED_AT: formData.RETURN_DATE,
-                RETURN_DATE: formData.RETURN_DATE,
-                STATUS: formData.STATUS,
-                REMARKS: formData.REMARKS,
-                DELIVERY_ID: parseInt(formData.DELIVERY_ID),
-                SUPPLIER_NAME: selectedDelivery?.SUPPLIER_NAME,
-                ITEMS: selectedItems.map(item => ({
-                    ITEM_ID: item.ITEM_ID,
-                    QUANTITY: item.QUANTITY
-                }))
-            };
-
-            console.log('Updated Return Data:', updatedReturnData);
-
-            // In real app, PATCH request here
-            alert('Return updated successfully!');
-            router.visit(returns().url);
-        }
+        return deliveries.find(d => d.ID.toString() == formData.DELIVERY_ID);
     };
 
     const handleInputChange = (field: string, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-
-        if (errors[field]) {
-            setErrors(prev => ({ ...prev, [field]: '' }));
-        }
+        setFormData(prev => ({ ...prev, [field]: value }));
+        if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
     };
 
     const handleDelete = () => {
-        console.log('Deleting return:', returnId);
-        alert('Return deleted successfully!');
-        setShowDeleteConfirm(false);
-        router.visit(returns().url);
+        router.delete(`/returns/${returnId}`, {
+            onSuccess: () => {
+                toast.success('Return deleted successfully!');
+                setShowDeleteConfirm(false);
+            },
+            onError: () => {
+                toast.error('Failed to delete return.');
+                setShowDeleteConfirm(false);
+            }
+        });
     };
 
     const handleCancel = () => {
-        if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-            router.visit(returns().url);
+        if (window.confirm('Discard unsaved changes?')) {
+            router.visit('/returns');
         }
     };
 
-    if (isLoading) {
+    // Safe check for data availability
+    if (!serverReturnData) {
         return (
             <AppLayout breadcrumbs={breadcrumbs(returnId)}>
-                <Head title="Edit Return" />
-                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-2xl font-bold">Edit Return</h1>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading return data...</p>
-                        </div>
-                    </div>
+                <div className="p-8 text-center">
+                    <h2 className="text-xl font-bold text-red-600">Error: Return Data Not Found</h2>
+                    <Link href="/returns" className="mt-4 inline-block text-blue-600 underline">Back to List</Link>
                 </div>
             </AppLayout>
         );
@@ -253,8 +225,8 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                             </p>
                         </div>
                         <Link
-                            href={returns().url}
-                            className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+                            href="/returns"
+                            className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700"
                         >
                             Return to Returns
                         </Link>
@@ -265,14 +237,15 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                         <div className="h-full overflow-y-auto">
                             <div className="min-h-full flex items-start justify-center p-6">
                                 <div className="w-full max-w-6xl bg-white dark:bg-background rounded-xl border border-sidebar-border/70 shadow-lg">
-                                    {/* Header Section */}
                                     <div className="border-b border-sidebar-border/70 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20">
                                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                             Edit Return #{formData.REFERENCE_NO}
                                         </h2>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Update the return details below
-                                        </p>
+                                        <div className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold
+                                            ${formData.STATUS === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                            formData.STATUS === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                            {formData.STATUS}
+                                        </div>
                                     </div>
 
                                     <form onSubmit={handleSubmit} className="p-6">
@@ -294,9 +267,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                             value={formData.REFERENCE_NO}
                                                             className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-900 dark:text-white font-mono cursor-not-allowed"
                                                         />
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                            Reference number cannot be changed
-                                                        </p>
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -306,47 +276,37 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                             type="text"
                                                             readOnly
                                                             value={formData.STATUS}
-                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-900 dark:text-white font-medium cursor-not-allowed capitalize"
+                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-50 dark:bg-input text-gray-900 dark:text-white font-medium cursor-not-allowed"
                                                         />
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                            Status cannot be changed when editing
-                                                        </p>
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 gap-6">
-                                                    {/* Return Date Input REMOVED */}
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                            Delivery Reference <span className="text-red-500">*</span>
+                                                            Delivery Reference
                                                         </label>
                                                         <select
-                                                            required
+                                                            disabled
                                                             value={formData.DELIVERY_ID}
-                                                            onChange={(e) => handleDeliveryChange(e.target.value)}
-                                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                                                errors.DELIVERY_ID ? 'border-red-500' : 'border-sidebar-border'
-                                                            }`}
+                                                            className="w-full px-3 py-2 border border-sidebar-border rounded-lg text-sm bg-gray-100 dark:bg-sidebar-accent text-gray-600 dark:text-gray-400 cursor-not-allowed"
                                                         >
-                                                            <option value="">Select a delivery</option>
+                                                            {!formData.DELIVERY_ID && <option value="">Loading Delivery Info...</option>}
                                                             {deliveries.map(delivery => (
                                                                 <option key={delivery.ID} value={delivery.ID}>
                                                                     {delivery.REFERENCE_NO} - {delivery.SUPPLIER_NAME} - {new Date(delivery.DELIVERY_DATE).toLocaleDateString()}
                                                                 </option>
                                                             ))}
                                                         </select>
-                                                        {errors.DELIVERY_ID && (
-                                                            <p className="text-red-500 text-xs mt-1">{errors.DELIVERY_ID}</p>
-                                                        )}
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            To change delivery, delete this return and create a new one.
+                                                        </p>
                                                     </div>
                                                 </div>
 
                                                 {/* Selected Delivery Info */}
-                                                {formData.DELIVERY_ID && (
+                                                {formData.DELIVERY_ID && getSelectedDelivery() && (
                                                     <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
-                                                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                                            Delivery Information
-                                                        </h4>
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             <div>
                                                                 <span className="text-xs text-gray-600 dark:text-gray-400">Supplier:</span>
@@ -363,6 +323,12 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {!formData.DELIVERY_ID && (
+                                                    <div className="p-3 bg-red-100 text-red-800 text-xs rounded border border-red-200">
+                                                        <strong>System Error:</strong> Could not find Delivery ID in the return data.
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Items Selection */}
@@ -371,11 +337,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                                         Items to Return
                                                     </h3>
-                                                    {formData.DELIVERY_ID && (
-                                                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                            {getAvailableItems().length} items available
-                                                        </span>
-                                                    )}
                                                 </div>
 
                                                 {errors.items && (
@@ -385,33 +346,31 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                 )}
 
                                                 {/* Available Items */}
-                                                {formData.DELIVERY_ID && (
-                                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
-                                                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                                                            Available Items from Delivery
-                                                        </h4>
-                                                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                                                            {getAvailableItems().map(item => (
-                                                                <div key={item.ID} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border">
-                                                                    <div className="flex-1">
-                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{item.ITEM_NAME}</p>
-                                                                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                            Available: {item.AVAILABLE_QUANTITY} • Price: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(item.UNIT_PRICE)}
-                                                                        </p>
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleAddItem(item)}
-                                                                        disabled={selectedItems.some(selected => selected.ITEM_ID === item.ITEM_ID)}
-                                                                        className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                                                    >
-                                                                        Add
-                                                                    </button>
+                                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
+                                                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                                                        Available Items from Delivery
+                                                    </h4>
+                                                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                                                        {serverDeliveryItems.map((item: any) => (
+                                                            <div key={item.item_id} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border">
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{item.item_name}</p>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                                        Available to add: {item.available_quantity} • Price: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(item.unit_price)}
+                                                                    </p>
                                                                 </div>
-                                                            ))}
-                                                        </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleAddItem(item)}
+                                                                    disabled={selectedItems.some(selected => selected.ITEM_ID == item.item_id) || item.available_quantity <= 0}
+                                                                    className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                                                >
+                                                                    {selectedItems.some(selected => selected.ITEM_ID == item.item_id) ? 'Added' : 'Add'}
+                                                                </button>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                )}
+                                                </div>
 
                                                 {/* Selected Items */}
                                                 {selectedItems.length > 0 && (
@@ -516,26 +475,24 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowDeleteConfirm(true)}
-                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30"
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100"
                                                 >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
                                                     Delete Return
                                                 </button>
                                                 <div className="flex gap-3">
                                                     <button
                                                         type="button"
                                                         onClick={handleCancel}
-                                                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
+                                                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50"
                                                     >
                                                         Cancel
                                                     </button>
                                                     <button
                                                         type="submit"
-                                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                                                        disabled={isSubmitting}
+                                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        Save Changes
+                                                        {isSubmitting ? 'Saving...' : 'Save Changes'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -547,6 +504,8 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                     </div>
                 </div>
             </AppLayout>
+
+            <Toaster />
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
@@ -563,7 +522,7 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                         <div className="p-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50"
                             >
                                 Cancel
                             </button>

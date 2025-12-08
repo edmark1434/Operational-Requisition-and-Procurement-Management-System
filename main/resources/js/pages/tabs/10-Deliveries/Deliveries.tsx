@@ -12,6 +12,30 @@ import DeliveriesDetailModal from './DeliveriesDetailModal';
 // Import utilities
 import { transformDeliveriesData } from './utils';
 import { useDeliveriesFilters } from './hooks';
+import deliveryItems from '@/pages/datasets/delivery_items';
+
+export interface Item {
+    id: number;
+    barcode: string | null;
+    name: string;
+    dimensions: string | null;
+    unit_price: number;
+    current_stock: number;
+    is_active: boolean;
+    make_id: number | null;
+    category_id: number;
+    vendor_id: number | null;
+}
+
+export interface Service {
+    id: number;
+    name: string;
+    description: string;
+    hourly_rate: number;
+    is_active: boolean;
+    category_id: number;
+    vendor_id: number | null;
+}
 
 // Add proper TypeScript interfaces
 interface Delivery {
@@ -24,12 +48,14 @@ interface Delivery {
     status: string;
     remarks: string | null;
     po_id: number | null;
+    purchase_order: any;
 }
 
 export interface DeliveryItem {
     id: number;
     delivery_id: number | null;
     item_id: number | null;
+    item: Item;
     quantity: number;
     unit_price: number;
 }
@@ -38,6 +64,7 @@ export interface DeliveryService {
     id: number;
     delivery_id: number;
     service_id: number;
+    service: Service;
     item_id: number | null;
 }
 
@@ -49,10 +76,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Deliveries() {
-    const { deliveries: backendDeliveries, types, statuses } = usePage<{
+    const { deliveries: backendDeliveries, types, statuses,deliveryItems, deliveryServices } = usePage<{
         deliveries: Delivery[];
         types: string[];
         statuses: string[];
+        deliveryItems: DeliveryItem[];
+        deliveryServices: DeliveryService[];
     }>().props;
     const [deliveries, setDeliveries] = useState<Delivery[]>(backendDeliveries);
 
@@ -61,6 +90,8 @@ export default function Deliveries() {
     const [typeFilter, setTypeFilter] = useState('All');
     const [dateFilter, setDateFilter] = useState('All');
     const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+    const [selectedDeliveryItem, setSelectedDeliveryItem] = useState<DeliveryItem[]>([]);
+    const [selectedDeliveryService, setSelectedDeliveryService] = useState<DeliveryService[]>([]);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
@@ -93,7 +124,11 @@ export default function Deliveries() {
     };
 
     const openDetailModal = (delivery: Delivery) => {
+        const selectedDeliveryItems = deliveryItems.filter(item => item.delivery_id === delivery.id);
+        const selectedDeliveryServices = deliveryServices.filter(service => service.delivery_id === delivery.id);
         setSelectedDelivery(delivery);
+        setSelectedDeliveryItem(selectedDeliveryItems || []);
+        setSelectedDeliveryService(selectedDeliveryServices || []);
         setIsDetailModalOpen(true);
     };
 
@@ -144,6 +179,8 @@ export default function Deliveries() {
                 {/* Deliveries List - Add onStatusChange prop */}
                 <DeliveriesList
                     deliveries={filteredDeliveries}
+                    deliveryItems={deliveryItems}
+                    deliveryServices={deliveryServices}
                     onDeliveryClick={openDetailModal}
                     onStatusChange={handleStatusChange}
                     viewMode={viewMode}
@@ -153,6 +190,8 @@ export default function Deliveries() {
                 {isDetailModalOpen && selectedDelivery && (
                     <DeliveriesDetailModal
                         delivery={selectedDelivery}
+                        deliveryItems={selectedDeliveryItem}
+                        deliveryServices={selectedDeliveryService}
                         isOpen={isDetailModalOpen}
                         onClose={closeAllModals}
                         onEdit={() => {

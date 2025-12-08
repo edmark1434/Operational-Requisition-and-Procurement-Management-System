@@ -1,4 +1,6 @@
 // RequisitionPreviewModal.tsx
+import { useState } from 'react'; // Added import
+
 interface RequisitionPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -12,6 +14,9 @@ export default function RequisitionPreviewModal({
                                                     onConfirm,
                                                     formData
                                                 }: RequisitionPreviewModalProps) {
+    // Added state to track submission status
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     if (!isOpen) return null;
 
     const isServiceRequisition = formData?.type === 'services';
@@ -38,6 +43,12 @@ export default function RequisitionPreviewModal({
         }).format(value) + " / hr";
     };
 
+    // Wrapper function to handle single-click logic
+    const handleConfirm = () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        onConfirm();
+    };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -50,7 +61,9 @@ export default function RequisitionPreviewModal({
                         </h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
+                            // Disable close button while submitting to prevent accidental closing
+                            disabled={isSubmitting}
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -105,8 +118,6 @@ export default function RequisitionPreviewModal({
                                     </p>
                                 </div>
                             )}
-
-                            {/* Service Status Indicator (No longer needed) */}
                         </div>
                     </div>
 
@@ -159,7 +170,7 @@ export default function RequisitionPreviewModal({
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border">
                                 {isServiceRequisition ? (
-                                    // Services Table (New Structure: Qty | Details | Hourly Rate)
+                                    // Services Table
                                     formData?.services?.map((service: any, index: number) => (
                                         <tr key={service.id} className="hover:bg-gray-50 dark:hover:bg-sidebar">
                                             <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
@@ -185,7 +196,7 @@ export default function RequisitionPreviewModal({
                                         </tr>
                                     ))
                                 ) : (
-                                    // Items Table (Unchanged)
+                                    // Items Table
                                     formData?.items?.map((item: any, index: number) => (
                                         <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-sidebar">
                                             <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
@@ -237,16 +248,32 @@ export default function RequisitionPreviewModal({
                     <div className="flex justify-between items-center">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
+                            disabled={isSubmitting}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Back to Edit
                         </button>
                         <div className="flex gap-3">
                             <button
-                                onClick={onConfirm}
-                                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                                onClick={handleConfirm}
+                                disabled={isSubmitting} // Disable button if submitting
+                                className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2
+                                    ${isSubmitting
+                                    ? 'bg-green-700 cursor-not-allowed opacity-75'
+                                    : 'bg-green-600 hover:bg-green-700'
+                                }`}
                             >
-                                Confirm & Submit
+                                {isSubmitting ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    'Confirm & Submit'
+                                )}
                             </button>
                         </div>
                     </div>

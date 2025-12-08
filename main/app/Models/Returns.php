@@ -4,43 +4,62 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ReturnDelivery;
-use App\Models\ReturnItem;
 
 class Returns extends Model
 {
     use HasFactory;
 
     protected $table = 'returns';
-    protected $primaryKey = 'id';
-    public $timestamps = false; // you only have created_at
-    public const STATUS = ['Pending','Issued','Rejected','Delivered'];
-    protected $fillable = [
-        'ref_no',
-        'return_date',
-        'remarks',
-        'status',
-    ];
-
-    protected $casts = [
-        'created_at' => 'datetime',
-    ];
+    public $timestamps = false;
+    protected $guarded = [];
 
     /**
-     * Each return belongs to one delivery
+     * 1. Items Relationship
+     */
+    public function items()
+    {
+        return $this->hasMany(ReturnItem::class, 'return_id');
+    }
+
+    /**
+     * 2. Deliveries (Direct Relation for EDIT Page)
+     * Used by ReturnsController::edit
+     */
+    public function deliveries()
+    {
+        return $this->belongsToMany(
+            Delivery::class,
+            'return_delivery', // Pivot table
+            'return_id',       // Local key
+            'old_delivery_id'  // Foreign key
+        );
+    }
+
+    /**
+     * 3. Original Delivery (Pivot Relation for INDEX Page)
+     * Used by WebPages\Returns::index
+     * RESTORED THIS TO FIX YOUR 500 ERROR
      */
     public function originalDelivery()
     {
-        return $this->hasOne(ReturnDelivery::class,  'return_id');
+        return $this->hasOne(ReturnDelivery::class, 'return_id');
     }
 
-    public function newDelivery()
+    /**
+     * Helper Accessor: Get the Delivery Object directly
+     * Usage: $return->delivery
+     */
+    public function getDeliveryAttribute()
     {
-        return $this->hasOne(ReturnDelivery::class, 'return_id', 'new_delivery_id');
+        return $this->deliveries->first();
     }
 
-    public function return_item()
+    /**
+     * Helper Accessor: Get Delivery ID safely
+     * Usage: $return->delivery_id
+     */
+    public function getDeliveryIdAttribute()
     {
-        return $this->hasOne(ReturnItem::class, 'return_id');
+        return $this->deliveries->first()?->id;
     }
 }

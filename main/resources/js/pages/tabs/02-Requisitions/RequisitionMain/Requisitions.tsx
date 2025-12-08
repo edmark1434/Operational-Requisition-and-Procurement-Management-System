@@ -1,9 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState, useMemo, useEffect } from 'react'; // Ensure useEffect is imported
+import { useState, useMemo, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { router } from '@inertiajs/react';
 import { requisitions as requisitionsRoute, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import { usePage } from '@inertiajs/react';
+
 
 // Import Components
 import RequisitionStats from './RequisitionStats';
@@ -11,7 +13,7 @@ import SearchAndFilters from './SearchAndFilters';
 import RequisitionsList from './RequisitionsList';
 import RequisitionDetailModal from './RequisitionDetailModal';
 
-// --- Types based on your Laravel Controller ---
+// --- Types ---
 interface Requisition {
     id: number;
     ref_no?: string;
@@ -24,11 +26,15 @@ interface Requisition {
     created_at: string;
     total_cost: number;
     categories: string[];
+    items?: any[];
+    services?: any[];
+    items_count?: number;
+    services_count?: number;
 }
 
 interface RequisitionsPageProps {
-    requisitions: Requisition[]; // Data from Laravel
-    dbCategories: string[];      // Master list of categories from Laravel
+    requisitions: Requisition[];
+    dbCategories: string[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -56,9 +62,12 @@ export default function Requisitions({
     // 3. Local state for requisitions
     const [localRequisitions, setLocalRequisitions] = useState<Requisition[]>(serverRequisitions || []);
 
-    // =========================================================================
-    // FIX #1: Sync local state when serverRequisitions prop changes
-    // =========================================================================
+    // 4. props for permissions
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
+
+
+    // Sync local state when serverRequisitions prop changes
     useEffect(() => {
         setLocalRequisitions(serverRequisitions || []);
     }, [serverRequisitions]);
@@ -75,7 +84,6 @@ export default function Requisitions({
                 req.id.toString().includes(searchLower) ||
                 (req.notes && req.notes.toLowerCase().includes(searchLower));
 
-            // FIX: Replace underscores with spaces for safe comparison (e.g. 'partially_approved' vs 'Partially Approved')
             const dbStatus = req.status.toLowerCase().replace(/_/g, ' ');
             const filterStatus = statusFilter.toLowerCase().replace(/_/g, ' ');
 
@@ -99,15 +107,12 @@ export default function Requisitions({
 
     // --- Handlers ---
     const handleStatusUpdate = (id: number, newStatus: string, reason?: string) => {
-
-        // FIX #2: Optimistically update local state for instant UI feedback
         setLocalRequisitions(prevItems => prevItems.map(item =>
             item.id === id
                 ? { ...item, status: newStatus, remarks: reason || item.remarks }
                 : item
         ));
 
-        // INSTANTLY Update the Modal (The Popup)
         if (selectedRequisition && selectedRequisition.id === id) {
             setSelectedRequisition(prev => prev ? ({
                 ...prev,
@@ -116,19 +121,14 @@ export default function Requisitions({
             }) : null);
         }
 
-        // Send Request to Backend (Background Sync)
         router.put(`/requisitions/${id}/status`, {
             status: newStatus,
             reason: reason
         }, {
             preserveScroll: true,
-            onSuccess: () => {
-                // The useEffect (Fix #1) will handle the final data sync automatically
-                console.log("Synced with server");
-            },
+            onSuccess: () => { console.log("Synced with server"); },
             onError: () => {
                 alert("Failed to save status. Reloading page.");
-                // If it failed, reload to get the real data back
                 router.reload();
             }
         });
@@ -147,10 +147,16 @@ export default function Requisitions({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Requisitions" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+
+            {/* FIXED HEIGHT CONTAINER for scrolling logic */}
+            <div className="flex flex-col gap-4 rounded-xl p-4 overflow-hidden h-[calc(100vh-5rem)]">
+
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between shrink-0">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Requisitions</h1>
+
+                    {/*Need permission Create Req to access this button*/}
+                    { permissionsList.includes('Create Requisition') &&
                     <Link
                         href={requisitionform().url}
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -160,28 +166,34 @@ export default function Requisitions({
                         </svg>
                         Create New Requisition
                     </Link>
+                    }
+
                 </div>
 
                 {/* Stats */}
-                <RequisitionStats requisitions={localRequisitions} />
+                <div className="shrink-0">
+                    <RequisitionStats requisitions={localRequisitions} />
+                </div>
 
                 {/* Search and Filters */}
-                <SearchAndFilters
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    statusFilter={statusFilter}
-                    setStatusFilter={setStatusFilter}
-                    priorityFilter={priorityFilter}
-                    setPriorityFilter={setPriorityFilter}
-                    categoryFilter={categoryFilter}
-                    setCategoryFilter={setCategoryFilter}
-                    statuses={statuses}
-                    priorities={priorities}
-                    allCategories={allCategories}
-                    resultsCount={filteredRequisitions.length}
-                />
+                <div className="shrink-0">
+                    <SearchAndFilters
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        statusFilter={statusFilter}
+                        setStatusFilter={setStatusFilter}
+                        priorityFilter={priorityFilter}
+                        setPriorityFilter={setPriorityFilter}
+                        categoryFilter={categoryFilter}
+                        setCategoryFilter={setCategoryFilter}
+                        statuses={statuses}
+                        priorities={priorities}
+                        allCategories={allCategories}
+                        resultsCount={filteredRequisitions.length}
+                    />
+                </div>
 
-                {/* Requisitions List */}
+                {/* Requisitions List (Scrolls independently) */}
                 <RequisitionsList
                     requisitions={filteredRequisitions}
                     onRequisitionClick={openModal}

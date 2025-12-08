@@ -3,9 +3,11 @@ import { DeliveriesIcons } from './utils/icons';
 import { getDeliveriesStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
 import deliveryItems from "@/pages/datasets/delivery_items";
-import {usePage} from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
+import { deliveryeditStatus } from '@/routes';
+import { toast, Toaster } from 'sonner';
 
-// Add proper TypeScript interfaces
+// ... [Interfaces] ...
 export interface Item {
     id: number;
     barcode: string | null;
@@ -39,6 +41,10 @@ interface Delivery {
     status: string;
     remarks: string | null;
     po_id: number | null;
+    purchase_order: any;
+    ref_no?: string;
+    items?: DeliveryItem[];
+    services?: DeliveryService[];
 }
 
 export interface DeliveryItem {
@@ -56,9 +62,14 @@ export interface DeliveryService {
     service_id: number;
     service: Service;
     item_id: number | null;
+    hours?: number;
+    hourly_rate?: number;
 }
 
 interface DeliveriesDetailModalProps {
+    delivery: Delivery;
+    deliveryItems: DeliveryItem[];
+    deliveryServices: DeliveryService[];
     isOpen: boolean;
     onClose: () => void;
     onEdit: () => void;
@@ -67,20 +78,87 @@ interface DeliveriesDetailModalProps {
 }
 
 export default function DeliveriesDetailModal({
+                                                  delivery,
+                                                  deliveryItems,
+                                                  deliveryServices,
                                                   isOpen,
                                                   onClose,
                                                   onEdit,
                                                   onDelete,
                                                   onStatusChange
                                               }: DeliveriesDetailModalProps) {
-    const { delivery, deliveryItems, deliveryServices } = usePage<{
-        delivery: Delivery;
-        deliveryItems: DeliveryItem[];
-        deliveryServices: DeliveryService[];
-    }>().props;
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
     const [showStatusDropdown, setShowStatusDropdown] = useState<boolean>(false);
+
+    // State for image enlargement
+    const [isImageExpanded, setIsImageExpanded] = useState<boolean>(false);
+
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Combine delivery with its items and services
+    const combinedDelivery = {
+        ...delivery,
+        items: delivery.items || deliveryItems || [],
+        services: delivery.services || deliveryServices || []
+    };
+
+    // Determine delivery type
+    const isServiceDelivery = combinedDelivery.type === 'Service Delivery' ||
+        (combinedDelivery.type === undefined && combinedDelivery.services && combinedDelivery.services.length > 0);
+    const isItemDelivery = combinedDelivery.type === 'Item Purchase' ||
+        (combinedDelivery.type === undefined && combinedDelivery.items && combinedDelivery.items.length > 0);
+    const isMixedDelivery = combinedDelivery.type === 'Mixed' ||
+        (combinedDelivery.items && combinedDelivery.items.length > 0 &&
+            combinedDelivery.services && combinedDelivery.services.length > 0);
+
+    // Calculate totals dynamically
+    const calculateItemTotals = () => {
+        if (!combinedDelivery.items || combinedDelivery.items.length === 0) return { totalItems: 0, totalItemValue: 0 };
+
+        const totalItems = combinedDelivery.items.reduce((sum, item) => sum + item.quantity, 0);
+        const totalItemValue = combinedDelivery.items.reduce((sum, item) =>
+            sum + (item.quantity * parseFloat(item.unit_price?.toString() || '0')), 0);
+
+        return { totalItems, totalItemValue };
+    };
+
+    const calculateServiceTotals = () => {
+        if (!combinedDelivery.services || combinedDelivery.services.length === 0) return { totalServices: 0, totalServiceValue: 0 };
+
+        const totalServices = combinedDelivery.services.length;
+        const totalServiceValue = combinedDelivery.services.reduce((sum, service) => {
+            const hours = service.hours || 0;
+            const rate = service.hourly_rate || service.service?.hourly_rate || 0;
+            return sum + (hours * parseFloat(rate.toString()));
+        }, 0);
+
+        return { totalServices, totalServiceValue };
+    };
+
+    const itemTotals = calculateItemTotals();
+    const serviceTotals = calculateServiceTotals();
+    const totalItems = itemTotals.totalItems;
+    const totalServices = serviceTotals.totalServices;
+    const totalItemValue = itemTotals.totalItemValue;
+    const totalServiceValue = serviceTotals.totalServiceValue;
+
+    // Get delivery type display
+    const getDeliveryTypeDisplay = () => {
+        if (combinedDelivery.type) return combinedDelivery.type;
+        if (isMixedDelivery) return 'Mixed';
+        if (isServiceDelivery) return 'Service Delivery';
+        if (isItemDelivery) return 'Item Purchase';
+        return 'Unknown';
+    };
+
+    // Helper to resolve image path for Laravel Storage
+    const getImageUrl = (path: string | null) => {
+        if (!path) return '';
+        if (path.startsWith('http') || path.startsWith('https')) return path;
+        const cleanPath = path.startsWith('/') ? path : `/${path}`;
+        if (cleanPath.startsWith('/storage')) return cleanPath;
+        return `/storage${cleanPath}`;
+    };
 
     const handleDelete = () => {
         onDelete(delivery.id);
@@ -88,12 +166,22 @@ export default function DeliveriesDetailModal({
     };
 
     const handleStatusChange = (newStatus: string) => {
-        onStatusChange(delivery.id, newStatus);
-        setShowStatusDropdown(false);
-        onClose(); // Auto-close the modal after status change
+        router.put(deliveryeditStatus.url(delivery.id), { status: newStatus },{
+            onSuccess:()=>{
+                toast(`Delivery ID ${delivery.id} status updated to ${newStatus}`);
+                onStatusChange(delivery.id, newStatus);
+                setTimeout(() => {
+                    setShowStatusDropdown(false);
+                    onClose(); // Auto-close the modal after status change
+                }, 1000);
+            },
+            onError:(errors)=>{
+                toast.error('Error updating status',errors);
+            }
+        });
+      
     };
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -109,17 +197,26 @@ export default function DeliveriesDetailModal({
 
     if (!isOpen || !delivery) return null;
 
+    const imageUrl = getImageUrl(delivery.receipt_photo);
+
     return (
         <>
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-sidebar-border">
+            {/* MAIN MODAL WRAPPER */}
+            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300">
+                <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-sidebar-border shadow-2xl">
                     {/* Header - Sticky */}
-                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
+                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10 rounded-t-xl">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                    Delivery #{delivery.receipt_no}
-                                </h2>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                        Delivery #{delivery.receipt_no}
+                                    </h2>
+                                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDeliveryTypeColor(getDeliveryTypeDisplay())}`}>
+                                        {getDeliveryIcon(getDeliveryTypeDisplay())}
+                                        {getDeliveryTypeDisplay()}
+                                    </span>
+                                </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                     Delivered on {formatDateTime(delivery.delivery_date)}
                                 </p>
@@ -138,7 +235,8 @@ export default function DeliveriesDetailModal({
                     {/* Content - Scrollable */}
                     <div className="flex-1 overflow-y-auto">
                         <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
-                            {/* Basic Information */}
+
+                            {/* Basic Info Section */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <div>
@@ -148,7 +246,7 @@ export default function DeliveriesDetailModal({
                                         <div className="flex items-center gap-2">
                                             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getDeliveriesStatusColor(delivery?.status)}`}>
                                                 <DeliveryStatusIcon status={delivery?.status} />
-                                                delivery?.status
+                                                {delivery?.status}
                                             </div>
                                             <div className="relative" ref={dropdownRef}>
                                                 <button
@@ -210,6 +308,14 @@ export default function DeliveriesDetailModal({
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Delivery Reference
+                                        </label>
+                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                            {delivery.ref_no || 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Receipt Number
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white font-medium font-mono">
@@ -226,106 +332,210 @@ export default function DeliveriesDetailModal({
                                     </div>
                                 </div>
                                 <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Total Items
-                                        </label>
-                                        <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                            {delivery.TOTAL_ITEMS} items
-                                        </p>
-                                    </div>
+                                    {/* Dynamic Content Display */}
+                                    {isItemDelivery && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Total Items
+                                            </label>
+                                            <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                                {totalItems} items
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {isServiceDelivery && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Total Services
+                                            </label>
+                                            <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                                {totalServices} services
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {isMixedDelivery && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                    Total Items
+                                                </label>
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {totalItems} items
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                    Total Services
+                                                </label>
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {totalServices} services
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Total Value
                                         </label>
-                                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                            {formatCurrency(delivery.TOTAL_VALUE)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Total Cost
-                                        </label>
                                         <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                            {formatCurrency(delivery.total_cost)}
+                                            {formatCurrency(totalItemValue + totalServiceValue || delivery.total_cost)}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Receipt Photo */}
-                            {delivery.receipt_photo && (
+                            {/* Receipt Photo - VIEW BUTTON OR EMPTY STATE */}
+                            <div className="border-t border-sidebar-border pt-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                    Receipt Photo
+                                </h3>
+                                {delivery.receipt_photo ? (
+                                    /* Button that opens the modal */
+                                    <button
+                                        onClick={() => setIsImageExpanded(true)}
+                                        className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-sidebar border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-all w-full md:w-auto group"
+                                    >
+                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-md text-blue-600 dark:text-blue-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                View Attached Receipt
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Click to view full image
+                                            </p>
+                                        </div>
+                                        <div className="ml-auto">
+                                            <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </div>
+                                    </button>
+                                ) : (
+                                    /* Empty State for No Photo */
+                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 flex flex-col items-center justify-center text-center">
+                                        <div className="p-3 bg-gray-100 dark:bg-sidebar rounded-full mb-3">
+                                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" className="text-gray-400" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">No Receipt Attached</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            No image was uploaded for this delivery.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Supplier Information */}
+                            {delivery.purchase_order && (
                                 <div className="border-t border-sidebar-border pt-6">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                        Receipt Photo
+                                        Supplier Information
                                     </h3>
-                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
-                                        <img
-                                            src={delivery.receipt_photo}
-                                            alt="Delivery receipt"
-                                            className="max-w-full h-auto rounded-lg max-h-64 object-contain"
-                                        />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Supplier Name
+                                            </label>
+                                            <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                {delivery.purchase_order?.vendor?.name || 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Purchase Order Reference
+                                            </label>
+                                            <p className="text-sm text-gray-900 dark:text-white">
+                                                {delivery.purchase_order?.ref_no || 'N/A'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Supplier Information */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Supplier Information
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Supplier Name
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {delivery.SUPPLIER_NAME}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Purchase Order Reference
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white">
-                                            {delivery.PO_REFERENCE}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Delivery Items */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Delivered Items
-                                </h3>
-                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border overflow-hidden">
-                                    <table className="w-full">
-                                        <thead>
-                                        <tr className="border-b border-sidebar-border bg-gray-100 dark:bg-sidebar">
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Item Name</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Unit Price</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Total</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Barcode</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        {deliveryItems?.map((item: DeliveryItem) => (
-                                            <tr key={item.ID} className="border-b border-sidebar-border last:border-b-0">
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{item.ITEM_NAME}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(item.unit_price)}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white font-medium">
-                                                    {formatCurrency(item.quantity * item.unit_price)}
-                                                </td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white font-mono">{item.BARCODE}</td>
+                            {/* ITEMS SECTION */}
+                            {combinedDelivery.items && combinedDelivery.items.length > 0 && (
+                                <div className="border-t border-sidebar-border pt-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                        Delivered Items
+                                    </h3>
+                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border overflow-hidden">
+                                        <table className="w-full">
+                                            <thead>
+                                            <tr className="border-b border-sidebar-border bg-gray-100 dark:bg-sidebar">
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Item Name</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Unit Price</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Total</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Barcode</th>
                                             </tr>
-                                        ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                            {combinedDelivery.items.map((item: DeliveryItem) => (
+                                                <tr key={item.id} className="border-b border-sidebar-border last:border-b-0">
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white">{item.item?.name || 'Unknown Item'}</td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(item.unit_price)}</td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white font-medium">
+                                                        {formatCurrency(item.quantity * parseFloat(item.unit_price?.toString() || '0'))}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white font-mono">{item.item?.barcode || 'N/A'}</td>
+                                                </tr>
+                                            ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {/* SERVICES SECTION */}
+                            {combinedDelivery.services && combinedDelivery.services.length > 0 && (
+                                <div className="border-t border-sidebar-border pt-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                        Delivered Services
+                                    </h3>
+                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border overflow-hidden">
+                                        <table className="w-full">
+                                            <thead>
+                                            <tr className="border-b border-sidebar-border bg-gray-100 dark:bg-sidebar">
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Service Name</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Hours</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Hourly Rate</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Total</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {combinedDelivery.services.map((service: DeliveryService) => {
+                                                const hours = service.hours || 0;
+                                                const rate = service.hourly_rate || service.service?.hourly_rate || 0;
+                                                const total = hours * parseFloat(rate.toString());
+
+                                                return (
+                                                    <tr key={service.id} className="border-b border-sidebar-border last:border-b-0">
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{service.service?.name || 'Unknown Service'}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{service.service?.description || 'N/A'}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{hours}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(rate)}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white font-medium">
+                                                            {formatCurrency(total)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Remarks */}
                             {delivery.remarks && (
@@ -344,7 +554,7 @@ export default function DeliveriesDetailModal({
                     </div>
 
                     {/* Footer with Actions */}
-                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
+                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent rounded-b-xl">
                         <div className="flex justify-between items-center">
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
@@ -371,8 +581,8 @@ export default function DeliveriesDetailModal({
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-[60] transition-all duration-300">
+                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border shadow-2xl">
                         <div className="p-6 border-b border-sidebar-border">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 Delete Delivery
@@ -398,11 +608,105 @@ export default function DeliveriesDetailModal({
                     </div>
                 </div>
             )}
+
+            {/* Image Viewer Modal (Lightbox) - With Transparent Blurred BG */}
+            {isImageExpanded && delivery.receipt_photo && (
+                <div
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[70] transition-all duration-300"
+                    onClick={() => setIsImageExpanded(false)}
+                >
+                    <div className="relative max-w-[90vw] max-h-[90vh]">
+                        <img
+                            src={imageUrl}
+                            alt="Receipt Full View"
+                            className="max-w-full max-h-[85vh] object-contain rounded-md shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+
+                        {/* Toolbar */}
+                        <div className="absolute top-4 right-4 flex gap-2">
+                            {/* Download Button */}
+                            <a
+                                href={imageUrl}
+                                download={`Receipt-${delivery.receipt_no}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all backdrop-blur-md"
+                                title="Download"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                            </a>
+
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setIsImageExpanded(false)}
+                                className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all backdrop-blur-md"
+                                title="Close"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <Toaster/>
         </>
     );
 }
 
-// Delivery Status Icon Component
+// ... [Helper functions] ...
+function getDeliveryTypeColor(type: string): string {
+    switch (type?.toLowerCase()) {
+        case 'item purchase':
+            return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+        case 'service delivery':
+            return 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800';
+        case 'mixed':
+            return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800';
+        default:
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
+    }
+}
+
+function getDeliveryIcon(type: string) {
+    switch (type?.toLowerCase()) {
+        case 'item purchase':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+            );
+        case 'service delivery':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            );
+        case 'mixed':
+            return (
+                <div className="flex">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <svg className="w-3 h-3 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+            );
+        default:
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            );
+    }
+}
+
 interface DeliveryStatusIconProps {
     status: string;
 }
@@ -429,3 +733,8 @@ function DeliveryStatusIcon({ status }: DeliveryStatusIconProps) {
             );
     }
 }
+
+const statusOptions = [
+    { value: 'Pending', label: 'Pending', description: 'Delivery is awaiting processing' },
+    { value: 'Received', label: 'Received', description: 'Delivery has been received' },
+];
