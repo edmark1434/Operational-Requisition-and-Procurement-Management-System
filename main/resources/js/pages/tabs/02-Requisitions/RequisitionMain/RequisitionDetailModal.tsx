@@ -73,7 +73,6 @@ const formatHourlyRate = (rate: number | string) => {
 // Component: DeclineReasonModal
 function DeclineReasonModal({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
     const { props } = usePage();
-    const permissionsList = props.user_permission as string[];
 
     const [reason, setReason] = useState('');
     return (
@@ -131,6 +130,7 @@ export default function RequisitionDetailModal({
                                                    onStatusUpdate,
                                                }: RequisitionDetailModalProps) {
     const { props } = usePage();
+    // Get permissions from Inertia props
     const permissionsList = props.user_permission as string[];
 
     const [showDeclineModal, setShowDeclineModal] = useState(false);
@@ -293,9 +293,12 @@ export default function RequisitionDetailModal({
                         <button onClick={handleEdit} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                             Edit Requisition
                         </button>
-                        <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">
-                            Adjust Requisition
-                        </button>
+                        {/* ADJUST REQUISITION: Requires Permission */}
+                        {permissionsList.includes('Approve / Reject Requisition') && (
+                            <button onClick={handleAdjust} className="px-4 py-2 text-sm font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors">
+                                Adjust Requisition
+                            </button>
+                        )}
                     </>
                 );
             }
@@ -324,8 +327,6 @@ export default function RequisitionDetailModal({
                     </button>
                 );
             }
-            // CHANGED: Only show "Mark as Completed" if Delivered.
-            // Previously this checked isApproved.
             if (isDelivered) {
                 return (
                     <button onClick={handleMarkAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
@@ -340,21 +341,25 @@ export default function RequisitionDetailModal({
 
     const renderRightButtons = () => {
         if (isPending) {
-            return (
-                <>
-                    <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
-                        Decline
-                    </button>
-                    <button onClick={handleAccept} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
-                        Accept
-                    </button>
-                </>
-            );
+            // ACCEPT/DECLINE: Requires Permission
+            if (permissionsList.includes('Approve / Reject Requisition')) {
+                return (
+                    <>
+                        <button onClick={() => setShowDeclineModal(true)} className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                            Decline
+                        </button>
+                        <button onClick={handleAccept} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                            Accept
+                        </button>
+                    </>
+                );
+            }
+            return null; // Show nothing if no permission
         }
 
         // Logic for "Create Purchase Order"
         // 1. Items: Approved OR Partially Approved
-        // 2. Services: Approved (ADDED THIS)
+        // 2. Services: Approved
         const showCreatePO = (!isServiceRequisition && (isApproved || isPartiallyApproved)) || (isServiceRequisition && isApproved);
 
         if (showCreatePO) {
@@ -409,7 +414,7 @@ export default function RequisitionDetailModal({
 
                                     {/* Content */}
                                     <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white dark:bg-sidebar">
-                                        {/* ... (content remains exactly the same) ... */}
+                                        {/* Top Grid: Status, Type, Priority, Requestor */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-4">
                                                 <div>
