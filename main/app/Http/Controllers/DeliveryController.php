@@ -7,6 +7,7 @@ use App\Models\Delivery;
 use App\Models\DeliveryItem;
 use App\Models\DeliveryService;
 use App\Models\PurchaseOrder;
+use App\Models\Requisition;
 use App\Models\ReturnDelivery;
 use App\Models\Returns;
 use App\Models\Rework;
@@ -118,13 +119,86 @@ class DeliveryController extends Controller
                 ]);
         }
 
+        $this::markDeliveredRequisitions();
+
         AuditLog::query()->create([
             'description' => 'Delivery recorded: ' . $final['ref_no'],
             'user_id' => auth()->id(),
-            'type_id' => 8,
+            'type_id' => 7,
         ]);
 
         return back();
+    }
+
+    public function delete($id)
+    {
+        $delivery = Delivery::with(['deliveryItems', 'delivery_service', 'returns', 'reworks'])->findOrFail($id);
+
+        // Delete items and services
+        $delivery->deliveryItems()->delete();
+        $delivery->delivery_service()->delete();
+
+        // Reset linked purchase order status
+        if ($delivery->po_id) {
+            $delivery->purchaseOrder?->update(['status' => 'Issued']);
+        }
+
+        // Reset linked return statuses and pivot
+        if ($delivery->type === 'Item Return') {
+            foreach ($delivery->returns as $ret) {
+                $ret->update(['status' => 'Issued']);
+            }
+            $delivery->returns()->updateExistingPivot($delivery->returns->pluck('id')->toArray(), ['new_delivery_id' => null]);
+        }
+
+        // Reset linked rework statuses and pivot
+        if ($delivery->type === 'Service Rework') {
+            foreach ($delivery->reworks as $rework) {
+                $rework->update(['status' => 'Issued']);
+            }
+            $delivery->reworks()->updateExistingPivot($delivery->reworks->pluck('id')->toArray(), ['new_delivery_id' => null]);
+        }
+
+        // Delete delivery
+        $delivery->delete();
+
+        $this::markDeliveredRequisitions();
+        return back()->with('success', 'Delivery deleted successfully.');
+    }
+
+    public static function markDeliveredRequisitions()
+    {
+        $requisitions = Requisition::query()
+            ->whereIn('status', ['Approved', 'Partially Approved', 'Ordered', 'Delivered'])
+            ->with([
+                'requisition_items.req_order_items.po_item.purchaseOrder.delivery.deliveryItems',
+                'requisition_services.req_order_services.po_service.purchase_order.delivery.delivery_service'
+            ])
+            ->get();
+
+        foreach ($requisitions as $req) {
+            $hasDeliveries = $req->requisition_items->some(function($item) {
+                return $item->req_order_items->some(function($roItem) {
+                    $po = $roItem->po_item->purchaseOrder ?? null;
+                    return $po && $po->delivery->count() > 0;
+                });
+            });
+
+            if (!$hasDeliveries) {
+                $hasDeliveries = $req->requisition_services->some(function($service) {
+                    return $service->req_order_services->some(function($roService) {
+                        $po = $roService->po_service->purchase_order ?? null;
+                        return $po && $po->delivery->count() > 0;
+                    });
+                });
+            }
+
+            $newStatus = $hasDeliveries ? 'Delivered' : 'Ordered';
+
+            if ($req->status !== $newStatus) {
+                $req->update(['status' => $newStatus]);
+            }
+        }
     }
 
     private function storeBase64Image(string $base64String, string $directory = 'images'): ?string
