@@ -58,7 +58,18 @@ export default function ReworkDetailModal({
 
     const handleDelete = () => {
         if (rework) {
-            onDelete(rework.ID);
+            // DIRECT BACKEND CALL
+            router.delete(`/reworks/${rework.ID}`, {
+                onSuccess: () => {
+                    toast.success('Rework deleted successfully');
+                    onClose(); // Close the modal
+                    // onDelete(rework.ID); // Optional: call prop to update parent state locally
+                },
+                onError: (errors) => {
+                    toast.error('Failed to delete rework');
+                    console.error(errors);
+                }
+            });
         }
         setShowDeleteConfirm(false);
     };
