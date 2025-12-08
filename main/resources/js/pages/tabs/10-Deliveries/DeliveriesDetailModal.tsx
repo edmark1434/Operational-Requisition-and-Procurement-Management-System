@@ -179,7 +179,7 @@ export default function DeliveriesDetailModal({
                 toast.error('Error updating status',errors);
             }
         });
-      
+
     };
 
     useEffect(() => {
@@ -210,7 +210,7 @@ export default function DeliveriesDetailModal({
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                        Delivery #{delivery.receipt_no}
+                                        {delivery.ref_no}
                                     </h2>
                                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDeliveryTypeColor(getDeliveryTypeDisplay())}`}>
                                         {getDeliveryIcon(getDeliveryTypeDisplay())}
@@ -308,14 +308,6 @@ export default function DeliveriesDetailModal({
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Delivery Reference
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {delivery.ref_no || 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Receipt Number
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white font-medium font-mono">
@@ -334,7 +326,7 @@ export default function DeliveriesDetailModal({
                                 <div className="space-y-4">
                                     {/* Dynamic Content Display */}
                                     {isItemDelivery && (
-                                        <div>
+                                        <div className="mt-16">
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 Total Items
                                             </label>

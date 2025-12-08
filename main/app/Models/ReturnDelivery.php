@@ -11,6 +11,8 @@ class ReturnDelivery extends Model
 
     protected $table = 'return_delivery';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'return_id',
         'old_delivery_id',

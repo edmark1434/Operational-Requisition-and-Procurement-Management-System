@@ -175,14 +175,14 @@ type DeliveryForm = {
 };
 
 export default function DeliveryAdd({ auth }: { auth: any }) {
-    const { purchaseOrders: backendPurchaseOrders, returns, reworks, orderItems, orderServices, returnItems, reworkService: reworkServices, types, statuses, items, services, vendors, deliveries } = usePage<{
+    const { purchaseOrders: backendPurchaseOrders, returns, reworks, orderItems, orderServices, returnItems, reworkServices, types, statuses, items, services, vendors, deliveries } = usePage<{
         purchaseOrders: PurchaseOrder[];
         returns: Return[];
         reworks: Rework[];
         orderItems: OrderItem[];
         orderServices: OrderService[];
         returnItems: ReturnItem[];
-        reworkService: ReworkService[];
+        reworkServices: ReworkService[];
         types: string[];
         statuses: string[];
         items: Item[];
@@ -483,16 +483,45 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
         });
     };
 
+    const getReturnItems = (returnId: number) => {
+        const retItems = returnItems.filter(ret => ret.return_id === returnId);
+        if (!retItems) return [];
+
+        return retItems.map(item => {
+            const itemData = items.find(i => i.id === item.item_id);
+            return {
+                ID: item.id,
+                ITEM_ID: item.item_id,
+                ITEM_NAME: itemData?.name || 'Unknown Item',
+                QUANTITY_ORDERED: item.quantity,
+                UNIT_PRICE: itemData?.unit_price,
+                BARCODE: itemData?.barcode || '',
+                CATEGORY: itemData?.category_id || 0
+            };
+        });
+    };
+
+
     const getAvailableItems = () => {
-        if (!formData.PO_ID) return [];
-        const poId = parseInt(formData.PO_ID);
-        return getPurchaseOrderItems(poId);
+        if (formData.PO_ID) {
+            const poId = parseInt(formData.PO_ID);
+            return getPurchaseOrderItems(poId);
+        } else if (formData.RETURN_ID) {
+            const returnId = parseInt(formData.RETURN_ID);
+            return getReturnItems(returnId); // you need a function that returns items from a return
+        }
+        return [];
     };
 
     const getAvailableServices = () => {
-        if (!formData.PO_ID) return [];
-        const poId = parseInt(formData.PO_ID);
-        return orderServices.filter(s => s.po_id === poId);
+        if (formData.PO_ID) {
+            const poId = parseInt(formData.PO_ID);
+            return orderServices.filter(service => service.po_id === poId);
+        } else if (formData.REWORK_ID) {
+            const reworkId = parseInt(formData.REWORK_ID);
+            return reworkServices.filter(service => service.rework_id === reworkId);
+        }
+        return [];
     };
 
     const getFilteredPurchaseOrders = () => {
@@ -870,13 +899,13 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Return Date:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedReturn()?.return_date ? formatDate(getSelectedReturn()!.return_date) : 'N/A'}
+                                                                {getSelectedReturn()?.created_at ? formatDate(getSelectedReturn()!.created_at) : 'N/A'}
                                                             </p>
                                                         </div>
                                                         <div>
                                                             <span className="text-xs text-gray-600 dark:text-gray-400">Remarks:</span>
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {getSelectedReturn()?.remarks}
+                                                                {getSelectedReturn()?.remarks ?? 'N/A'}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -912,16 +941,18 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                             )}
 
                                             {/* Items Selection */}
-                                            {(formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE || formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_RETURN) && (
+                                            {(formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE ||
+                                                formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_RETURN) && (
                                                 <div className="space-y-6">
                                                     <div className="flex justify-between items-center">
                                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                                             Delivery Items
                                                         </h3>
-                                                        {formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE && formData.PO_ID && (
+
+                                                        {(formData.PO_ID || formData.RETURN_ID) && (
                                                             <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                            {getAvailableItems().length} items available from PO
-                                                        </span>
+                    {getAvailableItems().length} items available
+                </span>
                                                         )}
                                                     </div>
 
@@ -931,12 +962,13 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                         </div>
                                                     )}
 
-                                                    {/* Available Items from Purchase Order */}
-                                                    {formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE && formData.PO_ID && (
+                                                    {/* Available Items */}
+                                                    {(formData.PO_ID || formData.RETURN_ID) && (
                                                         <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
                                                             <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                                                                Available Items from Purchase Order
+                                                                Available Items
                                                             </h4>
+
                                                             <div className="space-y-2 max-h-60 overflow-y-auto">
                                                                 {getAvailableItems().map(item => (
                                                                     <div key={item.ITEM_ID} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border">
@@ -968,12 +1000,15 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                     Selected Items ({selectedItems.length})
                                                                 </h4>
                                                             </div>
+
                                                             <div className="divide-y divide-sidebar-border">
                                                                 {selectedItems.map((item, index) => (
                                                                     <div key={item.item_id} className="p-4">
                                                                         <div className="flex justify-between items-start mb-3">
                                                                             <div className="flex-1">
-                                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</p>
+                                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                                    {items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}
+                                                                                </p>
                                                                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                                                                     Barcode: {items.find(i => i.id === item.item_id)?.barcode ?? 'No barcode data'}
                                                                                 </p>
@@ -1003,15 +1038,8 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                                         errors[`item_${index}_quantity`] ? 'border-red-500' : 'border-sidebar-border'
                                                                                     }`}
                                                                                 />
-                                                                                {errors[`item_${index}_quantity`] && (
-                                                                                    <p className="text-red-500 text-xs mt-1">{errors[`item_${index}_quantity`]}</p>
-                                                                                )}
-                                                                                {formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE && (
-                                                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                                        Ordered: {item.ordered_qty}
-                                                                                    </p>
-                                                                                )}
                                                                             </div>
+
                                                                             <div>
                                                                                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                                                     Unit Price <span className="text-red-500">*</span>
@@ -1025,14 +1053,6 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                                         errors[`item_${index}_unit_price`] ? 'border-red-500' : 'border-sidebar-border'
                                                                                     }`}
                                                                                 />
-                                                                                {errors[`item_${index}_quantity`] && (
-                                                                                    <p className="text-red-500 text-xs mt-1">{errors[`item_${index}_unit_price`]}</p>
-                                                                                )}
-                                                                                {formData.DELIVERY_TYPE === DELIVERY_TYPES.ITEM_PURCHASE && (
-                                                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                                        Latest record: {formatCurrency(item.original_unit_price)}
-                                                                                    </p>
-                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -1044,16 +1064,18 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                             )}
 
                                             {/* Services Selection */}
-                                            {(formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_DELIVERY || formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_REWORK) && (
+                                            {(formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_DELIVERY ||
+                                                formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_REWORK) && (
                                                 <div className="space-y-6">
                                                     <div className="flex justify-between items-center">
                                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                                             Delivery Services
                                                         </h3>
-                                                        {formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_DELIVERY && formData.PO_ID && (
+
+                                                        {(formData.PO_ID || formData.REWORK_ID) && (
                                                             <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                            {getAvailableServices().length} services available from PO
-                                                        </span>
+                    {getAvailableServices().length} services available
+                </span>
                                                         )}
                                                     </div>
 
@@ -1063,21 +1085,21 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                         </div>
                                                     )}
 
-                                                    {/* Available Services from Purchase Order */}
-                                                    {formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_DELIVERY && formData.PO_ID && (
+                                                    {/* Available services */}
+                                                    {(formData.PO_ID || formData.REWORK_ID) && (
                                                         <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
                                                             <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                                                                Available Services from Purchase Order
+                                                                Available Services
                                                             </h4>
+
                                                             <div className="space-y-2 max-h-60 overflow-y-auto">
-                                                                {getAvailableServices().map((service) => (
+                                                                {getAvailableServices().map(service => (
                                                                     <div key={service.id} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border">
                                                                         <div className="flex-1">
                                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">{service.service.name}</p>
-                                                                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                                {service.service.description}
-                                                                            </p>
+                                                                            <p className="text-xs text-gray-600 dark:text-gray-400">{service.service.description}</p>
                                                                         </div>
+
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => handleAddService(service)}
@@ -1092,7 +1114,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                         </div>
                                                     )}
 
-                                                    {/* Selected Services */}
+                                                    {/* Selected services */}
                                                     {selectedServices.length > 0 && (
                                                         <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border overflow-hidden">
                                                             <div className="bg-gray-50 dark:bg-sidebar-accent px-4 py-3 border-b border-sidebar-border">
@@ -1100,12 +1122,15 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                     Selected Services ({selectedServices.length})
                                                                 </h4>
                                                             </div>
+
                                                             <div className="divide-y divide-sidebar-border">
                                                                 {selectedServices.map((service, index) => (
-                                                                    <div key={`${service.service_id}-${index}`} className="p-4">
+                                                                    <div key={service.service_id} className="p-4">
                                                                         <div className="flex justify-between items-start mb-3">
                                                                             <div className="flex-1">
-                                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{services.find(s => s.id === service.service_id)?.name || 'Unknown Service'}</p>
+                                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                                    {services.find(s => s.id === service.service_id)?.name || 'Unknown Service'}
+                                                                                </p>
                                                                                 <p className="text-xs text-gray-600 dark:text-gray-400">
                                                                                     {services.find(s => s.id === service.service_id)?.description || 'No description'}
                                                                                 </p>
@@ -1139,6 +1164,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                                     <p className="text-red-500 text-xs mt-1">{errors[`service_${index}_hours`]}</p>
                                                                                 )}
                                                                             </div>
+
                                                                             <div>
                                                                                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                                                     Hourly Rate <span className="text-red-500">*</span>
@@ -1152,14 +1178,6 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                                         errors[`service_${index}_hourly_rate`] ? 'border-red-500' : 'border-sidebar-border'
                                                                                     }`}
                                                                                 />
-                                                                                {errors[`service_${index}_hourly_rate`] && (
-                                                                                    <p className="text-red-500 text-xs mt-1">{errors[`service_${index}_hourly_rate`]}</p>
-                                                                                )}
-                                                                                {formData.DELIVERY_TYPE === DELIVERY_TYPES.SERVICE_DELIVERY && (
-                                                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                                                        Latest record: {formatCurrency(service.original_hourly_rate)}
-                                                                                    </p>
-                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -1169,6 +1187,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                     )}
                                                 </div>
                                             )}
+
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
