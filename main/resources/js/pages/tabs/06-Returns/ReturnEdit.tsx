@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { returns } from '@/routes';
+import { returnsIndex } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -13,7 +13,7 @@ interface ReturnEditProps {
 const breadcrumbs = (returnId: number): BreadcrumbItem[] => [
     {
         title: 'Returns',
-        href: returns().url,
+        href: returnsIndex().url,
     },
     {
         title: `Edit Return #${returnId}`,
@@ -90,7 +90,7 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
         } catch (error) {
             console.error('Error loading return data:', error);
             alert('Error loading return data!');
-            router.visit(returns().url);
+            router.visit(returnsIndex().url);
         } finally {
             setIsLoading(false);
         }
@@ -192,7 +192,7 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
 
             // In real app, PATCH request here
             alert('Return updated successfully!');
-            router.visit(returns().url);
+            router.visit(returnsIndex().url);
         }
     };
 
@@ -211,12 +211,12 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
         console.log('Deleting return:', returnId);
         alert('Return deleted successfully!');
         setShowDeleteConfirm(false);
-        router.visit(returns().url);
+        router.visit(returnsIndex().url);
     };
 
     const handleCancel = () => {
         if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-            router.visit(returns().url);
+            router.visit(returnsIndex().url);
         }
     };
 
@@ -253,7 +253,7 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                             </p>
                         </div>
                         <Link
-                            href={returns().url}
+                            href={returnsIndex().url}
                             className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
                         >
                             Return to Returns
