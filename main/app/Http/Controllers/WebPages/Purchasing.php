@@ -63,7 +63,7 @@ class Purchasing extends Controller
                             'ID'          => $reqItem->id ?? null,
                             'ITEM_ID'     => $reqItem->item->id ?? null,
                             'NAME'        => $reqItem->item->name ?? null,
-                            'QUANTITY'    => $orderItem->quantity,
+                            'QUANTITY'    => $reqItem->quantity,
                             'UNIT_PRICE'  => $reqItem->item->unit_price ?? null,
                             'CATEGORY_ID' => $reqItem->item->category_id ?? null,
                             'SELECTED'    => true,
