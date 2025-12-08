@@ -10,6 +10,7 @@ use App\Models\DeliveryItem;
 use App\Models\Returns;
 use App\Models\ReturnItem;
 use App\Models\Item;
+use App\Models\AuditLog; // <--- ADDED IMPORT
 use Illuminate\Support\Facades\DB;
 
 class ReturnsController extends Controller
@@ -102,6 +103,14 @@ class ReturnsController extends Controller
                 'new_delivery_id' => null,
             ]);
 
+            // --- AUDIT LOG ADDED (Type 9: Return Created) ---
+            AuditLog::query()->create([
+                'description' => 'Return created: ' . $refNo,
+                'user_id' => auth()->id(),
+                'type_id' => 9,
+            ]);
+            // ------------------------------------------------
+
             DB::commit();
 
             return redirect()->route('returnsIndex')->with('success', 'Return created successfully');
@@ -117,7 +126,6 @@ class ReturnsController extends Controller
     public function edit($id)
     {
         // 1. Get the Return safely
-        // FIXED: Changed 'delivery' to 'deliveries' to match your Model relationship
         $return = Returns::with(['items.item', 'deliveries.purchaseOrder.vendor'])->find($id);
 
         if (!$return) {
@@ -201,18 +209,21 @@ class ReturnsController extends Controller
     }
 
     /**
-     * 5. Update Status
+     * 5. Update Status (Merged: Inventory Logic + Audit Log)
      */
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
             'status' => 'required|string',
         ]);
+
         $status = $request->status;
         $return = Returns::findOrFail($id);
         $return->status = $request->status;
         $return->save();
-        if($status === 'Issued') {
+
+        // --- 1. EXISTING INVENTORY LOGIC ---
+        if ($status === 'Issued') {
             ReturnItem::where('return_id', $id)->get()->map(function($returnItem) {
                 $item = Item::find($returnItem->item_id);
                 if ($item) {
@@ -220,7 +231,7 @@ class ReturnsController extends Controller
                     $item->save();
                 }
             });
-        }else if($status === 'Delivered') {
+        } else if ($status === 'Delivered') {
             ReturnItem::where('return_id', $id)->get()->map(function($returnItem) {
                 $item = Item::find($returnItem->item_id);
                 if ($item) {
@@ -229,6 +240,25 @@ class ReturnsController extends Controller
                 }
             });
         }
+
+        // --- 2. ADDED AUDIT LOG LOGIC ---
+        $typeId = null;
+
+        if ($status === 'Issued') {
+            $typeId = 10; // Return Issued
+        } elseif ($status === 'Rejected') {
+            $typeId = 11; // Return Rejected
+        }
+
+        if ($typeId) {
+            AuditLog::query()->create([
+                'description' => 'Return ' . strtolower($status) . ': ' . $return->ref_no,
+                'user_id' => auth()->id(),
+                'type_id' => $typeId,
+            ]);
+        }
+        // ---------------------------------
+
         return back()->with('success', 'Status updated successfully');
     }
 

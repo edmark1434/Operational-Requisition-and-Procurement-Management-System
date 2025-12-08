@@ -9,8 +9,10 @@ use App\Models\Delivery;
 use App\Models\Rework;
 use App\Models\ReworkService;
 use App\Models\ReworkDelivery;
+use App\Models\AuditLog; // <--- ADDED IMPORT
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ReworksController extends Controller
 {
@@ -36,56 +38,7 @@ class ReworksController extends Controller
         ]);
     }
 
-    // ... inside ReworksController class ...
-
-    // 4. Delete Rework (Cascading Delete)
-// 4. PERMANENTLY DELETE Rework
-    public function destroy($id)
-    {
-        try {
-            DB::beginTransaction();
-
-            // 1. Get exact table names from Models
-            // This ensures we get 'rework_delivery' (singular) instead of guessing plural
-            $serviceTable = (new ReworkService())->getTable();   // Likely 'rework_services'
-            $deliveryTable = (new ReworkDelivery())->getTable(); // Is 'rework_delivery'
-
-            // 2. DISABLE Foreign Key Checks
-            // This allows us to delete the children without the database blocking us
-            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
-
-            // 3. Delete Child Records using the CORRECT table names
-            DB::table($serviceTable)->where('rework_id', $id)->delete();
-            DB::table($deliveryTable)->where('rework_id', $id)->delete();
-
-            // 4. Delete Main Rework
-            $rework = Rework::find($id);
-            if ($rework) {
-                $rework->forceDelete();
-            }
-
-            // 5. Re-enable Checks
-            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
-
-            DB::commit();
-
-            return redirect()->back()->with('success', 'Rework request deleted successfully.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
-            Log::error("Delete Rework Error: " . $e->getMessage());
-
-            // Return the actual error to the frontend so we can see it if it fails again
-            return back()->withErrors(['error' => 'Delete failed: ' . $e->getMessage()]);
-        }
-    }
-
     // 2. API: Get Services associated with a Delivery
-// In App\Http\Controllers\ReworksController.php
-
-// In App\Http\Controllers\ReworksController.php
-
     public function getDeliveryServices($deliveryId)
     {
         try {
@@ -95,14 +48,11 @@ class ReworksController extends Controller
             $reworkTable = (new Rework())->getTable();
 
             // 2. Fetch Services that are currently in an ACTIVE Rework
-            // We EXCLUDE 'Rejected' or 'Cancelled' statuses here.
-            // This means if a rework was rejected, this query ignores it,
-            // effectively resetting the item to "Normal/Available".
             $existingReworks = DB::table($reworkServiceTable)
                 ->join($reworkDeliveryTable, "$reworkServiceTable.rework_id", '=', "$reworkDeliveryTable.rework_id")
                 ->join($reworkTable, "$reworkServiceTable.rework_id", '=', "$reworkTable.id")
                 ->where("$reworkDeliveryTable.old_delivery_id", $deliveryId)
-                ->whereNotIn("$reworkTable.status", ['Rejected', 'Cancelled']) // <--- THE FIX
+                ->whereNotIn("$reworkTable.status", ['Rejected', 'Cancelled'])
                 ->select(
                     "$reworkServiceTable.service_id",
                     "$reworkTable.status"
@@ -121,7 +71,6 @@ class ReworksController extends Controller
 
             // 5. Map Data
             $services = $deliveryServices->map(function ($ds) use ($statusMap) {
-                // If status is 'Rejected', it wasn't in $statusMap (due to step 2), so this will be null.
                 $currentStatus = $statusMap[$ds->service_id] ?? null;
 
                 return [
@@ -129,7 +78,7 @@ class ReworksController extends Controller
                     'item_name' => $ds->service ? $ds->service->name : 'Service #'.$ds->service_id,
                     'unit_price' => $ds->hourly_rate,
                     'available_quantity' => 1,
-                    'rework_status' => $currentStatus, // Will be null if Rejected, allowing re-add
+                    'rework_status' => $currentStatus,
                 ];
             })->values();
 
@@ -179,6 +128,14 @@ class ReworksController extends Controller
                 ]);
             }
 
+            // --- AUDIT LOG ADDED (Type 12: Rework Created) ---
+            AuditLog::query()->create([
+                'description' => 'Rework created: ' . $refNo,
+                'user_id' => auth()->id(),
+                'type_id' => 12,
+            ]);
+            // -------------------------------------------------
+
             DB::commit();
 
             return redirect()->route('reworks')->with('success', 'Rework created successfully');
@@ -187,6 +144,77 @@ class ReworksController extends Controller
             DB::rollBack();
             Log::error("Rework Error: " . $e->getMessage());
             return back()->withErrors(['error' => 'Error creating rework: ' . $e->getMessage()]);
+        }
+    }
+
+    // 4. Update Status (Handles Issued/Rejected Logs)
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string',
+        ]);
+
+        $rework = Rework::findOrFail($id);
+        $rework->status = $request->status;
+        $rework->save();
+
+        // --- AUDIT LOG ADDED (Types 13 & 14) ---
+        $typeId = null;
+
+        if ($request->status === 'Issued') {
+            $typeId = 13; // Rework Issued
+        } elseif ($request->status === 'Rejected') {
+            $typeId = 14; // Rework Rejected
+        }
+
+        if ($typeId) {
+            AuditLog::query()->create([
+                'description' => 'Rework ' . strtolower($request->status) . ': ' . $rework->ref_no,
+                'user_id' => auth()->id(),
+                'type_id' => $typeId,
+            ]);
+        }
+        // ---------------------------------------
+
+        return back()->with('success', 'Status updated successfully');
+    }
+
+    // 5. Delete Rework (Cascading Delete)
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            // 1. Get exact table names from Models
+            $serviceTable = (new ReworkService())->getTable();
+            $deliveryTable = (new ReworkDelivery())->getTable();
+
+            // 2. DISABLE Foreign Key Checks
+            Schema::disableForeignKeyConstraints();
+
+            // 3. Delete Child Records using the CORRECT table names
+            DB::table($serviceTable)->where('rework_id', $id)->delete();
+            DB::table($deliveryTable)->where('rework_id', $id)->delete();
+
+            // 4. Delete Main Rework
+            $rework = Rework::find($id);
+            if ($rework) {
+                $rework->forceDelete();
+            }
+
+            // 5. Re-enable Checks
+            Schema::enableForeignKeyConstraints();
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Rework request deleted successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Schema::enableForeignKeyConstraints();
+            Log::error("Delete Rework Error: " . $e->getMessage());
+
+            return back()->withErrors(['error' => 'Delete failed: ' . $e->getMessage()]);
         }
     }
 }
