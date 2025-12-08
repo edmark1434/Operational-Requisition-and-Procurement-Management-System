@@ -41,6 +41,6 @@ class Returns extends Model
 
     public function return_item()
     {
-        return $this->hasOne(ReturnItem::class, 'return_id');
+        return $this->hasMany(ReturnItem::class, 'return_id');
     }
 }

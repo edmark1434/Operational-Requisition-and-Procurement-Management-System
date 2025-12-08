@@ -2,6 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { ReworkStatusIcons } from './utils/icons';
 import { getReworkStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate } from './utils/formatters';
+import { router } from '@inertiajs/react';
+import { toast, Toaster } from 'sonner';
+import { reworksUpdateStatus } from '@/routes';
 
 interface ReworkDetailModalProps {
     rework: any;
@@ -62,9 +65,18 @@ export default function ReworkDetailModal({
 
     const handleStatusChange = (newStatus: string) => {
         if (rework) {
-            onStatusChange(rework.ID, newStatus);
+            router.put(reworksUpdateStatus.url(rework.ID), { status: newStatus }, {
+                onSuccess: () => {
+                    toast(`Rework ID ${rework.ID} status updated to ${newStatus}`);
+                    onStatusChange(rework.ID, newStatus);
+                },
+                onError: (errors) => {
+                    toast.error('Error updating status:', errors);
+                }
+            });
         }
         setShowStatusDropdown(false);
+        onClose();
     };
 
     // Click outside to close dropdown
@@ -314,6 +326,7 @@ export default function ReworkDetailModal({
                     </div>
                 </div>
             )}
+            <Toaster/>
         </>
     );
 }

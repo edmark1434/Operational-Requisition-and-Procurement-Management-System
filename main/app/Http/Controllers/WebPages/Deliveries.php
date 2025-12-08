@@ -56,5 +56,13 @@ class Deliveries extends Controller
             'deliveryId' => (int)$id
         ]);
     }
+    public function updateStatus(Request $request, $id){
+        $delivery = Delivery::find($id);
+        if(!$delivery){
+            return response()->json(['message' => 'Delivery not found'], 404);
+        }
+        $delivery->status = $request->input('status');
+        $delivery->save();
+    }
 }
 

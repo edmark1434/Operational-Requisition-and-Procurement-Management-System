@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { ReturnsIcons } from './utils/icons';
 import { getReturnsStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
+import { router } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { returnsIndex, returnsUpdateStatus } from '@/routes';
+import { on } from 'events';
 
 interface ReturnsDetailModalProps {
     returnItem: any;
@@ -46,11 +50,17 @@ export default function ReturnsDetailModal({
 
     const handleStatusChange = (newStatus: string) => {
         if (returnItem) {
-            onStatusChange(returnItem.ID, newStatus);
+            router.put(returnsUpdateStatus.url(returnItem.ID), { status: newStatus },{
+                onSuccess: () => {
+                    onStatusChange(returnItem.ID, newStatus);
+                    toast(`Return ID ${returnItem.ID} status updated to ${newStatus}`);
+                }
+            });
             // The modal will automatically close because the parent component
             // should handle the state update and re-render
         }
         setShowStatusDropdown(false);
+        onClose();
     };
 
     // Close dropdown when clicking outside
