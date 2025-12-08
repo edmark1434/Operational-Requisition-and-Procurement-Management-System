@@ -4,6 +4,8 @@ import AppLayout from '@/layouts/app-layout';
 import { router } from '@inertiajs/react';
 import { requisitions as requisitionsRoute, requisitionform } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import { usePage } from '@inertiajs/react';
+
 
 // Import Components
 import RequisitionStats from './RequisitionStats';
@@ -59,6 +61,11 @@ export default function Requisitions({
 
     // 3. Local state for requisitions
     const [localRequisitions, setLocalRequisitions] = useState<Requisition[]>(serverRequisitions || []);
+
+    // 4. props for permissions
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
+
 
     // Sync local state when serverRequisitions prop changes
     useEffect(() => {
@@ -147,6 +154,9 @@ export default function Requisitions({
                 {/* Header */}
                 <div className="flex items-center justify-between shrink-0">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Requisitions</h1>
+
+                    {/*Need permission Create Req to access this button*/}
+                    { permissionsList.includes('Create Requisition') &&
                     <Link
                         href={requisitionform().url}
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -156,6 +166,8 @@ export default function Requisitions({
                         </svg>
                         Create New Requisition
                     </Link>
+                    }
+
                 </div>
 
                 {/* Stats */}
