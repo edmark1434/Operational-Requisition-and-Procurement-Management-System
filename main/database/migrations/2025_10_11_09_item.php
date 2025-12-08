@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('barcode',20)->unique()->nullable();
             $table->string('name', 100);
-            $table->string('dimensions', 50)->nullable();
+            $table->string('dimensions', 255)->nullable();
             $table->decimal('unit_price', 10, 2);
             $table->integer('current_stock');
             $table->boolean('is_active')->default(true);

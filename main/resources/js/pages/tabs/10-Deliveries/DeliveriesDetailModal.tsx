@@ -3,7 +3,7 @@ import { DeliveriesIcons } from './utils/icons';
 import { getDeliveriesStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
 import deliveryItems from "@/pages/datasets/delivery_items";
-import {usePage} from "@inertiajs/react";
+import { usePage } from "@inertiajs/react";
 
 // Add proper TypeScript interfaces
 export interface Item {
@@ -39,6 +39,10 @@ interface Delivery {
     status: string;
     remarks: string | null;
     po_id: number | null;
+    purchase_order: any;
+    ref_no?: string;
+    items?: DeliveryItem[];
+    services?: DeliveryService[];
 }
 
 export interface DeliveryItem {
@@ -56,9 +60,14 @@ export interface DeliveryService {
     service_id: number;
     service: Service;
     item_id: number | null;
+    hours?: number;
+    hourly_rate?: number;
 }
 
 interface DeliveriesDetailModalProps {
+    delivery: Delivery; // <-- REQUIRED!
+    deliveryItems: DeliveryItem[];
+    deliveryServices: DeliveryService[];
     isOpen: boolean;
     onClose: () => void;
     onEdit: () => void;
@@ -67,32 +76,86 @@ interface DeliveriesDetailModalProps {
 }
 
 export default function DeliveriesDetailModal({
+                                                  delivery,
+                                                  deliveryItems,
+                                                  deliveryServices,
                                                   isOpen,
                                                   onClose,
                                                   onEdit,
                                                   onDelete,
                                                   onStatusChange
                                               }: DeliveriesDetailModalProps) {
-    const { delivery, deliveryItems, deliveryServices } = usePage<{
-        delivery: Delivery;
-        deliveryItems: DeliveryItem[];
-        deliveryServices: DeliveryService[];
-    }>().props;
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
     const [showStatusDropdown, setShowStatusDropdown] = useState<boolean>(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // Combine delivery with its items and services
+    const combinedDelivery = {
+        ...delivery,
+        items: delivery.items || deliveryItems || [],
+        services: delivery.services || deliveryServices || []
+    };
+    
+    // Determine delivery type
+    const isServiceDelivery = combinedDelivery.type === 'Service Delivery' || 
+                             (combinedDelivery.type === undefined && combinedDelivery.services && combinedDelivery.services.length > 0);
+    const isItemDelivery = combinedDelivery.type === 'Item Purchase' || 
+                          (combinedDelivery.type === undefined && combinedDelivery.items && combinedDelivery.items.length > 0);
+    const isMixedDelivery = combinedDelivery.type === 'Mixed' || 
+                           (combinedDelivery.items && combinedDelivery.items.length > 0 && 
+                            combinedDelivery.services && combinedDelivery.services.length > 0);
+    
+    // Calculate totals dynamically
+    const calculateItemTotals = () => {
+        if (!combinedDelivery.items || combinedDelivery.items.length === 0) return { totalItems: 0, totalItemValue: 0 };
+        
+        const totalItems = combinedDelivery.items.reduce((sum, item) => sum + item.quantity, 0);
+        const totalItemValue = combinedDelivery.items.reduce((sum, item) => 
+            sum + (item.quantity * parseFloat(item.unit_price?.toString() || '0')), 0);
+        
+        return { totalItems, totalItemValue };
+    };
+    
+    const calculateServiceTotals = () => {
+        if (!combinedDelivery.services || combinedDelivery.services.length === 0) return { totalServices: 0, totalServiceValue: 0 };
+        
+        const totalServices = combinedDelivery.services.length;
+        const totalServiceValue = combinedDelivery.services.reduce((sum, service) => {
+            const hours = service.hours || 0;
+            const rate = service.hourly_rate || service.service?.hourly_rate || 0;
+            return sum + (hours * parseFloat(rate.toString()));
+        }, 0);
+        
+        return { totalServices, totalServiceValue };
+    };
+    
+    const itemTotals = calculateItemTotals();
+    const serviceTotals = calculateServiceTotals();
+    const totalItems = itemTotals.totalItems;
+    const totalServices = serviceTotals.totalServices;
+    const totalItemValue = itemTotals.totalItemValue;
+    const totalServiceValue = serviceTotals.totalServiceValue;
+    
+    // Get delivery type display
+    const getDeliveryTypeDisplay = () => {
+        if (combinedDelivery.type) return combinedDelivery.type;
+        if (isMixedDelivery) return 'Mixed';
+        if (isServiceDelivery) return 'Service Delivery';
+        if (isItemDelivery) return 'Item Purchase';
+        return 'Unknown';
+    };
+    
     const handleDelete = () => {
         onDelete(delivery.id);
         setShowDeleteConfirm(false);
     };
-
+    
     const handleStatusChange = (newStatus: string) => {
         onStatusChange(delivery.id, newStatus);
         setShowStatusDropdown(false);
         onClose(); // Auto-close the modal after status change
     };
-
+    
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -100,15 +163,15 @@ export default function DeliveriesDetailModal({
                 setShowStatusDropdown(false);
             }
         };
-
+        
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
-
+    
     if (!isOpen || !delivery) return null;
-
+    
     return (
         <>
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -117,9 +180,15 @@ export default function DeliveriesDetailModal({
                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                    Delivery #{delivery.receipt_no}
-                                </h2>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                        Delivery #{delivery.receipt_no}
+                                    </h2>
+                                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDeliveryTypeColor(getDeliveryTypeDisplay())}`}>
+                                        {getDeliveryIcon(getDeliveryTypeDisplay())}
+                                        {getDeliveryTypeDisplay()}
+                                    </span>
+                                </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                     Delivered on {formatDateTime(delivery.delivery_date)}
                                 </p>
@@ -134,7 +203,7 @@ export default function DeliveriesDetailModal({
                             </button>
                         </div>
                     </div>
-
+                    
                     {/* Content - Scrollable */}
                     <div className="flex-1 overflow-y-auto">
                         <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
@@ -148,7 +217,7 @@ export default function DeliveriesDetailModal({
                                         <div className="flex items-center gap-2">
                                             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getDeliveriesStatusColor(delivery?.status)}`}>
                                                 <DeliveryStatusIcon status={delivery?.status} />
-                                                delivery?.status
+                                                {delivery?.status}
                                             </div>
                                             <div className="relative" ref={dropdownRef}>
                                                 <button
@@ -160,7 +229,7 @@ export default function DeliveriesDetailModal({
                                                     </svg>
                                                     Change Status
                                                 </button>
-
+                                                
                                                 {showStatusDropdown && (
                                                     <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
                                                         <div className="p-3">
@@ -210,6 +279,14 @@ export default function DeliveriesDetailModal({
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Delivery Reference
+                                        </label>
+                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                            {delivery.ref_no || 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Receipt Number
                                         </label>
                                         <p className="text-sm text-gray-900 dark:text-white font-medium font-mono">
@@ -226,33 +303,66 @@ export default function DeliveriesDetailModal({
                                     </div>
                                 </div>
                                 <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Total Items
-                                        </label>
-                                        <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                            {delivery.TOTAL_ITEMS} items
-                                        </p>
-                                    </div>
+                                    {/* Dynamic Content Display */}
+                                    {isItemDelivery && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Total Items
+                                            </label>
+                                            <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                                {totalItems} items
+                                            </p>
+                                        </div>
+                                    )}
+                                    
+                                    {isServiceDelivery && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Total Services
+                                            </label>
+                                            <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                                {totalServices} services
+                                            </p>
+                                        </div>
+                                    )}
+                                    
+                                    {isMixedDelivery && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                    Total Items
+                                                </label>
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {totalItems} items
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                    Total Services
+                                                </label>
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {totalServices} services
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                    
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Total Value
                                         </label>
-                                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                            {formatCurrency(delivery.TOTAL_VALUE)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Total Cost
-                                        </label>
                                         <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                            {formatCurrency(delivery.total_cost)}
+                                            {formatCurrency(totalItemValue + totalServiceValue || delivery.total_cost)}
                                         </p>
+                                        {(isMixedDelivery && (totalItemValue > 0 && totalServiceValue > 0)) && (
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Items: {formatCurrency(totalItemValue)} + Services: {formatCurrency(totalServiceValue)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-
+                            
                             {/* Receipt Photo */}
                             {delivery.receipt_photo && (
                                 <div className="border-t border-sidebar-border pt-6">
@@ -268,65 +378,110 @@ export default function DeliveriesDetailModal({
                                     </div>
                                 </div>
                             )}
-
+                            
                             {/* Supplier Information */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Supplier Information
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Supplier Name
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                            {delivery.SUPPLIER_NAME}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Purchase Order Reference
-                                        </label>
-                                        <p className="text-sm text-gray-900 dark:text-white">
-                                            {delivery.PO_REFERENCE}
-                                        </p>
+                            {delivery.purchase_order && (
+                                <div className="border-t border-sidebar-border pt-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                        Supplier Information
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Supplier Name
+                                            </label>
+                                            <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                {delivery.purchase_order?.vendor?.name || 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Purchase Order Reference
+                                            </label>
+                                            <p className="text-sm text-gray-900 dark:text-white">
+                                                {delivery.purchase_order?.ref_no || 'N/A'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Delivery Items */}
-                            <div className="border-t border-sidebar-border pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                    Delivered Items
-                                </h3>
-                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border overflow-hidden">
-                                    <table className="w-full">
-                                        <thead>
-                                        <tr className="border-b border-sidebar-border bg-gray-100 dark:bg-sidebar">
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Item Name</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Unit Price</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Total</th>
-                                            <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Barcode</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        {deliveryItems?.map((item: DeliveryItem) => (
-                                            <tr key={item.ID} className="border-b border-sidebar-border last:border-b-0">
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{item.ITEM_NAME}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(item.unit_price)}</td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white font-medium">
-                                                    {formatCurrency(item.quantity * item.unit_price)}
-                                                </td>
-                                                <td className="p-3 text-sm text-gray-900 dark:text-white font-mono">{item.BARCODE}</td>
+                            )}
+                            
+                            {/* ITEMS SECTION - Only show if delivery has items */}
+                            {combinedDelivery.items && combinedDelivery.items.length > 0 && (
+                                <div className="border-t border-sidebar-border pt-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                        Delivered Items
+                                    </h3>
+                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border overflow-hidden">
+                                        <table className="w-full">
+                                            <thead>
+                                            <tr className="border-b border-sidebar-border bg-gray-100 dark:bg-sidebar">
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Item Name</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Unit Price</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Total</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Barcode</th>
                                             </tr>
-                                        ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                            {combinedDelivery.items.map((item: DeliveryItem) => (
+                                                <tr key={item.id} className="border-b border-sidebar-border last:border-b-0">
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white">{item.item?.name || 'Unknown Item'}</td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(item.unit_price)}</td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white font-medium">
+                                                        {formatCurrency(item.quantity * parseFloat(item.unit_price?.toString() || '0'))}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-gray-900 dark:text-white font-mono">{item.item?.barcode || 'N/A'}</td>
+                                                </tr>
+                                            ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </div>
-
+                            )}
+                            
+                            {/* SERVICES SECTION - Only show if delivery has services */}
+                            {combinedDelivery.services && combinedDelivery.services.length > 0 && (
+                                <div className="border-t border-sidebar-border pt-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                        Delivered Services
+                                    </h3>
+                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border overflow-hidden">
+                                        <table className="w-full">
+                                            <thead>
+                                            <tr className="border-b border-sidebar-border bg-gray-100 dark:bg-sidebar">
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Service Name</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Hours</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Hourly Rate</th>
+                                                <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Total</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {combinedDelivery.services.map((service: DeliveryService) => {
+                                                const hours = service.hours || 0;
+                                                const rate = service.hourly_rate || service.service?.hourly_rate || 0;
+                                                const total = hours * parseFloat(rate.toString());
+                                                
+                                                return (
+                                                    <tr key={service.id} className="border-b border-sidebar-border last:border-b-0">
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{service.service?.name || 'Unknown Service'}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{service.service?.description || 'N/A'}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{hours}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white">{formatCurrency(rate)}</td>
+                                                        <td className="p-3 text-sm text-gray-900 dark:text-white font-medium">
+                                                            {formatCurrency(total)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                            
                             {/* Remarks */}
                             {delivery.remarks && (
                                 <div className="border-t border-sidebar-border pt-6">
@@ -342,7 +497,7 @@ export default function DeliveriesDetailModal({
                             )}
                         </div>
                     </div>
-
+                    
                     {/* Footer with Actions */}
                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                         <div className="flex justify-between items-center">
@@ -368,7 +523,7 @@ export default function DeliveriesDetailModal({
                     </div>
                 </div>
             </div>
-
+            
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -402,6 +557,54 @@ export default function DeliveriesDetailModal({
     );
 }
 
+// Helper functions for delivery type
+function getDeliveryTypeColor(type: string): string {
+    switch (type?.toLowerCase()) {
+        case 'item purchase':
+            return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+        case 'service delivery':
+            return 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800';
+        case 'mixed':
+            return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800';
+        default:
+            return 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border border-gray-200 dark:border-gray-700';
+    }
+}
+
+function getDeliveryIcon(type: string) {
+    switch (type?.toLowerCase()) {
+        case 'item purchase':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+            );
+        case 'service delivery':
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            );
+        case 'mixed':
+            return (
+                <div className="flex">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <svg className="w-3 h-3 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+            );
+        default:
+            return (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            );
+    }
+}
+
 // Delivery Status Icon Component
 interface DeliveryStatusIconProps {
     status: string;
@@ -429,3 +632,12 @@ function DeliveryStatusIcon({ status }: DeliveryStatusIconProps) {
             );
     }
 }
+
+// Status options (add this constant)
+const statusOptions = [
+    { value: 'Pending', label: 'Pending', description: 'Delivery is awaiting processing' },
+    { value: 'In Transit', label: 'In Transit', description: 'Delivery is on the way' },
+    { value: 'Received', label: 'Received', description: 'Delivery has been received' },
+    { value: 'With Returns', label: 'With Returns', description: 'Delivery has some returned items' },
+    { value: 'Cancelled', label: 'Cancelled', description: 'Delivery has been cancelled' }
+];

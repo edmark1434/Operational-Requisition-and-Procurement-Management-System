@@ -8,6 +8,8 @@ use App\Models\OrderItem;
 use App\Models\OrderService;
 use App\Models\PurchaseOrder;
 use App\Models\ReturnItem;
+use App\Models\DeliveryItem;
+use App\Models\DeliveryService;
 use App\Models\Returns;
 use App\Models\Rework;
 use App\Models\ReworkService;
@@ -23,7 +25,9 @@ class Deliveries extends Controller
     public function index()
     {
         return Inertia::render($this->base_path .'/Deliveries', [
-            'deliveries' => Delivery::all(),
+            'deliveries' => Delivery::with('purchaseOrder.vendor')->get(),
+            'deliveryItems' => DeliveryItem::with('item')->get(),
+            'deliveryServices' => DeliveryService::with('service')->get(),
             'types' => Delivery::TYPES,
             'statuses' => Delivery::STATUS,
         ]);
