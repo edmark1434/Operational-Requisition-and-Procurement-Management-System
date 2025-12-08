@@ -41,9 +41,15 @@ export default function ReturnsDetailModal({
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+// Inside ReturnsDetailModal.tsx
     const handleDelete = () => {
         if (returnItem) {
-            onDelete(returnItem.ID);
+            // Handle case sensitivity (Laravel sends 'id', your frontend might use 'ID')
+            const idToDelete = returnItem.id || returnItem.ID;
+
+            if (idToDelete) {
+                onDelete(idToDelete);
+            }
         }
         setShowDeleteConfirm(false);
     };
