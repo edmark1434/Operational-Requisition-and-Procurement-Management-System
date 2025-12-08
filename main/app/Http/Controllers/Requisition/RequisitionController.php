@@ -334,6 +334,7 @@ class RequisitionController extends Controller
             'reason' => 'nullable|string'
         ]);
 
+        // 1. Fetch the requisition (Make sure to verify it exists)
         $requisition = Requisition::findOrFail($id);
 
         $statusMap = [
@@ -355,7 +356,30 @@ class RequisitionController extends Controller
             $updateData['remarks'] = $request->reason;
         }
 
+        // 2. Perform the update
         $requisition->update($updateData);
+
+        // 3. Create Notification Logic
+        // We check if the status is one of the target statuses
+        $notifyStatuses = ['Approved', 'Rejected', 'Partially Approved'];
+
+        if (in_array($dbStatus, $notifyStatuses)) {
+
+            // Build the message based on status
+            $message = "Your requisition ({$requisition->ref_no}) has been {$dbStatus}.";
+
+            if ($dbStatus === 'Rejected') {
+                $message .= " Reason: " . ($request->reason ?? 'No reason provided');
+            }
+
+            // Create the notification specifically for the Requisition Creator ($requisition->user_id)
+            Notification::create([
+                'user_id' => $requisition->user_id, // <--- This ensures only the creator sees it
+                'message' => $message,
+                'is_read' => false,
+                'created_at' => now(), // Manually setting time because $timestamps = false in your Model
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Status updated successfully.');
     }
