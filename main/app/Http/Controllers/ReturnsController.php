@@ -16,12 +16,34 @@ class ReturnsController extends Controller
     public function create()
     {
         // Fetch valid deliveries (Item Purchase + Received)
-        // We use safe navigation (?) to prevent crashes if vendor is missing
         $deliveries = Delivery::where('type', 'Item Purchase')
             ->where('status', 'Received')
-            ->with(['purchaseOrder.vendor']) // Assuming 'vendor' is the relationship name based on your logs
+            ->with(['purchaseOrder.vendor', 'deliveryItems'])
             ->orderBy('delivery_date', 'desc')
             ->get()
+            ->filter(function ($delivery) {
+                // --- FILTER LOGIC START ---
+
+                // 1. Calculate Total Items originally bought
+                $totalPurchased = $delivery->deliveryItems->sum('quantity');
+
+                // 2. Calculate Total Items already returned
+                $associatedReturnIds = DB::table('return_delivery')
+                    ->where('old_delivery_id', $delivery->id)
+                    ->pluck('return_id');
+
+                // We sum quantities, BUT we exclude 'Rejected' returns
+                // because rejected items should be available again.
+                $totalReturned = DB::table('return_item')
+                    ->join('returns', 'returns.id', '=', 'return_item.return_id')
+                    ->whereIn('return_item.return_id', $associatedReturnIds)
+                    ->where('returns.status', '!=', 'Rejected') // <--- FIX HERE
+                    ->sum('return_item.quantity');
+
+                // 3. Keep delivery ONLY if there are items left to return
+                return ($totalPurchased - $totalReturned) > 0;
+                // --- FILTER LOGIC END ---
+            })
             ->map(function ($delivery) {
                 return [
                     'id' => $delivery->id,
@@ -30,29 +52,115 @@ class ReturnsController extends Controller
                     'supplier_name' => $delivery->purchaseOrder?->vendor?->name ?? 'Unknown Vendor',
                     'delivery_date' => $delivery->delivery_date,
                 ];
-            });
+            })
+            ->values();
 
-        // Ensure this path matches your frontend folder structure exactly
         return Inertia::render('tabs/06-Returns/ReturnAdd', [
             'availableDeliveriesList' => $deliveries
         ]);
     }
 
+
+
+    // 4. Update Status (Matches Route::put)
+    public function updateStatus(Request $request, $id)
+    {
+        // 1. Validate
+        $request->validate([
+            'status' => 'required|string',
+        ]);
+
+        // 2. Update
+        $return = Returns::findOrFail($id); // Ensure your Model is actually named "Returns" (plural)
+        $return->status = $request->status;
+        $return->save();
+
+        // 3. Return "Back"
+        return back()->with('success', 'Status updated successfully');
+    }
+
+    // 5. Delete Return (Matches Route::delete)
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            // 1. Delete the items first (foreign key cleanup)
+            DB::table('return_item')->where('return_id', $id)->delete();
+
+            // 2. Delete the pivot (delivery connection)
+            DB::table('return_delivery')->where('return_id', $id)->delete();
+
+            // 3. Delete the return itself
+            $return = Returns::findOrFail($id);
+            $return->delete();
+
+            DB::commit();
+
+            // 4. Redirect to the main list (Ensures valid page load)
+            return redirect()->route('returnsIndex')->with('success', 'Return deleted successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Delete failed: ' . $e->getMessage()]);
+        }
+    }
+
     // 2. API Endpoint: Fetch Items for a specific Delivery
     public function getDeliveryItems($deliveryId)
     {
-        $items = DeliveryItem::where('delivery_id', $deliveryId)
+        // A. Get original items
+        $deliveryItems = DeliveryItem::where('delivery_id', $deliveryId)
             ->with('item')
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'item_id' => $row->item_id,
-                    // Handle different naming conventions (item_name vs name)
-                    'item_name' => $row->item->item_name ?? $row->item->name ?? 'Unknown Item',
-                    'unit_price' => $row->unit_price,
-                    'available_quantity' => $row->quantity,
-                ];
-            });
+            ->get();
+
+        // B. Find previous returns for this delivery
+        $associatedReturnIds = DB::table('return_delivery')
+            ->where('old_delivery_id', $deliveryId)
+            ->pluck('return_id');
+
+        // C. Get breakdown of quantities by STATUS
+        // We exclude 'Rejected' returns here so they don't count as "Used"
+        $statusBreakdown = DB::table('return_item')
+            ->join('returns', 'returns.id', '=', 'return_item.return_id')
+            ->whereIn('return_item.return_id', $associatedReturnIds)
+            ->where('returns.status', '!=', 'Rejected') // <--- FIX HERE
+            ->select(
+                'return_item.item_id',
+                'returns.status',
+                DB::raw('SUM(return_item.quantity) as qty')
+            )
+            ->groupBy('return_item.item_id', 'returns.status')
+            ->get();
+
+        // D. Calculate remaining balance and attach status info
+        $items = $deliveryItems->map(function ($row) use ($statusBreakdown) {
+
+            $itemStats = $statusBreakdown->where('item_id', $row->item_id);
+
+            // Calculate totals based on status
+            $qtyPending = $itemStats->where('status', 'Pending')->sum('qty');
+            $qtyIssued = $itemStats->where('status', 'Issued')->sum('qty');
+            $qtyDelivered = $itemStats->where('status', 'Delivered')->sum('qty');
+
+            // Total "Used" quantity (Sum of all statuses EXCEPT Rejected)
+            // Since we filtered Rejected in the query above, this sum is now correct.
+            $totalUsed = $itemStats->sum('qty');
+
+            // Remaining available to return
+            $remaining = max(0, $row->quantity - $totalUsed);
+
+            return [
+                'item_id' => $row->item_id,
+                'item_name' => $row->item->item_name ?? $row->item->name ?? 'Unknown Item',
+                'unit_price' => $row->unit_price,
+                'original_quantity' => $row->quantity,
+                'available_quantity' => (int)$remaining,
+                'qty_pending' => (int)$qtyPending,
+                'qty_issued' => (int)$qtyIssued,
+                'qty_delivered' => (int)$qtyDelivered,
+            ];
+        });
 
         return response()->json($items);
     }
@@ -60,7 +168,6 @@ class ReturnsController extends Controller
     // 3. Store the Return
     public function store(Request $request)
     {
-        // 1. Validate the incoming data
         $request->validate([
             'delivery_id' => 'required|exists:delivery,id',
             'remarks' => 'nullable|string',
@@ -72,28 +179,23 @@ class ReturnsController extends Controller
         try {
             DB::beginTransaction();
 
-            // 2. Generate Random REF No (REF-XXXXXX)
             $randomNumber = str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT);
             $refNo = 'RET-' . $randomNumber;
 
-            // 3. Create the Main Return Record
             $return = Returns::create([
                 'ref_no' => $refNo,
                 'remarks' => $request->remarks,
                 'status' => 'Pending',
             ]);
 
-            // 4. Insert into Return Items Table
             foreach ($request->items as $item) {
                 DB::table('return_item')->insert([
-                    // Verify your DB table name is 'return_item' or 'return_items'
                     'return_id' => $return->id,
                     'item_id' => $item['item_id'],
                     'quantity' => $item['quantity'],
                 ]);
             }
 
-            // 5. Insert into Return Delivery (Pivot) Table
             DB::table('return_delivery')->insert([
                 'return_id' => $return->id,
                 'old_delivery_id' => $request->delivery_id,
@@ -102,7 +204,7 @@ class ReturnsController extends Controller
 
             DB::commit();
 
-            return redirect()->route('returns')->with('success', 'Return created successfully: ' . $refNo);
+            return redirect('/returns')->with('success', 'Return created successfully: ' . $refNo);
 
         } catch (\Exception $e) {
             DB::rollBack();
