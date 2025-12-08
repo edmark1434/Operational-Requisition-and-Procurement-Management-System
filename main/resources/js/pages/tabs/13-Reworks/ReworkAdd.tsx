@@ -1,23 +1,28 @@
 import AppLayout from '@/layouts/app-layout';
-import { reworks } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Remove dummy data import
-// import deliveryData from '@/pages/datasets/delivery';
-
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Reworks', href: '/reworks' }, // Fixed href
+    { title: 'Reworks', href: '/reworks' },
     { title: 'Create Rework', href: '/reworks/add' },
 ];
 
-// Interface for props passed from Laravel
 interface Props {
     auth: any;
-    deliveries: any[]; // Passed from Controller
+    deliveries: any[];
 }
+
+// Helper to determine badge color based on status text
+const getStatusBadgeStyle = (status: string) => {
+    const s = status ? status.toLowerCase() : '';
+    if (s.includes('pending')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+    if (s.includes('issued') || s.includes('approved')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+    if (s.includes('delivered') || s.includes('resolved') || s.includes('completed')) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+    if (s.includes('rejected') || s.includes('cancelled')) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+};
 
 export default function ReworkAdd({ auth, deliveries }: Props) {
 
@@ -31,7 +36,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         SUPPLIER_NAME: ''
     });
 
-    // Services selected for rework
+    // Services selected for current rework
     const [selectedServices, setSelectedServices] = useState<Array<{
         SERVICE_ID: number;
         SERVICE_NAME: string;
@@ -40,14 +45,14 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
     }>>([]);
 
     // Data States
-    // Initialize with prop data
     const [availableDeliveries, setAvailableDeliveries] = useState<any[]>(deliveries);
     const [availableServices, setAvailableServices] = useState<any[]>([]);
     const [isLoadingServices, setIsLoadingServices] = useState(false);
+    const [hasCheckedServices, setHasCheckedServices] = useState(false);
     const [errors, setErrors] = useState<{[key: string]: string}>({});
 
     useEffect(() => {
-        // If deliveries update via props, update state
+        // Filter deliveries to only show those capable of services
         const filteredDeliveries = deliveries.filter(d => d.TYPE.includes('Service'));
         setAvailableDeliveries(filteredDeliveries);
 
@@ -78,6 +83,8 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         // Reset lists
         setSelectedServices([]);
         setAvailableServices([]);
+        setHasCheckedServices(false);
+
         if (errors.DELIVERY_ID) setErrors(prev => ({ ...prev, DELIVERY_ID: '' }));
 
         if (!deliveryId) return;
@@ -85,7 +92,6 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         setIsLoadingServices(true);
 
         try {
-            // UPDATED API ROUTE
             const response = await axios.get(`/api/reworks/delivery/${deliveryId}/services`);
             if (Array.isArray(response.data)) {
                 setAvailableServices(response.data);
@@ -94,6 +100,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
             console.error("Failed to load delivery services", error);
         } finally {
             setIsLoadingServices(false);
+            setHasCheckedServices(true);
         }
     };
 
@@ -122,6 +129,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         if (validateForm()) {
             const payload = {
                 delivery_id: formData.DELIVERY_ID,
+                reference_no: formData.REFERENCE_NO,
                 remarks: formData.REMARKS,
                 services: selectedServices.map(s => ({
                     service_id: s.SERVICE_ID,
@@ -129,20 +137,17 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                 }))
             };
 
-            // Use Inertia Router for submission
             router.post('/reworks', payload, {
                 onSuccess: () => {
-                    // Optional: Toast notification here
+                    // Success logic handled by Inertia redirect usually
                 },
                 onError: (err) => {
                     console.error(err);
-                    alert("Error submitting form");
                 }
             });
         }
     };
 
-    // ... Rest of your UI render code (handleReset, handleCancel, JSX) remains exactly the same ...
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
@@ -159,6 +164,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         }));
         setSelectedServices([]);
         setAvailableServices([]);
+        setHasCheckedServices(false);
         setErrors({});
     };
 
@@ -174,10 +180,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create Rework" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {/* ... Your exact existing JSX structure ... */}
-                {/* Just ensure `value={formData.DELIVERY_ID}` matches the select logic */}
 
-                {/* Main Form Container */}
                 <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:bg-sidebar">
                     <div className="h-full overflow-y-auto">
                         <div className="min-h-full flex items-start justify-center p-6">
@@ -188,7 +191,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                         New Rework Request
                                     </h2>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Select a service delivery and specify what needs rework
+                                        Select a service delivery. Services already in process will show their status.
                                     </p>
                                 </div>
 
@@ -225,29 +228,6 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                     )}
                                                 </div>
                                             </div>
-
-                                            {/* Delivery Details Card */}
-                                            {formData.DELIVERY_ID && (
-                                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
-                                                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                                        Delivery Information
-                                                    </h4>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Supplier:</span>
-                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {formData.SUPPLIER_NAME}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Request Date:</span>
-                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                {formData.CREATED_AT}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
 
                                         {/* Services Selection */}
@@ -256,11 +236,6 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                                     Services to Rework
                                                 </h3>
-                                                {formData.DELIVERY_ID && (
-                                                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                        {availableServices.length} services available
-                                                    </span>
-                                                )}
                                             </div>
 
                                             {errors.services && (
@@ -275,34 +250,73 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                     <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
                                                         Available Services from Delivery
                                                     </h4>
+
                                                     {isLoadingServices ? (
-                                                        <div className="text-center py-4 text-sm text-gray-500 flex flex-col items-center">
+                                                        <div className="text-center py-8 text-sm text-gray-500 flex flex-col items-center">
                                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
-                                                            <span>Loading services...</span>
+                                                            <span>Checking available services...</span>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-2 max-h-60 overflow-y-auto">
                                                             {availableServices.length === 0 ? (
-                                                                <p className="text-sm text-gray-500 italic">No services found in this delivery.</p>
+                                                                <div className="text-center py-6">
+                                                                    {hasCheckedServices ? (
+                                                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                                            No services found for this delivery.
+                                                                        </p>
+                                                                    ) : (
+                                                                        <p className="text-sm text-gray-500">Waiting for selection...</p>
+                                                                    )}
+                                                                </div>
                                                             ) : (
-                                                                availableServices.map(service => (
-                                                                    <div key={service.item_id} className="flex justify-between items-center p-3 bg-white dark:bg-sidebar rounded border border-sidebar-border hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-                                                                        <div className="flex-1">
-                                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{service.item_name}</p>
-                                                                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                                                Rate: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(service.unit_price)}
-                                                                            </p>
+                                                                availableServices.map(service => {
+                                                                    // Check if added to current selection
+                                                                    const isSelected = selectedServices.some(s => s.SERVICE_ID === service.item_id);
+
+                                                                    // Check if blocked by backend and get Status
+                                                                    const currentStatus = service.rework_status;
+                                                                    const isUnavailable = !!currentStatus;
+
+                                                                    return (
+                                                                        <div key={service.item_id} className={`flex justify-between items-center p-3 rounded border transition-colors ${
+                                                                            isUnavailable
+                                                                                ? 'bg-gray-100 dark:bg-sidebar-accent border-gray-200 dark:border-gray-700 opacity-75'
+                                                                                : 'bg-white dark:bg-sidebar border-sidebar-border hover:border-blue-300 dark:hover:border-blue-700'
+                                                                        }`}>
+                                                                            <div className="flex-1">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                                        {service.item_name}
+                                                                                    </p>
+                                                                                    {/* STATUS BADGE */}
+                                                                                    {isUnavailable && (
+                                                                                        <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded-full ${getStatusBadgeStyle(currentStatus)}`}>
+                                                                                            {currentStatus}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                                                    Rate: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(service.unit_price)}
+                                                                                </p>
+                                                                            </div>
+
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleAddService(service)}
+                                                                                disabled={isSelected || isUnavailable}
+                                                                                className={`ml-4 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                                                                                    isUnavailable
+                                                                                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+                                                                                        : isSelected
+                                                                                            ? 'bg-blue-600 text-white opacity-50 cursor-not-allowed'
+                                                                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                                                }`}
+                                                                            >
+                                                                                {isUnavailable ? 'Locked' : (isSelected ? 'Added' : 'Add')}
+                                                                            </button>
                                                                         </div>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleAddService(service)}
-                                                                            disabled={selectedServices.some(s => s.SERVICE_ID === service.item_id)}
-                                                                            className="ml-4 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                                                        >
-                                                                            {selectedServices.some(s => s.SERVICE_ID === service.item_id) ? 'Added' : 'Add'}
-                                                                        </button>
-                                                                    </div>
-                                                                ))
+                                                                    );
+                                                                })
                                                             )}
                                                         </div>
                                                     )}
@@ -318,7 +332,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                         </h4>
                                                     </div>
                                                     <div className="divide-y divide-sidebar-border">
-                                                        {selectedServices.map((service, index) => (
+                                                        {selectedServices.map((service) => (
                                                             <div key={service.SERVICE_ID} className="p-4 flex justify-between items-center">
                                                                 <div className="flex-1">
                                                                     <p className="font-medium text-gray-900 dark:text-white">
@@ -327,9 +341,6 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                                     <div className="flex gap-4 mt-1">
                                                                         <p className="text-xs text-gray-600 dark:text-gray-400">
                                                                             Rate: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(service.UNIT_PRICE)}
-                                                                        </p>
-                                                                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                                                            Total: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(service.UNIT_PRICE)}
                                                                         </p>
                                                                     </div>
                                                                 </div>
@@ -346,7 +357,6 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                             </div>
                                                         ))}
                                                     </div>
-
                                                     <div className="bg-gray-50 dark:bg-sidebar-accent px-4 py-3 border-t border-sidebar-border">
                                                         <div className="flex justify-between items-center">
                                                             <span className="text-sm font-medium text-gray-900 dark:text-white">Total Value:</span>
@@ -389,34 +399,35 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                     <div className="sticky bottom-0 bg-white dark:bg-background pt-6 pb-2 border-t border-sidebar-border/70 -mx-6 px-6 mt-8">
                                         <div className="flex gap-3 justify-between">
                                             <div className="flex gap-3">
-                                                <div className="relative group">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleReset}
-                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-                                                    >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-
-                                                <div className="relative group">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleCancel}
-                                                        className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-                                                    >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleReset}
+                                                    className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCancel}
+                                                    className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
                                             </div>
 
                                             <button
                                                 type="submit"
-                                                className="flex-1 max-w-xs bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out"
+                                                // Prevent submit if no services selected
+                                                disabled={selectedServices.length === 0}
+                                                className={`flex-1 max-w-xs py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out ${
+                                                    selectedServices.length === 0
+                                                        ? 'bg-gray-400 cursor-not-allowed'
+                                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                }`}
                                             >
                                                 Submit Rework Request
                                             </button>
