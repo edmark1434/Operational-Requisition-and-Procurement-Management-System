@@ -15,13 +15,10 @@ class ReworkService extends Model
     protected $fillable = ['rework_id', 'service_id', 'item_id'];
 
     public function rework(){
-        $this->belongsTo(Rework::class, 'rework_id');
+        return $this->belongsTo(Rework::class, 'rework_id');
     }
     public function service(){
-        $this->belongsTo(Service::class, 'service_id');
-    }
-    public function item(){
-        $this->belongsTo(Item::class, 'item_id');
+        return $this->belongsTo(Service::class, 'service_id');
     }
     public $timestamps = false;
 }

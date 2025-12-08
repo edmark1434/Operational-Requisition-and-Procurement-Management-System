@@ -310,7 +310,7 @@ export default function PurchaseDetailModal({
                                                             Payment Methods
                                                         </label>
                                                         <div className="flex flex-wrap gap-1">
-                                                            {safePurchase.ALLOWS_CASH && (
+                                                            {safePurchase.PAYMENT_TYPE && (
                                                                 <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                                                     Cash
                                                                 </span>
@@ -334,31 +334,33 @@ export default function PurchaseDetailModal({
                                             <div className="border-t border-sidebar-border pt-6">
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                                     Requisition Information
-                                                </h3>
+                                                </h3>                                
+                                                {orderItems.map((item: any) => (
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                                     <div>
                                                         <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
-                                                        <p className="font-medium">{safePurchase.REQUESTOR}</p>
+                                                        <p className="font-medium">{item.REQUESTOR}</p>
                                                     </div>
                                                     <div>
                                                         <span className="text-gray-600 dark:text-gray-400">Priority:</span>
                                                         <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                                            safePurchase.PRIORITY === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                                safePurchase.PRIORITY === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                            item.PRIORITY === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                item.PRIORITY === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                                                                     'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                                                         }`}>
-                                                            {safePurchase.PRIORITY}
+                                                            {item.PRIORITY}
                                                         </span>
                                                     </div>
                                                     <div>
                                                         <span className="text-gray-600 dark:text-gray-400">Requisition Date:</span>
-                                                        <p>{safePurchase.REQUISITION_DATE ? formatDate(safePurchase.REQUISITION_DATE) : 'N/A'}</p>
+                                                        <p>{item.REQUISITION_DATE ? formatDate(item.REQUISITION_DATE) : 'N/A'}</p>
                                                     </div>
                                                     <div>
                                                         <span className="text-gray-600 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
                                                         <p>{orderItems.length}</p>
                                                     </div>
                                                 </div>
+                                                ))}
                                             </div>
 
                                             {/* Items/Services List */}
@@ -398,13 +400,13 @@ export default function PurchaseDetailModal({
                                                                 </div>
                                                                 <div className="col-span-2 text-right">
                                                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                                        {formatCurrency(item.UNIT_PRICE)}
+                                                                        {isServiceOrder ? formatCurrency(item.HOURLY_RATE) : formatCurrency(item.UNIT_PRICE)}
                                                                         {isServiceOrder && '/hr'}
                                                                     </p>
                                                                 </div>
                                                                 <div className="col-span-2 text-right">
                                                                     <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                                                        {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
+                                                                        {isServiceOrder ? formatCurrency(item.HOURLY_RATE) :formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -437,14 +439,7 @@ export default function PurchaseDetailModal({
                                                             {safePurchase.CREATED_AT ? formatDate(safePurchase.CREATED_AT) : 'N/A'}
                                                         </p>
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                            Last Updated
-                                                        </label>
-                                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                            {safePurchase.UPDATED_AT ? formatDate(safePurchase.UPDATED_AT) : 'N/A'}
-                                                        </p>
-                                                    </div>
+                            
                                                 </div>
                                                 {safePurchase.REMARKS && (
                                                     <div className="mt-4">

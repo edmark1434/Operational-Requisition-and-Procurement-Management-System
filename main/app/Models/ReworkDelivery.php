@@ -11,6 +11,8 @@ class ReworkDelivery extends Model
 
     protected $table = 'rework_delivery';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'rework_id',
         'old_delivery_id',

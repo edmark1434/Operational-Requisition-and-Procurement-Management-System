@@ -23,9 +23,10 @@ interface Prop{
     CATEGORY_OPTIONS: any[],
     categorySuppliers: any[],
     SUPPLIER_OPTIONS: any[],
-    itemsData: any[]
+    itemsData: any[],
+    MAKE_OPTIONS: any[]
 }
-export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLIER_OPTIONS,itemsData }: Prop) {
+export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLIER_OPTIONS,itemsData, MAKE_OPTIONS }: Prop) {
     const [formData, setFormData] = useState({
         NAME: '',
         BARCODE: '',
@@ -33,7 +34,7 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
         UNIT_PRICE: '',
         CURRENT_STOCK: '',
         DIMENSIONS: '',
-        MAKE_ID: 1,
+        MAKE_ID: 0,
         SUPPLIER_ID: '',
         SUPPLIER_NAME: '',
         SUPPLIER_EMAIL: '',
@@ -91,6 +92,10 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
 
         if (!formData.CATEGORY) {
             newErrors.CATEGORY = 'Category is required';
+        }
+
+        if (!formData.MAKE_ID) {
+            newErrors.MAKE_ID = 'Make is required';
         }
 
         if (!formData.UNIT_PRICE || parseFloat(formData.UNIT_PRICE) <= 0) {
@@ -172,7 +177,7 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
             UNIT_PRICE: '',
             CURRENT_STOCK: '',
             DIMENSIONS: '',
-            MAKE_ID: 1,
+            MAKE_ID: 0,
             SUPPLIER_ID: '',
             SUPPLIER_NAME: '',
             SUPPLIER_EMAIL: '',
@@ -230,6 +235,7 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
                                                 Basic Information
                                             </h3>
 
+                                            {/* Row 1: Name and Barcode */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -266,12 +272,10 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
                                                     {errors.BARCODE && (
                                                         <p className="text-red-500 text-xs mt-1">{errors.BARCODE}</p>
                                                     )}
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        Enter the barcode for this item
-                                                    </p>
                                                 </div>
                                             </div>
 
+                                            {/* Row 2: Category and Make */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -296,6 +300,32 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
                                                         <p className="text-red-500 text-xs mt-1">{errors.CATEGORY}</p>
                                                     )}
                                                 </div>
+
+                                                {/* Make Input (User requested to ignore logic, just placing it here for layout) */}
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Make <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <select
+                                                        required
+                                                        value={formData.MAKE_ID} 
+                                                        onChange={(e) => handleInputChange('MAKE_ID', e.target.value)}
+                                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                            errors.MAKE_ID ? 'border-red-500' : 'border-sidebar-border'
+                                                        }`}
+                                                    >
+                                                        <option value="">Select Make</option>
+                                                        {MAKE_OPTIONS.map(make => (
+                                                            <option key={make.id} value={make.id}>
+                                                                {make.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            {/* Row 3: Unit Price and Current Stock (Grouped Together) */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         Unit Price <span className="text-red-500">*</span>
@@ -316,9 +346,7 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
                                                         <p className="text-red-500 text-xs mt-1">{errors.UNIT_PRICE}</p>
                                                     )}
                                                 </div>
-                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         Current Stock <span className="text-red-500">*</span>
@@ -338,24 +366,26 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
                                                         <p className="text-red-500 text-xs mt-1">{errors.CURRENT_STOCK}</p>
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Dimensions <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.DIMENSIONS}
-                                                        onChange={(e) => handleInputChange('DIMENSIONS', e.target.value)}
-                                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
-                                                            errors.DIMENSIONS ? 'border-red-500' : 'border-sidebar-border'
-                                                        }`}
-                                                        placeholder="e.g., 30cm x 15cm x 5cm"
-                                                    />
-                                                    {errors.DIMENSIONS && (
-                                                        <p className="text-red-500 text-xs mt-1">{errors.DIMENSIONS}</p>
-                                                    )}
-                                                </div>
+                                            </div>
+
+                                            {/* Row 4: Dimensions (Full Width) */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    Dimensions <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={formData.DIMENSIONS}
+                                                    onChange={(e) => handleInputChange('DIMENSIONS', e.target.value)}
+                                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white ${
+                                                        errors.DIMENSIONS ? 'border-red-500' : 'border-sidebar-border'
+                                                    }`}
+                                                    placeholder="e.g., 30cm x 15cm x 5cm"
+                                                />
+                                                {errors.DIMENSIONS && (
+                                                    <p className="text-red-500 text-xs mt-1">{errors.DIMENSIONS}</p>
+                                                )}
                                             </div>
                                         </div>
 

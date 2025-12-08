@@ -281,7 +281,7 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
                         <div key={item.ID} className="flex justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400 truncate">{item.NAME}</span>
                             <span className="text-gray-900 dark:text-white font-medium">
-                                {item.QUANTITY} {isServiceOrder ? 'hrs' : '×'} {formatCurrency(item.UNIT_PRICE)}
+                                {!isServiceOrder ? item.QUANTITY : ''} {isServiceOrder && item.QUANTITY ? 'hrs' : '×'} {!isServiceOrder ? formatCurrency(item.UNIT_PRICE) : formatCurrency(item.HOURLY_RATE)}
                                 {isServiceOrder && '/hr'}
                             </span>
                         </div>

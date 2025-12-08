@@ -16,21 +16,23 @@ class ReturnsController extends Controller
     public function create()
     {
         // Fetch valid deliveries (Item Purchase + Received)
+        // We use safe navigation (?) to prevent crashes if vendor is missing
         $deliveries = Delivery::where('type', 'Item Purchase')
             ->where('status', 'Received')
-            ->with(['purchaseOrder.supplier'])
+            ->with(['purchaseOrder.vendor']) // Assuming 'vendor' is the relationship name based on your logs
             ->orderBy('delivery_date', 'desc')
             ->get()
             ->map(function ($delivery) {
                 return [
                     'id' => $delivery->id,
-                    'reference_no' => $delivery->receipt_no ?? 'DEL-'.$delivery->id,
-                    'supplier_name' => $delivery->purchaseOrder->supplier->name ?? 'Unknown Supplier',
+                    'reference_no' => $delivery->ref_no ?? 'DEL-'.$delivery->id,
+                    // Safely access vendor name
+                    'supplier_name' => $delivery->purchaseOrder?->vendor?->name ?? 'Unknown Vendor',
                     'delivery_date' => $delivery->delivery_date,
                 ];
             });
 
-        // FIX: Added 'tabs/' to match the folder structure in your screenshot
+        // Ensure this path matches your frontend folder structure exactly
         return Inertia::render('tabs/06-Returns/ReturnAdd', [
             'availableDeliveries' => $deliveries
         ]);
@@ -45,9 +47,9 @@ class ReturnsController extends Controller
             ->map(function ($row) {
                 return [
                     'item_id' => $row->item_id,
-                    'item_name' => $row->item->name ?? 'Unknown Item',
+                    // Handle different naming conventions (item_name vs name)
+                    'item_name' => $row->item->item_name ?? $row->item->name ?? 'Unknown Item',
                     'unit_price' => $row->unit_price,
-                    // Max returnable quantity is what was delivered
                     'available_quantity' => $row->quantity,
                 ];
             });
@@ -58,9 +60,10 @@ class ReturnsController extends Controller
     // 3. Store the Return
     public function store(Request $request)
     {
+        // 1. Validate the incoming data
         $request->validate([
             'delivery_id' => 'required|exists:delivery,id',
-            'return_date' => 'required|date',
+            'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required',
             'items.*.quantity' => 'required|numeric|min:1',
@@ -69,25 +72,37 @@ class ReturnsController extends Controller
         try {
             DB::beginTransaction();
 
+            // 2. Generate Random REF No (REF-XXXXXX)
+            $randomNumber = str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT);
+            $refNo = 'RET-' . $randomNumber;
+
+            // 3. Create the Main Return Record
             $return = Returns::create([
-                'delivery_id' => $request->delivery_id,
-                'return_date' => $request->return_date,
+                'ref_no' => $refNo,
                 'remarks' => $request->remarks,
                 'status' => 'Pending',
-                'reference_no' => 'RET-' . time(),
             ]);
 
-            // Assuming you have a 'return_item' table/model
+            // 4. Insert into Return Items Table
             foreach ($request->items as $item) {
-                DB::table('return_items')->insert([
+                DB::table('return_item')->insert([
+                    // Verify your DB table name is 'return_item' or 'return_items'
                     'return_id' => $return->id,
                     'item_id' => $item['item_id'],
                     'quantity' => $item['quantity'],
                 ]);
             }
 
+            // 5. Insert into Return Delivery (Pivot) Table
+            DB::table('return_delivery')->insert([
+                'return_id' => $return->id,
+                'old_delivery_id' => $request->delivery_id,
+                'new_delivery_id' => null,
+            ]);
+
             DB::commit();
-            return redirect()->route('returns')->with('success', 'Return created successfully');
+
+            return redirect()->route('returns')->with('success', 'Return created successfully: ' . $refNo);
 
         } catch (\Exception $e) {
             DB::rollBack();

@@ -33,7 +33,7 @@ class Dashboard extends Controller
         });
         $purchase_orders = PurchaseOrder::with([
             'vendor',                // vendor for SUPPLIER_NAME
-            'requisition.requisition_service.item' // nested relation to get items
+            'item' // nested relation to get items
         ])->get()->map(function ($po) {
             return [
                 'ID' => $po->id,
@@ -47,14 +47,14 @@ class Dashboard extends Controller
                 'REQUISITION_ID' => $po->req_id,
                 'SUPPLIER_ID' => $po->vendor_id,
                 'SUPPLIER_NAME' => optional($po->vendor)->name ?? 'Unknown Supplier',
-                'ITEMS' => $po->requisition->requisitionServices->map(function ($reqService) {
+                'ITEMS' => $po->item->map(function ($item) {
                     return [
-                        'ID' => $reqService->id,
-                        'ITEM_ID' => $reqService->item_id,
-                        'NAME' => optional($reqService->item)->name ?? 'Unknown Item',
-                        'QUANTITY' => $reqService->quantity,
-                        'UNIT_PRICE' => optional($reqService->item)->unit_price ?? 0,
-                        'CATEGORY_ID' => optional($reqService->item)->category_id ?? null,
+                        'ID' => $item->id,
+                        'ITEM_ID' => $item->item_id,
+                        'NAME' => optional($item->item)->name ?? 'Unknown Item',
+                        'QUANTITY' => $item->quantity,
+                        'UNIT_PRICE' => optional($item->item)->unit_price ?? 0,
+                        'CATEGORY_ID' => optional($item->item)->category_id ?? null,
                         'SELECTED' => true,
                     ];
                 }),
@@ -97,15 +97,20 @@ class Dashboard extends Controller
                 'SUPPLIER_NAME' => $ret->delivery->purchaseOrder->vendor->name];
         });
 
-        $reworks = Rework::with('rework_service.service.delivery_service.purchaseOrder.vendor')->get()->map(function ($rework) {
+        $reworks = Rework::with(
+            'rework_service.service.order_service.purchase_order.vendor',
+            'originalDelivery.oldDelivery')->get()->map(function ($rework) {
+
+            $orderService = $rework->rework_service?->service?->order_service?->first();
+
             return [
                 'ID' => $rework->id,
                 'CREATED_AT' => $rework->created_at,
                 'STATUS' => $rework->status,
                 'REMARKS' => $rework->remarks,
-                'PO_ID' => $rework->rework_service->service->delivery_service->purchaseOrder->id,
-                'DELIVERY_ID' => $rework->rework_service->service->delivery_service->id ,
-                'SUPPLIER_NAME' => $rework->rework_service->service->delivery_service->purchaseOrder->vendor->name,
+                'PO_ID' => $orderService?->purchase_order?->id,
+                'DELIVERY_ID' => $rework->originalDelivery?->oldDelivery?->id,
+                'SUPPLIER_NAME' => $rework->rework_service?->service?->vendor?->name,
             ];
         });
         $items = Item::all()->map(function ($it) {

@@ -20,7 +20,7 @@ class RequisitionItem extends Model
         return $this->belongsTo(Item::class,'item_id');
     }
 
-    public function req_order_items()
+    public function req_order_items()  //    public function requisition_order_item(){ old
     {
         return $this->hasMany(RequisitionOrderItem::class, 'req_item_id');
     }

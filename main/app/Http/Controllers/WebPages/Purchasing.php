@@ -22,46 +22,55 @@ use Illuminate\Http\Request;
 class Purchasing extends Controller
 {
     protected $base_path = "tabs/04-Purchases";
-        public function index()
+    public function index()
     {
         $purchases = PurchaseOrder::with(
             'vendor',
-            'requisition.requisition_items.item',
+            'orderItems.requisition_order_item.req_item',
+            'orderServices.requisition_order_service.req_service',
             'service.service'
         )
-        ->get()
-        ->map(function ($po) {
+            ->get()
+            ->map(function ($po) {
 
-            // Normalize fields for frontend consistency
-            $type = strtolower(trim($po->type));            // items / services
-            $status = strtolower(trim($po->status));        // pending_approval / approved / completed
+                // Normalize fields for frontend consistency
+                $type = strtolower(trim($po->type));            // items / services
+                $status = strtolower(trim($po->status));        // pending_approval / approved / completed
 
-            return [
-                'ID'             => $po->id,
-                'REFERENCE_NO'   => $po->ref_no,
-                'CREATED_AT'     => $po->created_at,
-                'TOTAL_COST'     => $po->total_cost,
-                'PAYMENT_TYPE'   => $po->payment_type,
-                'STATUS'         => $status,
-                'SUPPLIER_ID'    => $po->vendor_id,
-                'SUPPLIER_NAME'  => $po->vendor->name ?? '',
-                'REQUISITION_ID' => $po->req_id,
-                'ORDER_TYPE'     => $type,                   // items / services
-                'REMARKS'        => $po->remarks,
+                return [
+                    'ID'             => $po->id,
+                    'REFERENCE_NO'   => $po->ref_no,
+                    'CREATED_AT'     => $po->created_at,
+                    'TOTAL_COST'     => $po->total_cost,
+                    'PAYMENT_TYPE'   => $po->payment_type,
+                    'STATUS'         => $status,
+                    'SUPPLIER_ID'    => $po->vendor_id,
+                    'SUPPLIER_NAME'  => $po->vendor->name ?? '',
+                    'ALLOWS_CASH'  => $po->vendor->allows_cash ?? '',
+                    'ALLOWS_DISBURSEMENT'  => $po->vendor->allows_disbursement ?? '',
+                    'ALLOWS_STORE_CREDIT'  => $po->vendor->allows_store_credit ?? '',
+                    // 'REQUISITION_ID' => $type === 'items' ? $po->orderItems->requisition_order_item->req_item->req_id ?? null : $po->orderServices->requisition_order_service->req_service->req_id ?? null,
+                    'ORDER_TYPE'     => $type,                   // items / services
+                    'REMARKS'        => $po->remarks,
 
                 // -------------------------------
                 // ITEMS: requisition → requisition_items → item
                 // -------------------------------
-                'ITEMS' => $type === 'items' && $po->requisition
-                    ? $po->requisition->requisition_items->map(function ($reqItem) {
+                'ITEMS' => $type === 'items' && $po->orderItems->isNotEmpty()
+                    ? $po->orderItems->map(function ($orderItem) {
+                        $reqItem = $orderItem->requisition_order_item->req_item ?? null;
                         return [
-                            'ID'          => $reqItem->id,
-                            'ITEM_ID'     => $reqItem->item->id,
-                            'NAME'        => $reqItem->item->name,
+                            'ID'          => $reqItem->id ?? null,
+                            'ITEM_ID'     => $reqItem->item->id ?? null,
+                            'NAME'        => $reqItem->item->name ?? null,
                             'QUANTITY'    => $reqItem->quantity,
-                            'UNIT_PRICE'  => $reqItem->item->unit_price,
-                            'CATEGORY_ID' => $reqItem->item->category_id,
+                            'UNIT_PRICE'  => $reqItem->item->unit_price ?? null,
+                            'CATEGORY_ID' => $reqItem->item->category_id ?? null,
                             'SELECTED'    => true,
+                            'REQUISITION_DATE' => $reqItem->requisition->created_at ?? null,
+                            'REQUISITION_ID' => $reqItem->req_id ?? null,
+                            'REQUESTOR' => $reqItem->requisition->requestor ?? null,
+                            'PRIORITY' => $reqItem->requisition->priority ?? null,
                         ];
                     })->toArray()
                     : [],
@@ -69,16 +78,21 @@ class Purchasing extends Controller
                 // -------------------------------
                 // SERVICES: order_service → service
                 // -------------------------------
-                'SERVICES' => $type === 'services'
-                    ? $po->service->map(function ($os) {
+                'SERVICES' => $type === 'services' && $po->orderServices->isNotEmpty()
+                    ? $po->orderServices->map(function ($orderService) {
+                        $reqService = $orderService->requisition_order_service->req_service ?? null;
                         return [
-                            'ID'           => $os->id,
-                            'SERVICE_ID'   => $os->service->id,
-                            'NAME'         => $os->service->name,
-                            'DESCRIPTION'  => $os->service->description,
-                            'HOURLY_RATE'  => $os->service->hourly_rate,
-                            'CATEGORY_ID'  => $os->service->category_id,
-                            'SELECTED'     => true
+                            'ID'           => $reqService->id,
+                            'SERVICE_ID'   => $reqService->service->id,
+                            'NAME'         => $reqService->service->name,
+                            'DESCRIPTION'  => $reqService->service->description,
+                            'HOURLY_RATE'  => $reqService->service->hourly_rate,
+                            'CATEGORY_ID'  => $reqService->service->category_id,
+                            'SELECTED'     => true,
+                            'REQUESTION_ID' => $reqService->req_id ?? null,
+                            'REQUISITION_DATE' => $reqService->requisition->created_at ?? null,
+                            'REQUESTOR' => $reqService->requisition->requestor ?? null,
+                            'PRIORITY' => $reqService->requisition->priority ?? null,
                         ];
                     })->toArray()
                     : [],
