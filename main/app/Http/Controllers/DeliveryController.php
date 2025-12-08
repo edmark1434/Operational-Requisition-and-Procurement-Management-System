@@ -13,6 +13,7 @@ use App\Models\ReturnDelivery;
 use App\Models\Returns;
 use App\Models\Rework;
 use App\Models\ReworkDelivery;
+use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -80,18 +81,27 @@ class DeliveryController extends Controller
                 $inventoryItem = Item::query()->find($item['item_id']);
                 if ($inventoryItem) {
                     $inventoryItem->current_stock += $item['quantity'];
+                    $inventoryItem->unit_price = $item['unit_price']; // update the unit price
                     $inventoryItem->save();
                 }
             }
         }
         if (!empty($validated['services'])) {
             foreach ($validated['services'] as $service) {
+                // Create the delivery service record
                 DeliveryService::query()->create([
                     'delivery_id' => $deliveryId,
                     'service_id' => $service['service_id'],
                     'hourly_rate' => $service['hourly_rate'],
                     'hours' => $service['hours'] ?? 0,
                 ]);
+
+                // Update the service's standard hourly rate
+                $serviceRecord = Service::query()->find($service['service_id']);
+                if ($serviceRecord) {
+                    $serviceRecord->hourly_rate = $service['hourly_rate'];
+                    $serviceRecord->save();
+                }
             }
         }
 
@@ -208,6 +218,7 @@ class DeliveryController extends Controller
                 $inventoryItem = Item::find($item['item_id']);
                 if ($inventoryItem) {
                     $inventoryItem->current_stock += $item['quantity'];
+                    $inventoryItem->unit_price = $item['unit_price']; // update the unit price
                     $inventoryItem->save();
                 }
             }
@@ -216,14 +227,22 @@ class DeliveryController extends Controller
         // Remove old services
         $delivery->delivery_service()->delete();
 
-        // Add new services
+        // Add new services and update the hourly rate
         if (!empty($validated['services'])) {
             foreach ($validated['services'] as $service) {
+                // Add to delivery_service
                 $delivery->delivery_service()->create([
                     'service_id' => $service['service_id'],
                     'hourly_rate' => $service['hourly_rate'],
                     'hours' => $service['hours'],
                 ]);
+
+                // Update the standard hourly rate of the service
+                $serviceRecord = Service::query()->find($service['service_id']);
+                if ($serviceRecord) {
+                    $serviceRecord->hourly_rate = $service['hourly_rate'];
+                    $serviceRecord->save();
+                }
             }
         }
 
