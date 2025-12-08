@@ -536,9 +536,7 @@ export default function PurchaseOrderForm() {
         e.preventDefault();
 
         if (validateForm()) {
-            // Show preview instead of directly submitting
-            //  setShowPreview(true);
-            handleConfirmSubmit();
+            setShowPreview(true);
         }
     };
 
@@ -648,8 +646,7 @@ export default function PurchaseOrderForm() {
         <AppLayout breadcrumbs={updatedBreadcrumbs}>
             <Head title={isEditMode ? "Edit Purchase Order" : "Create Purchase Order"} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {JSON.stringify(formData.SERVICES)}
-                {'Selected: ' + formData.SUPPLIER_ID + ' ' + JSON.stringify(selectedSupplier)}
+                {JSON.stringify(formData, null, 2)}
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -912,12 +909,13 @@ export default function PurchaseOrderForm() {
                     formData={formData}
                     selectedSupplier={selectedSupplier}
                     selectedRequisition={selectedRequisitions}
-                    selectedItems={formData.ORDER_TYPE === 'Items' ? getSelectedItems() : []}
-                    selectedServices={formData.ORDER_TYPE === 'Services' ? getSelectedServices() : []}
+                    selectedItems={getSelectedItems()}
+                    selectedServices={getSelectedServices()}
                     totalCost={calculateTotal()}
                     onConfirm={handleConfirmSubmit}
                     onCancel={() => setShowPreview(false)}
                     isEditMode={isEditMode}
+                    categories={categories}
                 />
             )}
         </AppLayout>

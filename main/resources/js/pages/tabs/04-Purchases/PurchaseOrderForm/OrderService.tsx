@@ -5,6 +5,7 @@ import {
     RequisitionOrderService,
     RequisitionService
 } from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import { GroupedService, groupRequisitionServices } from "@/pages/tabs/04-Purchases/utils/groupedServices";
 
 interface OrderServiceProps {
     formData: {
@@ -37,8 +38,38 @@ export default function OrderService({
         }).format(amount);
     };
 
-    const getSelectedServices = () => {
-        return formData.SERVICES;
+    // Get all reqServices for selected requisitions
+    const availableReqServices = requisitionServices.filter(rs =>
+        selectedRequisition.map(r => r.id).includes(rs.req_id)
+    );
+
+    // Group them for display
+    const groupedServices = groupRequisitionServices(availableReqServices);
+
+    // Check if a grouped service is fully selected
+    const isGroupedServiceSelected = (groupedService: GroupedService) => {
+        return groupedService.reqServices.every(reqService =>
+            formData.SERVICES.some(s => s.id === reqService.id)
+        );
+    };
+
+    // Toggle all reqServices in a group
+    const handleToggleGroupedService = (groupedService: GroupedService) => {
+        const allSelected = isGroupedServiceSelected(groupedService);
+
+        if (allSelected) {
+            // Remove all reqServices in this group
+            groupedService.reqServices.forEach(reqService => {
+                onToggleServiceSelection(reqService.id);
+            });
+        } else {
+            // Add all reqServices in this group
+            groupedService.reqServices.forEach(reqService => {
+                if (!formData.SERVICES.some(s => s.id === reqService.id)) {
+                    onToggleServiceSelection(reqService.id);
+                }
+            });
+        }
     };
 
     const calculateSubtotal = () => {
@@ -50,7 +81,6 @@ export default function OrderService({
         return null;
     }
 
-    const selectedServices = getSelectedServices();
     const subtotal = calculateSubtotal();
 
     const reqServicetoFormService = (reqService: RequisitionService) => {
@@ -65,7 +95,7 @@ export default function OrderService({
                     Order Services
                 </h3>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedServices.length} of {requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).length} service{requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).length > 1 ? 's' : ''} selected
+                    {groupedServices.filter(gs => isGroupedServiceSelected(gs)).length} of {groupedServices.length} service{groupedServices.length > 1 ? 's' : ''} selected
                 </div>
             </div>
 
@@ -95,16 +125,19 @@ export default function OrderService({
 
                 {/* Table Body */}
                 <div className="divide-y divide-sidebar-border max-h-96 overflow-y-auto">
-                    {requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).map((service) => {
-                        const serviceTotal = service.service.hourly_rate;
+                    {groupedServices.map((groupedService) => {
+                        const isSelected = isGroupedServiceSelected(groupedService);
+                        const isAlreadyOrdered = groupedService.reqServices.some(reqService =>
+                            requisitionOrderServices.some(i => i.req_service_id === reqService.id)
+                        );
 
                         return (
                             <div
-                                key={service.id}
+                                key={`grouped-service-${groupedService.service_id}`}
                                 className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors
-                                ${requisitionOrderServices.some(i => i.req_service_id === service.id)
+                                ${isAlreadyOrdered
                                     ? 'opacity-50 bg-neutral-100 dark:bg-neutral-900 font-normal pointer-events-none cursor-not-allowed'
-                                    : formData.SERVICES.some(i => i.id === service.id)
+                                    : isSelected
                                         ? 'bg-purple-50 dark:bg-purple-900/10 hover:bg-purple-100 dark:hover:bg-purple-900/20'
                                         : 'hover:bg-gray-50 dark:hover:bg-sidebar'
                                 }`}
@@ -113,8 +146,9 @@ export default function OrderService({
                                 <div className="col-span-1">
                                     <input
                                         type="checkbox"
-                                        checked={formData.SERVICES.some(i => i.id === service.id) || false}
-                                        onChange={() => onToggleServiceSelection(service.id)}
+                                        checked={isSelected}
+                                        onChange={() => handleToggleGroupedService(groupedService)}
+                                        disabled={isAlreadyOrdered}
                                         className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                                     />
                                 </div>
@@ -122,24 +156,29 @@ export default function OrderService({
                                 {/* Service Details */}
                                 <div className="col-span-4">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {service.service.name}
+                                        {groupedService.service.name}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {service.service.description}
+                                        {groupedService.service.description}
                                     </p>
+                                    {groupedService.reqServices.length > 1 && (
+                                        <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                            📦 Merged from {groupedService.reqServices.length} requisitions
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Category */}
                                 <div className="col-span-5 text-center">
                                     <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-sidebar text-gray-600 dark:text-gray-400">
-                                        {categories.find(c => c.id === service.service.category_id)?.name || 'N/A'}
+                                        {categories.find(c => c.id === groupedService.categoryId)?.name || 'N/A'}
                                     </span>
                                 </div>
 
                                 {/* Hourly Rate */}
                                 <div className="col-span-2 text-right">
                                     <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                        {formatCurrency(service.service.hourly_rate)}/hr
+                                        {formatCurrency(groupedService.service.hourly_rate)}/hr
                                     </p>
                                 </div>
                             </div>
@@ -148,14 +187,14 @@ export default function OrderService({
                 </div>
 
                 {/* Summary Section */}
-                {selectedServices.length > 0 && (
+                {groupedServices.filter(gs => isGroupedServiceSelected(gs)).length > 0 && (
                     <>
                         {/* Summary Breakdown */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
                             <div className="col-span-12">
                                 <div className="flex justify-between items-center text-sm">
                                     <div className="text-gray-600 dark:text-gray-400">
-                                        <span className="font-medium">{selectedServices.length}</span> service{selectedServices.length > 1 ? 's' : ''} selected •
+                                        <span className="font-medium">{groupedServices.filter(gs => isGroupedServiceSelected(gs)).length}</span> service{groupedServices.filter(gs => isGroupedServiceSelected(gs)).length > 1 ? 's' : ''} selected
                                     </div>
                                 </div>
                             </div>
@@ -164,7 +203,7 @@ export default function OrderService({
                 )}
 
                 {/* Empty State */}
-                {requisitionServices.filter(rs => selectedRequisition.map(r => r.id).includes(rs.req_id)).length === 0 && (
+                {availableReqServices.length === 0 && (
                     <div className="px-4 py-8 text-center">
                         <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />

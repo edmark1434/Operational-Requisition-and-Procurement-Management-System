@@ -1,4 +1,12 @@
-import {Requisition, RequisitionItem, RequisitionService, Vendor} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import {
+    Category,
+    Requisition,
+    RequisitionItem,
+    RequisitionService,
+    Vendor
+} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import { groupRequisitionItems } from "@/pages/tabs/04-Purchases/utils/groupedItems";
+import { groupRequisitionServices } from "@/pages/tabs/04-Purchases/utils/groupedServices";
 
 interface PreviewModalProps {
     formData: any;
@@ -10,6 +18,7 @@ interface PreviewModalProps {
     onConfirm: () => void;
     onCancel: () => void;
     isEditMode: boolean;
+    categories: Category[];
 }
 
 export default function PreviewModal({
@@ -21,7 +30,8 @@ export default function PreviewModal({
                                          totalCost,
                                          onConfirm,
                                          onCancel,
-                                         isEditMode
+                                         isEditMode,
+                                         categories,
                                      }: PreviewModalProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -45,31 +55,60 @@ export default function PreviewModal({
     };
 
     // Safe access to requisition data
-    const getRequisitionData: {
+    const getRequisitionData = (): {
         REQUESTOR: string,
-        PRIORITY: string,
-        CREATED_AT: string,
+        PRIORITY: string[],
+        CATEGORIES: number[],
         ITEMS: RequisitionItem[]
-    } = () => {
+    } => {
         if (!selectedRequisition || selectedRequisition.length === 0) {
             return {
                 REQUESTOR: 'N/A',
-                PRIORITY: 'Normal',
-                CREATED_AT: new Date().toISOString(),
+                PRIORITY: ['N/A'],
+                CATEGORIES: [],
                 ITEMS: []
             };
         }
 
-        // For multiple requisitions, show summary
-        if (selectedRequisition.length > 0) {
-            return {
-                REQUESTOR: `${selectedRequisition.length} Requisitions`,
-                PRIORITY: 'Multiple',
-                CREATED_AT: selectedRequisition[0]?.created_at || new Date().toISOString(),
-                ITEMS: selectedRequisition.flatMap(req => selectedItems.filter(i => i.req_id === req.id) || [])
-            };
-        }
+        // --- Unique Requestors ---
+        const uniqueRequestors = Array.from(
+            new Set(selectedRequisition.map(r => r.requestor))
+        );
+
+        const REQUESTOR =
+            uniqueRequestors.length === 0
+                ? 'N/A'
+                : uniqueRequestors.length === 1
+                    ? uniqueRequestors[0] || 'N/A'
+                    : `${uniqueRequestors.length} requestors`;
+
+
+        // --- Priorities ---
+        const PRIORITY = Array.from(
+            new Set(selectedRequisition.map(r => r.priority))
+        );
+
+        // --- Categories ---
+        const CATEGORIES = Array.from(
+            new Set([
+                ...selectedItems.map(r => r.item.category_id),
+                ...selectedServices.map(s => s.service.category_id)
+            ])
+        );
+
+        // --- All Items from the Selected Requisitions ---
+        const ITEMS = selectedRequisition.flatMap(req =>
+            selectedItems.filter(i => i.req_id === req.id)
+        );
+
+        return {
+            REQUESTOR,
+            PRIORITY,
+            CATEGORIES,
+            ITEMS
+        };
     };
+
 
     const requisitionData = getRequisitionData();
 
@@ -87,10 +126,15 @@ export default function PreviewModal({
                                 Review your purchase order before {isEditMode ? 'updating' : 'creating'}
                             </p>
                             {selectedRequisition && selectedRequisition.length > 1 && (
-                                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-                                        Merging {selectedRequisition.length} requisitions
-                                    </p>
+                                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 self-start">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                        </svg>
+                                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                            Merging {formData.REQUISITION_IDS.length} requisitions into one PO
+                                        </span>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -128,20 +172,24 @@ export default function PreviewModal({
                             </div>
                         </div>
                         <div className="space-y-4">
+                            {formData.ORDER_TYPE !== 'Services' ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Total Amount
+                                    </label>
+                                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                        {formatCurrency(totalCost)}
+                                    </p>
+                                </div>
+                                ) : (
+                                <div className="h-16"></div>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Total Amount
-                                </label>
-                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                    {formatCurrency(totalCost)}
-                                </p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Items Count
+                                    Order Type
                                 </label>
                                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    {selectedItems.length} items
+                                    {formData.ORDER_TYPE}
                                 </p>
                             </div>
                         </div>
@@ -207,105 +255,174 @@ export default function PreviewModal({
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                                 <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
-                                <p className="font-medium text-gray-900 dark:text-white mt-1">{requisitionData.REQUESTOR}</p>
+                                <p className="font-medium text-gray-900 dark:text-white mt-2">{requisitionData.REQUESTOR}</p>
                             </div>
                             <div>
                                 <span className="text-gray-600 dark:text-gray-400">Priority:</span>
-                                <div className="mt-1">
-                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                        requisitionData.PRIORITY === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                            requisitionData.PRIORITY === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                                                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                    }`}>
-                                        {requisitionData.PRIORITY}
-                                    </span>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    { requisitionData.PRIORITY.map(p =>
+                                        <div className="">
+                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                            p === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                            p === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                            'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                        }`}>
+                                            {p}
+                                        </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div>
-                                <span className="text-gray-600 dark:text-gray-400">Date:</span>
-                                <p className="font-medium text-gray-900 dark:text-white mt-1">{formatDate(requisitionData.CREATED_AT)}</p>
+                                <span className="text-gray-600 dark:text-gray-400">Categories:</span>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    { requisitionData.CATEGORIES.map(cId =>
+                                        <div className="">
+                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200`}>
+                                            {categories.find(c => c.id === cId)?.name || 'N/A'}
+                                        </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div>
-                                <span className="text-gray-600 dark:text-gray-400">Items:</span>
-                                <p className="font-medium text-gray-900 dark:text-white mt-1">{requisitionData.ITEMS.length}</p>
+                                <span className="text-gray-600 dark:text-gray-400">
+                                    {formData.ORDER_TYPE === 'Items' ? 'Items:' : 'Services:'}
+                                </span>
+                                <p className="font-medium text-gray-900 dark:text-white mt-2">
+                                    {formData.ORDER_TYPE === 'Items'
+                                        ? groupRequisitionItems(selectedItems).length
+                                        : groupRequisitionServices(selectedServices).length
+                                    }
+                                </p>
                             </div>
                         </div>
 
-                        {/* Multiple requisitions summary */}
                         {selectedRequisition && selectedRequisition.length > 1 && (
-                            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    Merged Requisitions:
-                                </p>
-                                <div className="space-y-2">
-                                    {selectedRequisition.map((req, index) => (
-                                        <div key={req.ID} className="flex justify-between items-center text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">
-                                                Requisition #{req.ID} - {req.REQUESTOR}
-                                            </span>
-                                            <span className="font-medium text-gray-900 dark:text-white">
-                                                {req.ITEMS?.length || 0} items
-                                            </span>
+                            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                                {selectedRequisition.map((req) => {
+                                    const count = formData.ORDER_TYPE === 'Items'
+                                        ? selectedItems.filter(i => i.req_id === req.id)?.length || 0
+                                        : selectedServices.filter(s => s.req_id === req.id)?.length || 0;
+
+                                    const label = formData.ORDER_TYPE === 'Items' ? 'items' : 'services';
+
+                                    return (
+                                        <div key={req.id} className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600 dark:text-gray-400">{req.ref_no} - {req.requestor}</span>
+                                            <span className="font-medium text-gray-900 dark:text-white">{count} {label}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                    </div>
+
+                    {formData.ORDER_TYPE === 'Items' && (
+                        <div className="border-t border-sidebar-border pt-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                Order Items ({groupRequisitionItems(selectedItems).length})
+                            </h3>
+                            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border shadow-sm">
+                                <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar-accent border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                    <div className="col-span-6">Item Details</div>
+                                    <div className="col-span-2 text-right">Quantity</div>
+                                    <div className="col-span-2 text-right">Unit Price</div>
+                                    <div className="col-span-2 text-right">Total</div>
+                                </div>
+                                <div className="divide-y divide-sidebar-border">
+                                    {groupRequisitionItems(selectedItems).map((groupedItem) => (
+                                        <div key={`preview-${groupedItem.item_id}`} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors">
+                                            <div className="col-span-6">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {groupedItem.item.name}
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    {categories.find(c => c.id === groupedItem.categoryId)?.name || 'Cannot get category'}
+                                                </p>
+                                                {groupedItem.reqItems.length > 1 && (
+                                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                        📦 Merged from {groupedItem.reqItems.length} requisitions
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {groupedItem.total_quantity}
+                                                </p>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    {formatCurrency(groupedItem.unit_price)}
+                                                </p>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {formatCurrency(groupedItem.total_quantity * groupedItem.unit_price)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {/* Total Row */}
+                                <div className="grid grid-cols-12 gap-4 px-4 py-4 bg-gray-50 dark:bg-sidebar-accent border-t border-sidebar-border">
+                                    <div className="col-span-8"></div>
+                                    <div className="col-span-4 text-right">
+                                        <p className="text-base font-medium text-gray-700 dark:text-gray-300">Grand Total:</p>
+                                        <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                                            {formatCurrency(totalCost)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {formData.ORDER_TYPE === 'Services' && (
+                        <div className="border-t border-sidebar-border pt-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                Order Services ({groupRequisitionServices(selectedServices).length})
+                            </h3>
+                            <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border shadow-sm">
+                                <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar-accent border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                    <div className="col-span-8">Service Details</div>
+                                    <div className="col-span-2 text-center">Category</div>
+                                    <div className="col-span-2 text-right">Hourly Rate</div>
+                                </div>
+                                <div className="divide-y divide-sidebar-border">
+                                    {groupRequisitionServices(selectedServices).map((groupedService) => (
+                                        <div key={`preview-${groupedService.service_id}`} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors">
+                                            <div className="col-span-8">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {groupedService.service.name}
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    {groupedService.service.description}
+                                                </p>
+                                                {groupedService.reqServices.length > 1 && (
+                                                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                                        📦 Merged from {groupedService.reqServices.length} requisitions
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="col-span-2 text-center">
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-sidebar text-gray-600 dark:text-gray-400">
+                                {categories.find(c => c.id === groupedService.categoryId)?.name || 'Cannot get category'}
+                            </span>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {formatCurrency(groupedService.service.hourly_rate)}/hr
+                                                </p>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        )}
-                    </div>
-
-                    {/* Items List */}
-                    <div className="border-t border-sidebar-border pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            Order Items ({selectedItems.length})
-                        </h3>
-                        <div className="bg-white dark:bg-sidebar rounded-lg border border-sidebar-border shadow-sm">
-                            <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar-accent border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                <div className="col-span-6">Item Details</div>
-                                <div className="col-span-2 text-right">Quantity</div>
-                                <div className="col-span-2 text-right">Unit Price</div>
-                                <div className="col-span-2 text-right">Total</div>
-                            </div>
-                            <div className="divide-y divide-sidebar-border">
-                                {selectedItems.map((item) => (
-                                    <div key={item.ID} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors">
-                                        <div className="col-span-6">
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {item.NAME}
-                                            </p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                {item.CATEGORY}
-                                            </p>
-                                        </div>
-                                        <div className="col-span-2 text-right">
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {item.QUANTITY}
-                                            </p>
-                                        </div>
-                                        <div className="col-span-2 text-right">
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                {formatCurrency(item.UNIT_PRICE)}
-                                            </p>
-                                        </div>
-                                        <div className="col-span-2 text-right">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                                {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {/* Total Row */}
-                            <div className="grid grid-cols-12 gap-4 px-4 py-4 bg-gray-50 dark:bg-sidebar-accent border-t border-sidebar-border">
-                                <div className="col-span-8"></div>
-                                <div className="col-span-4 text-right">
-                                    <p className="text-base font-medium text-gray-700 dark:text-gray-300">Grand Total:</p>
-                                    <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                                        {formatCurrency(totalCost)}
-                                    </p>
-                                </div>
-                            </div>
                         </div>
-                    </div>
+                    )}
+
 
                     {/* Remarks */}
                     {formData.REMARKS && (

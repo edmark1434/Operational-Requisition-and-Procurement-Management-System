@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\WebPages;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Models\PurchaseOrder;
 use App\Http\Controllers\Supplier\SupplierController;
 use App\Models\Category;
