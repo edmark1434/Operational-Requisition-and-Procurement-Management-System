@@ -109,8 +109,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/delivery/{id}/items', [ReturnsController::class, 'getDeliveryItems']);
 
     // 7. Edit Page (Full View)
-    Route::get('returns/{id}/edit', [Returns::class, "edit"])->name('returnsedit');
+    Route::get('returns/{id}/edit', [ReturnsController::class, "edit"])->name('returnsedit');
     // -----------------------
+
+    // 8. Update Action (Save Changes) - ADD THIS
+    Route::put('returns/{id}', [ReturnsController::class, "update"])->name('returns.update');
 
     Route::get('audit',[Audit::class,'index'])->name('audit');
 

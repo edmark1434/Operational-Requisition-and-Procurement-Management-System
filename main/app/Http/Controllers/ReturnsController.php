@@ -35,8 +35,6 @@ class ReturnsController extends Controller
                     ->pluck('return_id');
 
                 // 3. Calculate Total Returned Quantity
-                // We exclude 'Rejected' returns because those items are sent back to us
-                // and should be eligible for return again if needed.
                 $totalReturned = DB::table('return_item')
                     ->join('returns', 'returns.id', '=', 'return_item.return_id')
                     ->whereIn('return_item.return_id', $associatedReturnIds)
@@ -64,7 +62,7 @@ class ReturnsController extends Controller
     }
 
     /**
-     * 2. Store the Return
+     * 2. Store the Return (Create New)
      */
     public function store(Request $request)
     {
@@ -104,8 +102,7 @@ class ReturnsController extends Controller
 
             DB::commit();
 
-// ReturnsController.php
-            return redirect()->route('returnsIndex')->with('success', 'Return deleted successfully');
+            return redirect()->route('returnsIndex')->with('success', 'Return created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Error creating return: ' . $e->getMessage()]);
@@ -117,17 +114,26 @@ class ReturnsController extends Controller
      */
     public function edit($id)
     {
-        // 1. Get the Return and its Items
-        // Uses the 'items' and 'delivery' relationships defined in your Returns model
-        $return = Returns::with(['items.item', 'delivery.purchaseOrder.vendor'])->findOrFail($id);
+        // 1. Get the Return safely
+        // FIXED: Changed 'delivery' to 'deliveries' to match your Model relationship
+        $return = Returns::with(['items.item', 'deliveries.purchaseOrder.vendor'])->find($id);
 
-        // 2. Get the Delivery Items for the delivery associated with this return
-        // We reuse getDeliveryItems logic to ensure consistent "Available" math
-        // $return->delivery_id works because of the accessor we added to the Model
-        $deliveryItemsResponse = $this->getDeliveryItems($return->delivery_id);
-        $deliveryItems = $deliveryItemsResponse->getData(); // Extract data from JsonResponse
+        if (!$return) {
+            abort(404, "Return #$id not found.");
+        }
 
-        // 3. Get list of all deliveries (for the dropdown, strictly to display current selection context)
+        // 2. Get Delivery ID using the Model Accessor
+        $deliveryId = $return->delivery_id;
+
+        if (!$deliveryId) {
+            return back()->withErrors(['error' => 'This return is not linked to a valid Delivery.']);
+        }
+
+        // 3. Get the Delivery Items logic
+        $deliveryItemsResponse = $this->getDeliveryItems($deliveryId);
+        $deliveryItems = $deliveryItemsResponse->getData();
+
+        // 4. Get list of all deliveries (for context display)
         $deliveries = Delivery::where('type', 'Item Purchase')
             ->where('status', 'Received')
             ->select('id', 'ref_no', 'delivery_date')
@@ -143,14 +149,57 @@ class ReturnsController extends Controller
 
         return Inertia::render('tabs/06-Returns/ReturnEdit', [
             'returnId' => (int)$id,
-            'serverReturnData' => $return,       // The actual return record
-            'serverDeliveryItems' => $deliveryItems, // The items available in that delivery
-            'serverDeliveries' => $deliveries    // The dropdown list
+            'serverReturnData' => $return,
+            'serverDeliveryItems' => $deliveryItems,
+            'serverDeliveries' => $deliveries
         ]);
     }
 
     /**
-     * 4. Update Status
+     * 4. Update the Return (Save Edits)
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'remarks' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required',
+            'items.*.quantity' => 'required|numeric|min:1',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $return = Returns::findOrFail($id);
+
+            // 1. Update basic details
+            $return->update([
+                'remarks' => $request->remarks,
+            ]);
+
+            // 2. Sync Items: Delete old items and insert new ones
+            DB::table('return_item')->where('return_id', $return->id)->delete();
+
+            foreach ($request->items as $item) {
+                DB::table('return_item')->insert([
+                    'return_id' => $return->id,
+                    'item_id' => $item['item_id'],
+                    'quantity' => $item['quantity'],
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('returnsIndex')->with('success', 'Return updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Update failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 5. Update Status
      */
     public function updateStatus(Request $request, $id)
     {
@@ -166,7 +215,7 @@ class ReturnsController extends Controller
     }
 
     /**
-     * 5. Delete Return
+     * 6. Delete Return
      */
     public function destroy($id)
     {
@@ -185,7 +234,7 @@ class ReturnsController extends Controller
 
             DB::commit();
 
-            return redirect()->route('returnsIndex')->with('success', 'Return created successfully');
+            return redirect()->route('returnsIndex')->with('success', 'Return deleted successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
