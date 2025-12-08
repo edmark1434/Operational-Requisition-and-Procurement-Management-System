@@ -80,6 +80,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('deliveries',[Deliveries::class,'index'])->name('delivery');
     Route::get('deliveries/add',[Deliveries::class,"store"])->name('deliveryadd');
     Route::get('deliveries/{id}/edit',[Deliveries::class,"edit"])->name('deliveryedit');
+    Route::put('deliveries/{id}/editStatus',[Deliveries::class,"updateStatus"])->name('deliveryeditStatus');
 
     Route::post('deliveries/add',[DeliveryController::class,"post"])->name('deliverypost');
     Route::put('deliveries/{id}/edit',[DeliveryController::class,"put"])->name('deliveryput');
