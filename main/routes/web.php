@@ -181,8 +181,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('contacts/{id}/delete-modal',[Contact::class,"deleteModal"])->name('contactsdeleteModal');
 
     Route::get('notifications',[Notifications::class,'index'])->name('notifications');
-    Route::put('notifications/{id}/read',[Notifications::class,'editIsRead'])->name('notifications.read');
-    Route::put('notifications/mark-all-read',[Notifications::class,'markAsAllRead'])->name('notifications.mark-all-read');
+    Route::put('notifications/{id}/editIsRead',[Notifications::class,'editIsRead'])->name('notificationsIsRead');
+    Route::put('notifications/markAsAllRead',[Notifications::class,'markAsAllRead'])->name('notificationsMarkAsAllRead');
 });
 
 // --- TEMPORARY FIX ROUTE ---
