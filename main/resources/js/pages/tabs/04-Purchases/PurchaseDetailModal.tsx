@@ -3,6 +3,10 @@ import { Dialog, Transition } from '@headlessui/react';
 import { formatCurrency, formatDate } from './utils/formatters';
 import { getStatusColor, getStatusDisplayName } from './utils/purchaseCalculations';
 import { router } from "@inertiajs/react";
+import {groupRequisitionItems} from "@/pages/tabs/04-Purchases/utils/groupedItems";
+import {groupRequisitionServices} from "@/pages/tabs/04-Purchases/utils/groupedServices";
+import {RequisitionItem} from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import {Category} from "@/pages/tabs/04-Purchases/Purchases";
 
 interface PurchaseDetailModalProps {
     purchase: any;
@@ -11,6 +15,7 @@ interface PurchaseDetailModalProps {
     onEdit: () => void;
     onDelete: (id: number) => void;
     onStatusChange: (id: number, newStatus: string) => void;
+    categories: Category[];
 }
 
 export default function PurchaseDetailModal({
@@ -19,7 +24,8 @@ export default function PurchaseDetailModal({
                                                 onClose,
                                                 onEdit,
                                                 onDelete,
-                                                onStatusChange
+                                                onStatusChange,
+                                                categories
                                             }: PurchaseDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -96,6 +102,77 @@ export default function PurchaseDetailModal({
 
     const orderItems = getOrderItems();
     const isServiceOrder = safePurchase.ORDER_TYPE === 'services';
+
+    const getRequisitionData = (): {
+        REQUESTOR: string;
+        PRIORITY: string[];
+        CATEGORIES: number[];
+        ITEMS: RequisitionItem[];
+    } => {
+        if (!orderItems || orderItems.length === 0) {
+            return {
+                REQUESTOR: "N/A",
+                PRIORITY: ["N/A"],
+                CATEGORIES: [],
+                ITEMS: []
+            };
+        }
+
+        // --- Unique Requestors ---
+        const uniqueRequestors: string[] = Array.from(
+            new Set(
+                orderItems.map((i: any) =>
+                    typeof i.REQUESTOR === "string" && i.REQUESTOR.trim() !== ""
+                        ? i.REQUESTOR
+                        : "N/A"
+                )
+            )
+        );
+
+        let REQUESTOR: string;
+
+        if (uniqueRequestors.length === 0) {
+            REQUESTOR = "N/A";
+        } else if (uniqueRequestors.length === 1) {
+            REQUESTOR = uniqueRequestors[0];
+        } else {
+            REQUESTOR = `${uniqueRequestors.length} requestors`;
+        }
+
+        // --- Priorities ---
+        const PRIORITY: string[] = Array.from(
+            new Set(
+                orderItems.map((i: any) =>
+                    typeof i.PRIORITY === "string" ? i.PRIORITY : "N/A"
+                )
+            )
+        );
+
+        // --- Categories ---
+        const CATEGORIES: number[] = Array.from(
+            new Set(
+                orderItems
+                    .map((i: any) =>
+                        typeof i.CATEGORY_ID === "number" ? i.CATEGORY_ID : null
+                    )
+                    .filter((x: number | null): x is number => x !== null)
+            )
+        );
+
+        // --- Items ---
+        const ITEMS = orderItems as RequisitionItem[];
+
+        return {
+            REQUESTOR,
+            PRIORITY,
+            CATEGORIES,
+            ITEMS
+        };
+    };
+
+
+
+    const requisitionData = getRequisitionData();
 
     return (
         <>
@@ -259,14 +336,18 @@ export default function PurchaseDetailModal({
                                                     </div>
                                                 </div>
                                                 <div className="space-y-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                            Total Amount
-                                                        </label>
-                                                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                                            {formatCurrency(safePurchase.TOTAL_COST || 0)}
-                                                        </p>
-                                                    </div>
+                                                    {safePurchase.ORDER_TYPE !== 'services' ? (
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                    Total Amount
+                                                                </label>
+                                                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                                                    {formatCurrency(safePurchase.TOTAL_COST || 0)}
+                                                                </p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="h-14"></div>
+                                                    )}
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                             Payment Type
@@ -336,32 +417,48 @@ export default function PurchaseDetailModal({
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                                     Requisition Information
                                                 </h3>
-                                                {orderItems.map((item: any, index: number) => (
-                                                    <div key={index} className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                        <div>
-                                                            <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
-                                                            <p className="font-medium">{item.REQUESTOR}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-600 dark:text-gray-400">Priority:</span>
-                                                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                                                item.PRIORITY === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                                    item.PRIORITY === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                                                                        'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                                            }`}>
-                                                            {item.PRIORITY}
-                                                        </span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-600 dark:text-gray-400">Requisition Date:</span>
-                                                            <p>{item.REQUISITION_DATE ? formatDate(item.REQUISITION_DATE) : 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-600 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
-                                                            <p>{orderItems.length}</p>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
+                                                        <p className="font-medium text-gray-900 dark:text-white mt-2">{requisitionData.REQUESTOR}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Priority:</span>
+                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                            { requisitionData.PRIORITY.map(p =>
+                                                                <div className="">
+                                                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                                        p === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                            p === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                                                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                                    }`}>
+                                                                        {p}
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                ))}
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Categories:</span>
+                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                            { requisitionData.CATEGORIES.map(cId =>
+                                                                <div className="">
+                                                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200`}>
+                                                                        {categories.find(c => c.id === cId)?.name || 'N/A'}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">
+                                                            {safePurchase.ORDER_TYPE === 'items' ? 'Items:' : 'Services:'}
+                                                        </span>
+                                                        <p className="font-medium text-gray-900 dark:text-white mt-2">
+                                                            {orderItems.length}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {/* Items/Services List */}
@@ -369,18 +466,17 @@ export default function PurchaseDetailModal({
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                                     Order {isServiceOrder ? 'Services' : 'Items'}
                                                 </h3>
-                                                {/* Adjusted inner background for glass effect context */}
-                                                <div className="bg-gray-50/50 dark:bg-sidebar-accent/50 rounded-lg border border-sidebar-border backdrop-blur-sm">
-                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100/50 dark:bg-sidebar/50 border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                                        <div className="col-span-6">{isServiceOrder ? 'Service' : 'Item'}</div>
-                                                        <div className="col-span-2 text-right">{isServiceOrder ? 'Hours' : 'Quantity'}</div>
+                                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
+                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                                        <div className={`col-span-6 ${isServiceOrder && ('col-span-8')}`}>{isServiceOrder ? 'Service' : 'Item'}</div>
+                                                        <div className="col-span-2 text-right">{isServiceOrder ? '' : 'Quantity'}</div>
                                                         <div className="col-span-2 text-right">{isServiceOrder ? 'Hourly Rate' : 'Unit Price'}</div>
-                                                        <div className="col-span-2 text-right">Total</div>
+                                                        {!isServiceOrder && (<div className="col-span-2 text-right">Total</div>)}
                                                     </div>
                                                     <div className="divide-y divide-sidebar-border">
                                                         {orderItems.map((item: any) => (
                                                             <div key={item.ID} className="grid grid-cols-12 gap-4 px-4 py-3">
-                                                                <div className="col-span-6">
+                                                                <div className={`col-span-6 ${isServiceOrder && ('col-span-8')}`}>
                                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                                         {item.NAME}
                                                                     </p>
@@ -406,24 +502,28 @@ export default function PurchaseDetailModal({
                                                                         {isServiceOrder && '/hr'}
                                                                     </p>
                                                                 </div>
-                                                                <div className="col-span-2 text-right">
-                                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                                                        {isServiceOrder ? formatCurrency(item.HOURLY_RATE) :formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
-                                                                    </p>
-                                                                </div>
+                                                                {!isServiceOrder && (
+                                                                    <div className="col-span-2 text-right">
+                                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                                            {formatCurrency(item.QUANTITY * item.UNIT_PRICE)}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ))}
                                                     </div>
                                                     {/* Total Row */}
-                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50/50 dark:bg-sidebar/50 border-t border-sidebar-border">
-                                                        <div className="col-span-8"></div>
-                                                        <div className="col-span-4 text-right">
-                                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Grand Total:</p>
-                                                            <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                                                {formatCurrency(safePurchase.TOTAL_COST || 0)}
-                                                            </p>
+                                                    {!isServiceOrder && (
+                                                        <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                                            <div className="col-span-8"></div>
+                                                            <div className="col-span-4 text-right">
+                                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Grand Total:</p>
+                                                                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                                    {formatCurrency(safePurchase.TOTAL_COST || 0)}
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -435,24 +535,14 @@ export default function PurchaseDetailModal({
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                            Created Date
+                                                            Remarks
                                                         </label>
                                                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                            {safePurchase.CREATED_AT ? formatDate(safePurchase.CREATED_AT) : 'N/A'}
+                                                            {safePurchase.REMARKS ?? 'No remarks'}
                                                         </p>
                                                     </div>
 
                                                 </div>
-                                                {safePurchase.REMARKS && (
-                                                    <div className="mt-4">
-                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                            Remarks
-                                                        </label>
-                                                        <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50/50 dark:bg-sidebar-accent/50 p-3 rounded-lg border border-sidebar-border">
-                                                            {safePurchase.REMARKS}
-                                                        </p>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -510,33 +600,60 @@ export default function PurchaseDetailModal({
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white/90 dark:bg-sidebar/90 backdrop-blur-xl rounded-xl max-w-md w-full border border-sidebar-border shadow-2xl">
-                        <div className="p-6 border-b border-sidebar-border">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Delete Purchase Order
-                            </h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Are you sure you want to delete "{safePurchase.REFERENCE_NO}"? This action cannot be undone.
-                            </p>
-                        </div>
-                        <div className="p-6 flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowDeleteConfirm(false)}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-sidebar/50 border border-sidebar-border rounded-lg hover:bg-gray-50/50 dark:hover:bg-sidebar-accent/50 transition-colors"
+                <Transition appear show={showDeleteConfirm} as={Fragment}>
+                    <Dialog as="div" className="relative z-50" onClose={() => setShowDeleteConfirm(false)}>
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0"
+                            enterTo="opacity-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
+                        </Transition.Child>
+
+                        <div className="fixed inset-0 flex items-center justify-center p-4">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
                             >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                            >
-                                Delete Order
-                            </button>
+                                <Dialog.Panel className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
+                                    <div className="p-6 border-b border-sidebar-border">
+                                        <Dialog.Title className="text-xl font-bold text-gray-900 dark:text-white">
+                                            Delete Purchase Order
+                                        </Dialog.Title>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            Are you sure you want to delete "{safePurchase.REFERENCE_NO}"? This action cannot be undone.
+                                        </p>
+                                    </div>
+                                    <div className="p-6 flex justify-end gap-3">
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(false)}
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            Delete Order
+                                        </button>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
                         </div>
-                    </div>
-                </div>
+                    </Dialog>
+                </Transition>
             )}
+
         </>
     );
 }

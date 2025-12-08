@@ -20,6 +20,9 @@ interface OrderItemsProps {
     requisitionItems: RequisitionItem[];
     categories: Category[];
     requisitionOrderItems: RequisitionOrderItem[];
+    form: {
+        ITEMS: any[];
+    };
 }
 
 export default function OrderItems({
@@ -32,6 +35,7 @@ export default function OrderItems({
                                        requisitionItems,
                                        categories,
                                        requisitionOrderItems,
+                                       form
                                    }: OrderItemsProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -46,7 +50,13 @@ export default function OrderItems({
     );
 
     // Group them for display
-    const groupedItems = groupRequisitionItems(availableReqItems);
+    const groupedItems = groupRequisitionItems(availableReqItems, requisitionOrderItems);
+
+    // Build lookup: item_id → hasOrderedVersion?
+    const hasOrderedVersion = groupedItems.reduce((acc, g) => {
+        if (g.isOrdered) acc[g.item_id] = true;
+        return acc;
+    }, {} as Record<number, boolean>);
 
     // Check if a grouped item is fully selected
     const isGroupedItemSelected = (groupedItem: GroupedItem) => {
@@ -184,9 +194,9 @@ export default function OrderItems({
 
                         return (
                             <div
-                                key={`grouped-${groupedItem.item_id}`}
+                                key={`grouped-${groupedItem.item_id}-${groupedItem.isOrdered ? 'ordered' : 'not'}`}
                                 className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors
-                  ${isAlreadyOrdered
+                                ${(isAlreadyOrdered && !form.ITEMS.some(i => i.item.id === groupedItem.item_id))
                                     ? 'opacity-50 bg-neutral-100 dark:bg-neutral-900 pointer-events-none'
                                     : isSelected
                                         ? 'bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100'
@@ -199,7 +209,7 @@ export default function OrderItems({
                                         type="checkbox"
                                         checked={isSelected}
                                         onChange={() => handleToggleGroupedItem(groupedItem)}
-                                        disabled={isAlreadyOrdered}
+                                        disabled={isAlreadyOrdered && !form.ITEMS.some(i => i.item.id === groupedItem.item_id)}
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                     />
                                 </div>
@@ -217,6 +227,11 @@ export default function OrderItems({
                                     {isIncreased && (
                                         <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                                             ⚠️ Increased from {groupedItem.total_quantity}
+                                        </p>
+                                    )}
+                                    {!groupedItem.isOrdered && hasOrderedVersion[groupedItem.item_id] && (
+                                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                            🔶 Not yet ordered
                                         </p>
                                     )}
                                 </div>

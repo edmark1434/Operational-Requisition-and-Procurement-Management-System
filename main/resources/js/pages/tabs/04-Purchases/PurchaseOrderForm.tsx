@@ -26,7 +26,7 @@ import PreviewModal from './PurchaseOrderForm/PreviewModal';
 
 // Import UI components
 import { Button } from '@/components/ui/button';
-import {orderpost, servicepost} from "@/routes";
+import {orderpost} from "@/routes";
 import {X} from "lucide-react";
 
 interface PageProps {
@@ -646,7 +646,6 @@ export default function PurchaseOrderForm() {
         <AppLayout breadcrumbs={updatedBreadcrumbs}>
             <Head title={isEditMode ? "Edit Purchase Order" : "Create Purchase Order"} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {JSON.stringify(formData, null, 2)}
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -751,6 +750,7 @@ export default function PurchaseOrderForm() {
                                                     requisitionItems={requisitionItems}
                                                     categories={categories}
                                                     requisitionOrderItems={requisitionOrderItems}
+                                                    form={{ITEMS: []}}
                                                 />
                                             )}
 
@@ -764,6 +764,7 @@ export default function PurchaseOrderForm() {
                                                     requisitionServices={requisitionServices}
                                                     categories={categories}
                                                     requisitionOrderServices={requisitionOrderServices}
+                                                    form={{SERVICES: []}}
                                                 />
                                             )}
 

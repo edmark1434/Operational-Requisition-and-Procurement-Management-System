@@ -197,15 +197,13 @@ export default function SelectApprovedRequisition({
                                 <span>{requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0} {getRequisitionTypeLabel(formData.ORDER_TYPE ?? '')}
                                     {requisitionItems.filter(ri => ri.req_id === requisition.id)?.length || requisitionServices.filter(rs => rs.req_id === requisition.id)?.length || 0 > 1 ? 's' : ''}
                                 </span>
-                                {!isEditMode && (
-                                    <button
-                                        type="button"
-                                        onClick={() => onRequisitionRemove(requisition.id.toString())}
-                                        className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => onRequisitionRemove(requisition.id.toString())}
+                                    className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -217,10 +215,10 @@ export default function SelectApprovedRequisition({
                 <button
                     type="button"
                     onClick={() => formData.ORDER_TYPE && setIsDropdownOpen(!isDropdownOpen)}
-                    disabled={isEditMode || !formData.ORDER_TYPE}
+                    disabled={!formData.ORDER_TYPE}
                     className={`w-full px-3 py-2 border rounded-lg text-sm text-left focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-input text-gray-900 dark:text-white flex justify-between items-center ${
                         errors.REQUISITION_IDS ? 'border-red-500' : 'border-sidebar-border'
-                    } ${(isEditMode || !formData.ORDER_TYPE) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${!formData.ORDER_TYPE ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                     <span className={selectedRequisitions.length === 0 ? 'text-gray-500' : 'text-gray-900 dark:text-white'}>
                         {!formData.ORDER_TYPE
@@ -233,7 +231,7 @@ export default function SelectApprovedRequisition({
                     <ChevronsUpDown className="w-4 h-4 text-gray-500" />
                 </button>
 
-                {isDropdownOpen && !isEditMode && formData.ORDER_TYPE && (
+                {isDropdownOpen && formData.ORDER_TYPE && (
                     <div className="absolute z-50 w-full mt-1 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg max-h-80 overflow-hidden">
                         {/* Search Input */}
                         <div className="p-2 border-b border-sidebar-border">
