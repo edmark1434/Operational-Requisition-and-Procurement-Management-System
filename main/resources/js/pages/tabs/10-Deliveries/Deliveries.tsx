@@ -1,4 +1,4 @@
-import {Head, Link, usePage} from '@inertiajs/react';
+import {Head, Link, router, usePage} from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -13,6 +13,7 @@ import DeliveriesDetailModal from './DeliveriesDetailModal';
 import { transformDeliveriesData } from './utils';
 import { useDeliveriesFilters } from './hooks';
 import deliveryItems from '@/pages/datasets/delivery_items';
+import {deliverydelete, orderdelete} from "@/routes";
 
 export interface Item {
     id: number;
@@ -98,6 +99,8 @@ export default function Deliveries() {
     const {filteredDeliveries, dateRanges} = useDeliveriesFilters(deliveries, searchTerm, statusFilter, dateFilter, typeFilter);
 
     const handleDeleteDelivery = (id: number) => {
+        router.delete(deliverydelete(id).url);
+        alert('Purchase order deleted successfully!');
         setDeliveries(prev => prev.filter(delivery => delivery.id !== id));
         setIsDetailModalOpen(false);
     };

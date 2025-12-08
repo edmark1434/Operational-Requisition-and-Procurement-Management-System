@@ -284,8 +284,15 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
             }
         }
 
+        // Receipt number required
         if (!formData.RECEIPT_NO) {
             newErrors.RECEIPT_NO = 'Receipt number is required';
+        } else {
+            // Validate uniqueness
+            const exists = deliveries.some(d => d.receipt_no === formData.RECEIPT_NO);
+            if (exists) {
+                newErrors.RECEIPT_NO = 'Delivery has already been recorded for that';
+            }
         }
 
         if (selectedItems.length === 0 && selectedServices.length === 0) {
