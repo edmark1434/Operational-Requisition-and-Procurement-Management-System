@@ -27,6 +27,7 @@ class ReworksController extends Controller
                 return [
                     'ID' => $delivery->id,
                     'REFERENCE_NO' => $delivery->ref_no ?? 'DEL-'.$delivery->id,
+                    'TYPE' => $delivery->type,
                     'SUPPLIER_NAME' => $delivery->purchaseOrder?->vendor?->name ?? 'Unknown Supplier',
                     'DELIVERY_DATE' => $delivery->delivery_date,
                 ];

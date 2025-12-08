@@ -1,27 +1,28 @@
 import AppLayout from '@/layouts/app-layout';
-import { returns } from '@/routes';
+import { returnsIndex } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Returns', href: returns().url },
+    { title: 'Returns', href: returnsIndex().url },
     { title: 'Create Return', href: '/returns/add' },
 ];
 
 interface Props {
     auth: any;
     // Matches the data sent from ReturnsController::create
-    availableDeliveries: Array<{
+    availableDeliveriesList: Array<{
         id: number;
         reference_no: string;
+        type: string;
         supplier_name: string;
         delivery_date: string;
     }>;
 }
 
-export default function ReturnAdd({ auth, availableDeliveries }: Props) {
+export default function ReturnAdd({ auth, availableDeliveriesList }: Props) {
     // Form State
     const [formData, setFormData] = useState({
         DELIVERY_ID: '',
@@ -30,7 +31,7 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
         REMARKS: '',
         STATUS: 'pending'
     });
-
+    const [availableDeliveries, setAvailableDeliveries] = useState(availableDeliveriesList);
     // Items selected by the user to return
     const [selectedItems, setSelectedItems] = useState<Array<{
         ITEM_ID: number;
@@ -48,6 +49,8 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
     // Generate a visual "Draft" Reference Number
     // Note: The Backend generates the final official "REF-XXXXXX" upon saving.
     useEffect(() => {
+        const filteredDeliveries = availableDeliveries.filter(d => d.type.includes('Item'));
+        setAvailableDeliveries(filteredDeliveries);
         const timestamp = new Date().getTime();
         const random = Math.floor(Math.random() * 1000);
         setFormData(prev => ({ ...prev, REFERENCE_NO: `DRAFT-${timestamp}`.slice(0, 15) }));
@@ -171,7 +174,7 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
         if (selectedItems.length > 0 && !window.confirm('Are you sure you want to cancel? Unsaved changes will be lost.')) {
             return;
         }
-        router.visit(returns().url);
+        router.visit(returnsIndex().url);
     };
 
     const handleReset = () => {
@@ -204,7 +207,7 @@ export default function ReturnAdd({ auth, availableDeliveries }: Props) {
                         </p>
                     </div>
                     <Link
-                        href={returns().url}
+                        href={returnsIndex().url}
                         className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
                     >
                         Return to Returns

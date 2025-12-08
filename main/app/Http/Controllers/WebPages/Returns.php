@@ -14,7 +14,7 @@ class Returns extends Controller
     protected $base_path = "tabs/06-Returns";
     public function index()
     {
-        $returns = \App\Models\Returns::with('return_item.item.vendor','originalDelivery.oldDelivery')->get()->map(function($ret){
+        $returns = \App\Models\Returns::with('originalDelivery.oldDelivery.purchaseOrder.vendor')->get()->map(function($ret){
             return [
                 'ID' => $ret->id,
                 'CREATED_AT' => $ret->created_at,
@@ -22,7 +22,7 @@ class Returns extends Controller
                 'STATUS' => $ret->status,
                 'REMARKS' => $ret->remarks,
                 'DELIVERY_ID' => $ret->originalDelivery?->old_delivery_id,
-                'SUPPLIER_NAME' => $ret->return_item->item->vendor->name ?? 'Unknown Supplier',
+                'SUPPLIER_NAME' => $ret->originalDelivery?->oldDelivery?->purchaseOrder?->vendor?->name ?? 'Unknown Supplier',
             ];
         });
         $returnsItem = ReturnItem::all()->map(function($ret_item){
@@ -104,5 +104,13 @@ class Returns extends Controller
         return Inertia::render($this->base_path .'/ReturnEdit', [
             'returnId' => (int)$id
         ]);
+    }
+    public function updateStatus(Request $request, $id)
+    {
+        $status = $request->input('status');
+        $return = \App\Models\Returns::findOrFail($id);
+        $return->status = $status;
+        $return->save();
+        // return response()->json(['message' => 'Return status updated successfully.']);
     }
 }

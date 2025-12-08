@@ -19,10 +19,10 @@ const capitalizeStatus = (status: string) => {
 
 // Returns status options with capitalized labels
 const statusOptions = [
-    { value: 'pending', label: 'Pending', description: 'Return is created' },
-    { value: 'issued', label: 'Issued', description: 'When manager sends return slip to supplier' },
-    { value: 'rejected', label: 'Rejected', description: 'When return is rejected by supplier' },
-    { value: 'replaced', label: 'Replaced', description: 'When items are replaced' }
+    { value: 'Pending', label: 'Pending', description: 'Return is created' },
+    { value: 'Issued', label: 'Issued', description: 'When manager sends return slip to supplier' },
+    { value: 'Rejected', label: 'Rejected', description: 'When return is rejected by supplier' },
+    { value: 'Delivered', label: 'Delivered', description: 'When items are replaced' }
 ];
 
 export default function ReturnsDetailModal({

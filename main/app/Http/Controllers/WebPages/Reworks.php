@@ -31,7 +31,6 @@ class Reworks extends Controller
         });
         $reworks = Rework::with([
             'originalDelivery.oldDelivery.purchaseOrder.vendor',
-            'rework_service.service.vendor'
         ])->get()->map(function($rew) {
             return [
                 'ID' => $rew->id,
@@ -40,7 +39,7 @@ class Reworks extends Controller
                 'REMARKS' => $rew->remarks,
                 'PO_ID' => $rew->originalDelivery?->oldDelivery?->purchaseOrder?->id,
                 'DELIVERY_ID' => $rew->originalDelivery?->oldDelivery?->id,
-                'SUPPLIER_NAMES' => $rew->rework_service?->service?->vendor?->name,
+                'SUPPLIER_NAMES' => $rew->originalDelivery?->oldDelivery?->purchaseOrder?->vendor?->name ?? 'Unknown Supplier',
                 'SERVICES' => $rew->rework_services?->map(function($rs) {
                     $serv = $rs->service;
                     return [
@@ -66,4 +65,5 @@ class Reworks extends Controller
             'reworkId' => (int)$id
         ]);
     }
+    
 }

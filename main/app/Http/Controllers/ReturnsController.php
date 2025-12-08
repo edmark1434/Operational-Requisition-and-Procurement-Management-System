@@ -26,7 +26,7 @@ class ReturnsController extends Controller
                 return [
                     'id' => $delivery->id,
                     'reference_no' => $delivery->ref_no ?? 'DEL-'.$delivery->id,
-                    // Safely access vendor name
+                    'type' => $delivery->type,
                     'supplier_name' => $delivery->purchaseOrder?->vendor?->name ?? 'Unknown Vendor',
                     'delivery_date' => $delivery->delivery_date,
                 ];
@@ -34,7 +34,7 @@ class ReturnsController extends Controller
 
         // Ensure this path matches your frontend folder structure exactly
         return Inertia::render('tabs/06-Returns/ReturnAdd', [
-            'availableDeliveries' => $deliveries
+            'availableDeliveriesList' => $deliveries
         ]);
     }
 

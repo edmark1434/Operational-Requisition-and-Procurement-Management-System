@@ -48,7 +48,8 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
 
     useEffect(() => {
         // If deliveries update via props, update state
-        setAvailableDeliveries(deliveries);
+        const filteredDeliveries = deliveries.filter(d => d.TYPE.includes('Service'));
+        setAvailableDeliveries(filteredDeliveries);
 
         const timestamp = new Date().getTime();
         setFormData(prev => ({ ...prev, REFERENCE_NO: `RW-DRAFT-${timestamp}`.slice(0, 18) }));

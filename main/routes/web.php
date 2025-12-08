@@ -87,13 +87,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // --- RETURNS SECTION ---
     // 1. Main List
-    Route::get('returns',[Returns::class,'index'])->name('returns');
+    Route::get('returns',[Returns::class,'index'])->name('returnsIndex');
 
     // 2. Add Return Form (Uses ReturnsController for logic)
     Route::get('returns/add',[ReturnsController::class,"create"])->name('returnsadd');
 
     // 3. Store Return (Uses ReturnsController logic)
     Route::post('returns',[ReturnsController::class,"store"])->name('returns.store');
+    Route::put('returns/{id}/update-status',[Returns::class,"updateStatus"])->name('returnsUpdateStatus');
 
     // 4. API to fetch Items (For the Dropdown)
     Route::get('/api/delivery/{id}/items', [ReturnsController::class, 'getDeliveryItems']);
