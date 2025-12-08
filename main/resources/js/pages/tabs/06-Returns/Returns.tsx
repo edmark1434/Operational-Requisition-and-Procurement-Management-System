@@ -3,16 +3,17 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Toaster, toast } from 'sonner';
+import { router } from '@inertiajs/react';
+
 // Import components
 import ReturnsStats from './ReturnsStats';
 import SearchAndFilters from './SearchAndFilters';
 import ReturnsList from './ReturnsList';
 import ReturnsDetailModal from './ReturnsDetailModal';
-import { router } from '@inertiajs/react';
+
 // Import utilities
 import { transformReturnsData } from './utils';
 import { useReturnsFilters } from './hooks';
-import { returnsIndex, reworks } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -20,6 +21,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/returns',
     },
 ];
+
 interface Props{
     returnsData: any[],
     returnsItemData: any[],
@@ -27,40 +29,45 @@ interface Props{
     suppliersData: any[],
     itemsData: any[],
 }
+
 export default function Returns({
-    returnsData,
-    returnsItemData,
-    deliveriesData,
-    suppliersData,
-    itemsData,
-}: Props) {
+                                    returnsData,
+                                    returnsItemData,
+                                    deliveriesData,
+                                    suppliersData,
+                                    itemsData,
+                                }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [dateFilter, setDateFilter] = useState('All');
     const [selectedReturn, setSelectedReturn] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    // Initialize state with transformed data
     const [returns, setReturns] = useState(() => transformReturnsData(returnsData, returnsItemData, deliveriesData, suppliersData, itemsData));
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
-    console.log('Returns:', returns);
+
+    // Custom Hook for filtering
     const {
         filteredReturns,
         statuses,
         dateRanges
     } = useReturnsFilters(returns, searchTerm, statusFilter, dateFilter);
 
+    // --- Handlers ---
+
     const handleDeleteReturn = (id: number) => {
-        // FIXED: Using string interpolation instead of route() helper
         router.delete(`/returns/${id}`, {
             preserveScroll: true,
             onSuccess: () => {
-                // 2. On Success: Update local state to remove item from UI immediately
+                // 1. Update local state to remove item from UI immediately
                 setReturns(prev => prev.filter(returnItem => returnItem.ID !== id));
 
-                // 3. Close Modal and Reset Selection
+                // 2. Close Modal and Reset Selection
                 setIsDetailModalOpen(false);
                 setSelectedReturn(null);
 
-                // 4. Show Success Notification
+                // 3. Show Success Notification
                 toast.success("Return deleted successfully");
             },
             onError: (errors) => {
@@ -69,8 +76,7 @@ export default function Returns({
             }
         });
     };
-    // UPDATED: Status Change Handler with explicit modal close
-// UPDATED: Status Change Handler
+
     const handleStatusChange = (id: number, newStatus: string) => {
         // 1. Optimistic UI Update (Updates screen immediately)
         setReturns(prevReturns =>
@@ -82,18 +88,14 @@ export default function Returns({
         );
 
         // 2. Perform Request
-        // FIX: Changed URL from '/returns/${id}/update-status' to '/returns/${id}/status'
         router.put(`/returns/${id}/status`, { status: newStatus }, {
             onSuccess: () => {
                 toast.success(`Return #${id} status updated to ${newStatus}`);
-                // Optional: Refresh data from server to be 100% sure
-                // router.reload({ only: ['returnsData'] });
             },
             onError: (errors) => {
                 console.error('Error updating status:', errors);
                 toast.error("Failed to update status on server.");
-
-                // Optional: Revert UI change on error if needed
+                // Optional: Revert UI change here if needed
             }
         });
 
@@ -155,13 +157,14 @@ export default function Returns({
                     viewMode={viewMode}
                 />
 
-                {/* View Detail Modal - REMOVED the conditional rendering */}
+                {/* View Detail Modal */}
                 <ReturnsDetailModal
                     returnItem={selectedReturn}
                     isOpen={isDetailModalOpen}
                     onClose={closeAllModals}
                     onEdit={() => {
-                        window.location.href = `/returns/${selectedReturn?.ID}/edit`;
+                        // FIXED: Uses Inertia router instead of window.location
+                        router.visit(`/returns/${selectedReturn?.ID}/edit`);
                     }}
                     onDelete={handleDeleteReturn}
                     onStatusChange={handleStatusChange}

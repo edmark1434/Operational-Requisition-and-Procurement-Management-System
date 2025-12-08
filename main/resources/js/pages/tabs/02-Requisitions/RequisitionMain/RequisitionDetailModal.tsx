@@ -198,6 +198,8 @@ export default function RequisitionDetailModal({
     const isPartiallyApproved = status.toLowerCase() === 'partially_approved' || status.toLowerCase() === 'partially approved';
     const isAwaitingPickup = status.toLowerCase() === 'awaiting_pickup' || status.toLowerCase() === 'awaiting pickup';
     const isReceived = status.toLowerCase() === 'completed';
+    // Added helper for delivered status
+    const isDelivered = status.toLowerCase() === 'delivered';
 
     // --- HANDLERS ---
     const handleStatusChange = (newStatus: string) => {
@@ -249,8 +251,8 @@ export default function RequisitionDetailModal({
 
     const handleMarkAsReceived = () => {
         // For Items: Awaiting Pickup -> Ordered
-        // For Services: Approved -> completed
-        const newStatus = isServiceRequisition ? 'completed' : 'completed';
+        // For Services: Delivered -> completed
+        const newStatus = 'completed';
         onStatusUpdate(id, newStatus);
         onClose();
     };
@@ -322,7 +324,9 @@ export default function RequisitionDetailModal({
                     </button>
                 );
             }
-            if (isApproved) {
+            // CHANGED: Only show "Mark as Completed" if Delivered.
+            // Previously this checked isApproved.
+            if (isDelivered) {
                 return (
                     <button onClick={handleMarkAsReceived} className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
                         Mark as Completed
@@ -348,8 +352,12 @@ export default function RequisitionDetailModal({
             );
         }
 
-        // For Items: Show Create Purchase Order when Approved or Partially Approved
-        if (!isServiceRequisition && (isApproved || isPartiallyApproved)) {
+        // Logic for "Create Purchase Order"
+        // 1. Items: Approved OR Partially Approved
+        // 2. Services: Approved (ADDED THIS)
+        const showCreatePO = (!isServiceRequisition && (isApproved || isPartiallyApproved)) || (isServiceRequisition && isApproved);
+
+        if (showCreatePO) {
             return (
                 <button onClick={handleCreatePurchaseOrder} className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
                     Create Purchase Order

@@ -4,33 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ReturnDelivery;
-use App\Models\ReturnItem;
-use App\Models\Delivery; // Import this
 
 class Returns extends Model
 {
     use HasFactory;
 
     protected $table = 'returns';
-    protected $primaryKey = 'id';
     public $timestamps = false;
+    protected $guarded = [];
     public const STATUS = ['Pending','Issued','Rejected','Delivered'];
 
-    protected $fillable = [
-        'ref_no',
-        'return_date',
-        'remarks',
-        'status',
-    ];
-
-    protected $casts = [
-        'created_at' => 'datetime',
-    ];
-
     /**
-     * ✅ FIX 1: Rename 'return_item' to 'items'
-     * This matches Returns::with('items') in your controller
+     * 1. Items Relationship
      */
     public function items()
     {
@@ -38,32 +23,44 @@ class Returns extends Model
     }
 
     /**
-     * ✅ FIX 2: Add 'delivery' relationship
-     * This allows Returns::with('delivery.purchaseOrder') to work.
-     * It skips over the 'return_delivery' table to get the actual Delivery.
+     * 2. Deliveries (Direct Relation for EDIT Page)
+     * Used by ReturnsController::edit
      */
-    public function delivery()
+    public function deliveries()
     {
-        return $this->hasOneThrough(
-            Delivery::class,       // The final model we want
-            ReturnDelivery::class, // The intermediate model
-            'return_id',           // Foreign key on return_delivery table
-            'id',                  // Foreign key on delivery table
-            'id',                  // Local key on returns table
-            'old_delivery_id'      // Local key on return_delivery table
+        return $this->belongsToMany(
+            Delivery::class,
+            'return_delivery', // Pivot table
+            'return_id',       // Local key
+            'old_delivery_id'  // Foreign key
         );
     }
 
-    // You can keep this if you need direct access to the pivot table
+    /**
+     * 3. Original Delivery (Pivot Relation for INDEX Page)
+     * Used by WebPages\Returns::index
+     * RESTORED THIS TO FIX YOUR 500 ERROR
+     */
     public function originalDelivery()
     {
         return $this->hasOne(ReturnDelivery::class, 'return_id');
     }
 
-    // Helper to make $return->delivery_id work in your controller
-    // since the 'returns' table doesn't actually have that column
+    /**
+     * Helper Accessor: Get the Delivery Object directly
+     * Usage: $return->delivery
+     */
+    public function getDeliveryAttribute()
+    {
+        return $this->deliveries->first();
+    }
+
+    /**
+     * Helper Accessor: Get Delivery ID safely
+     * Usage: $return->delivery_id
+     */
     public function getDeliveryIdAttribute()
     {
-        return $this->originalDelivery->old_delivery_id ?? null;
+        return $this->deliveries->first()?->id;
     }
 }

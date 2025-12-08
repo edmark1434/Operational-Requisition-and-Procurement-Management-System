@@ -119,13 +119,6 @@ class PurchaseOrderController extends Controller
         }
 
         $this::markFullyOrderedRequisitions();
-
-        AuditLog::query()->create([
-            'description' => 'Purchase order created: ' . $finalPO['ref_no'],
-            'user_id' => auth()->id(),
-            'type_id' => 4,
-        ]);
-
         return back();
     }
 
@@ -184,26 +177,115 @@ class PurchaseOrderController extends Controller
     public function put(Request $request, $id)
     {
         $validated = $request->validate([
-            'NAME' => 'required|string|max:255',
-            'DESCRIPTION' => 'required|string',
-            'HOURLY_RATE' => 'required|numeric|min:0',
-            'CATEGORY' => 'required|exists:category,id',
-            'VENDOR_ID' => 'nullable|exists:vendor,id',
+            'REFERENCE_NO' => ['required', 'string', 'max:255'],
+            'REQUISITION_IDS' => ['required', 'array'],
+            'REQUISITION_IDS.*' => ['integer', 'exists:requisition,id'],
+            'SUPPLIER_ID' => ['required', 'integer', 'exists:vendor,id'],
+            'PAYMENT_TYPE' => ['required', 'string', 'in:Cash,Disbursement,Store Credit'],
+            'ORDER_TYPE' => ['required', 'string', 'in:Items,Services'],
+            'TOTAL_COST' => ['required', 'numeric', 'min:0'],
+            'REMARKS' => ['nullable', 'string'],
+
+            'ITEMS' => ['nullable', 'array'],
+            'ITEMS.*.REQ_ITEM_ID' => ['required_with:ITEMS', 'integer', 'exists:requisition_item,id'],
+            'ITEMS.*.ITEM_ID' => ['required_with:ITEMS', 'integer', 'exists:item,id'],
+            'ITEMS.*.QUANTITY' => ['required_with:ITEMS', 'integer', 'min:1'],
+
+            'SERVICES' => ['nullable', 'array'],
+            'SERVICES.*.REQ_SERVICE_ID' => ['required_with:SERVICES', 'integer', 'exists:requisition_services,id'],
+            'SERVICES.*.SERVICE_ID' => ['required_with:SERVICES', 'integer', 'exists:services,id'],
         ]);
 
-        $final = [
-            'name' => $validated['NAME'],
-            'description' => $validated['DESCRIPTION'],
-            'hourly_rate' => $validated['HOURLY_RATE'],
-            'category_id' => $validated['CATEGORY'],
-            'vendor_id' => $validated['VENDOR_ID'] ?? null,
-        ];
+        $po = PurchaseOrder::findOrFail($id);
 
-        Service::query()->findOrFail($id)->update($final);
-        AuditLog::query()->create([
-            'description' => 'Details of ' . $final['name'] . ' updated',
+        // Update main PO
+        $po->update([
+            'ref_no' => $validated['REFERENCE_NO'],
+            'type' => $validated['ORDER_TYPE'],
+            'total_cost' => $validated['TOTAL_COST'],
+            'payment_type' => $validated['PAYMENT_TYPE'],
+            'remarks' => $validated['REMARKS'],
+            'vendor_id' => $validated['SUPPLIER_ID'],
+        ]);
+
+        // Delete old items/services and junctions
+        if ($po->type === 'Items') {
+            // Delete old junctions
+            RequisitionOrderItem::whereIn('po_item_id', $po->orderItems()->pluck('id'))->delete();
+            // Delete old order items
+            $po->orderItems()->delete();
+
+            // Merge and recreate
+            $mergedItems = [];
+            foreach ($validated['ITEMS'] ?? [] as $reqItem) {
+                $itemId = $reqItem['ITEM_ID'];
+                $quantity = $reqItem['QUANTITY'];
+                $reqItemId = $reqItem['REQ_ITEM_ID'];
+
+                if (!isset($mergedItems[$itemId])) {
+                    $mergedItems[$itemId] = [
+                        'quantity' => $quantity,
+                        'req_item_ids' => [$reqItemId],
+                    ];
+                } else {
+                    $mergedItems[$itemId]['quantity'] += $quantity;
+                    $mergedItems[$itemId]['req_item_ids'][] = $reqItemId;
+                }
+            }
+
+            foreach ($mergedItems as $itemId => $data) {
+                $createdOrderItem = OrderItem::create([
+                    'po_id' => $po->id,
+                    'item_id' => $itemId,
+                    'quantity' => $data['quantity'],
+                ]);
+
+                foreach ($data['req_item_ids'] as $reqItemId) {
+                    RequisitionOrderItem::create([
+                        'po_item_id' => $createdOrderItem->id,
+                        'req_item_id' => $reqItemId,
+                    ]);
+                }
+            }
+        } else {
+            // Delete old junctions
+            RequisitionOrderService::whereIn('po_service_id', $po->orderServices()->pluck('id'))->delete();
+            $po->orderServices()->delete();
+
+            // Merge and recreate
+            $mergedServices = [];
+            foreach ($validated['SERVICES'] ?? [] as $reqService) {
+                $serviceId = $reqService['SERVICE_ID'];
+                $reqServiceId = $reqService['REQ_SERVICE_ID'];
+
+                if (!isset($mergedServices[$serviceId])) {
+                    $mergedServices[$serviceId] = ['req_service_ids' => [$reqServiceId]];
+                } else {
+                    $mergedServices[$serviceId]['req_service_ids'][] = $reqServiceId;
+                }
+            }
+
+            foreach ($mergedServices as $serviceId => $data) {
+                $createdOrderService = OrderService::create([
+                    'po_id' => $po->id,
+                    'service_id' => $serviceId,
+                ]);
+
+                foreach ($data['req_service_ids'] as $reqServiceId) {
+                    RequisitionOrderService::create([
+                        'po_service_id' => $createdOrderService->id,
+                        'req_service_id' => $reqServiceId,
+                    ]);
+                }
+            }
+        }
+
+        $this::markFullyOrderedRequisitions();
+
+        AuditLog::create([
+            'description' => 'Purchase order updated: ' . $po->ref_no,
             'user_id' => auth()->id(),
-            'type_id' => 20,
+            'type_id' => 4,
         ]);
 
         return back();
@@ -211,22 +293,36 @@ class PurchaseOrderController extends Controller
 
     public function delete($id)
     {
-        $service = Service::query()->findOrFail($id);
-        $service->update(['is_active' => false]);
+        $po = PurchaseOrder::with(['orderItems', 'orderServices'])->findOrFail($id);
 
-        AuditLog::query()->create([
-            'description' => 'Service deleted: ' . $service->name,
-            'user_id' => auth()->id(),
-            'type_id' => 21,
-        ]);
+        // Delete all related requisition links first
+        foreach ($po->orderItems as $orderItem) {
+            RequisitionOrderItem::query()
+                ->where('po_item_id', $orderItem->id)
+                ->delete();
 
+            $orderItem->delete(); // hard delete order item
+        }
+
+        foreach ($po->orderServices as $orderService) {
+            RequisitionOrderService::query()
+                ->where('po_service_id', $orderService->id)
+                ->delete();
+
+            $orderService->delete(); // hard delete order service
+        }
+
+        // Delete the PO itself
+        $po->delete();
+
+        $this::markFullyOrderedRequisitions();
         return back();
     }
 
     public static function markFullyOrderedRequisitions()
     {
         $requisitions = Requisition::query()
-            ->whereIn('status', ['Approved', 'Partially Approved'])
+            ->whereIn('status', ['Approved', 'Partially Approved', 'Ordered'])
             ->with(['requisition_items.req_order_items', 'requisition_services.req_order_services'])
             ->get();
 
@@ -234,19 +330,23 @@ class PurchaseOrderController extends Controller
             $hasItems = $req->requisition_items->count() > 0;
             $hasServices = $req->requisition_services->count() > 0;
 
-            // Check if all items are ordered (if any items exist)
-            $allItemsOrdered = !$hasItems || $req->requisition_items->every(fn($item) => $item->req_order_items->count() > 0); // No items = automatically satisfied
+            // Check if all items/services are ordered
+            $allItemsOrdered = !$hasItems || $req->requisition_items->every(fn($item) => $item->req_order_items->count() > 0);
+            $allServicesOrdered = !$hasServices || $req->requisition_services->every(fn($service) => $service->req_order_services->count() > 0);
 
-            // Check if all services are ordered (if any services exist)
-            $allServicesOrdered = !$hasServices || $req->requisition_services->every(fn($service) => $service->req_order_services->count() > 0); // No services = automatically satisfied
-
-            // Only mark as ordered if:
-            // 1. At least one type exists (items OR services)
-            // 2. All existing items/services are ordered
             if (($hasItems || $hasServices) && $allItemsOrdered && $allServicesOrdered) {
-                $req->update(['status' => 'Ordered']);
+                $newStatus = 'Ordered';
+            } else {
+                // Check if any approved_qty differs from requested quantity
+                $anyItemPartiallyApproved = $req->requisition_items->some(fn($item) => $item->approved_qty !== $item->quantity);
+                $anyServicePartiallyApproved = $req->requisition_services->some(fn($service) => $service->approved_qty !== $service->quantity);
+
+                $newStatus = ($anyItemPartiallyApproved || $anyServicePartiallyApproved) ? 'Partially Approved' : 'Approved';
+            }
+
+            if ($req->status !== $newStatus) {
+                $req->update(['status' => $newStatus]);
             }
         }
     }
-
 }
