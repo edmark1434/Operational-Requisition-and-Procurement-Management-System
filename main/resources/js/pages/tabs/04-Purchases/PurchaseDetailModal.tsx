@@ -110,7 +110,8 @@ export default function PurchaseDetailModal({
                         leaveFrom="opacity-100"
                         leaveTo="opacity-0"
                     >
-                        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
+                        {/* Modified overlay: slightly darker for better glass contrast */}
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
                     </Transition.Child>
 
                     <div className="fixed inset-0 overflow-y-auto">
@@ -124,10 +125,11 @@ export default function PurchaseDetailModal({
                                 leaveFrom="opacity-100 scale-100"
                                 leaveTo="opacity-0 scale-95"
                             >
-                                <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-xl bg-white dark:bg-sidebar text-left align-middle shadow-xl transition-all border border-sidebar-border flex flex-col max-h-[90vh]">
+                                {/* Modal Panel: Applied Transparent Blur BG here */}
+                                <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-xl bg-white/90 dark:bg-sidebar/90 backdrop-blur-xl text-left align-middle shadow-2xl transition-all border border-sidebar-border flex flex-col max-h-[90vh]">
 
-                                    {/* Header */}
-                                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
+                                    {/* Header - Semi-transparent sticky header */}
+                                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white/80 dark:bg-sidebar/90 backdrop-blur-md sticky top-0 z-10">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -148,7 +150,7 @@ export default function PurchaseDetailModal({
                                             </div>
                                             <button
                                                 onClick={onClose}
-                                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
+                                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50/50 dark:hover:bg-sidebar-accent/50"
                                             >
                                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -157,9 +159,9 @@ export default function PurchaseDetailModal({
                                         </div>
                                     </div>
 
-                                    {/* Content */}
-                                    <div className="flex-1 overflow-y-auto">
-                                        <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
+                                    {/* Content - Removed solid BG to allow Panel transparency to show */}
+                                    <div className="flex-1 overflow-y-auto bg-transparent">
+                                        <div className="p-6 space-y-6">
                                             {/* Order Summary */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div className="space-y-4">
@@ -175,7 +177,7 @@ export default function PurchaseDetailModal({
                                                             <div className="relative" ref={dropdownRef}>
                                                                 <button
                                                                     onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                                                                 >
                                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -184,7 +186,8 @@ export default function PurchaseDetailModal({
                                                                 </button>
 
                                                                 {showStatusDropdown && (
-                                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                                    // Dropdown remains solid for readability
+                                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-xl z-20">
                                                                         <div className="p-3">
                                                                             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
                                                                                 Update Status
@@ -366,8 +369,9 @@ export default function PurchaseDetailModal({
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                                     Order {isServiceOrder ? 'Services' : 'Items'}
                                                 </h3>
-                                                <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border">
-                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100 dark:bg-sidebar border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                                {/* Adjusted inner background for glass effect context */}
+                                                <div className="bg-gray-50/50 dark:bg-sidebar-accent/50 rounded-lg border border-sidebar-border backdrop-blur-sm">
+                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100/50 dark:bg-sidebar/50 border-b border-sidebar-border text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                                                         <div className="col-span-6">{isServiceOrder ? 'Service' : 'Item'}</div>
                                                         <div className="col-span-2 text-right">{isServiceOrder ? 'Hours' : 'Quantity'}</div>
                                                         <div className="col-span-2 text-right">{isServiceOrder ? 'Hourly Rate' : 'Unit Price'}</div>
@@ -411,7 +415,7 @@ export default function PurchaseDetailModal({
                                                         ))}
                                                     </div>
                                                     {/* Total Row */}
-                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
+                                                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50/50 dark:bg-sidebar/50 border-t border-sidebar-border">
                                                         <div className="col-span-8"></div>
                                                         <div className="col-span-4 text-right">
                                                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Grand Total:</p>
@@ -444,7 +448,7 @@ export default function PurchaseDetailModal({
                                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                             Remarks
                                                         </label>
-                                                        <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-sidebar-accent p-3 rounded-lg">
+                                                        <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50/50 dark:bg-sidebar-accent/50 p-3 rounded-lg border border-sidebar-border">
                                                             {safePurchase.REMARKS}
                                                         </p>
                                                     </div>
@@ -453,12 +457,12 @@ export default function PurchaseDetailModal({
                                         </div>
                                     </div>
 
-                                    {/* Footer with Actions */}
-                                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
+                                    {/* Footer with Actions - Semi-transparent */}
+                                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50/80 dark:bg-sidebar-accent/80 backdrop-blur-xl">
                                         <div className="flex justify-between items-center">
                                             <button
                                                 onClick={() => setShowDeleteConfirm(true)}
-                                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -469,13 +473,13 @@ export default function PurchaseDetailModal({
 
                                                 <button
                                                     onClick={onClose}
-                                                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
+                                                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-sidebar/50 border border-sidebar-border rounded-lg hover:bg-gray-50/50 dark:hover:bg-sidebar-accent/50 transition-colors backdrop-blur-sm"
                                                 >
                                                     Close
                                                 </button>
                                                 <button
                                                     onClick={onEdit}
-                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                                                 >
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -486,7 +490,7 @@ export default function PurchaseDetailModal({
                                                 {isPending && (
                                                     <button
                                                         onClick={handleIssue}
-                                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
                                                     >
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -506,8 +510,8 @@ export default function PurchaseDetailModal({
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white/90 dark:bg-sidebar/90 backdrop-blur-xl rounded-xl max-w-md w-full border border-sidebar-border shadow-2xl">
                         <div className="p-6 border-b border-sidebar-border">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 Delete Purchase Order
@@ -519,7 +523,7 @@ export default function PurchaseDetailModal({
                         <div className="p-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-sidebar/50 border border-sidebar-border rounded-lg hover:bg-gray-50/50 dark:hover:bg-sidebar-accent/50 transition-colors"
                             >
                                 Cancel
                             </button>
