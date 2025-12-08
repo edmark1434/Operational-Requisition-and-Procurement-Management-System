@@ -12,6 +12,7 @@ class Returns extends Model
     protected $table = 'returns';
     public $timestamps = false;
     protected $guarded = [];
+    public const STATUS = ['Pending','Issued','Rejected','Delivered'];
 
     /**
      * 1. Items Relationship
