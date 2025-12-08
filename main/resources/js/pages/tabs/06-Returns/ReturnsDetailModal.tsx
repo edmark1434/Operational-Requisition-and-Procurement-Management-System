@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { ReturnsIcons } from './utils/icons';
 import { getReturnsStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
-import { router } from '@inertiajs/react';
-import { toast } from 'sonner';
 
 interface ReturnsDetailModalProps {
     returnItem: any;
@@ -39,6 +37,22 @@ export default function ReturnsDetailModal({
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    const handleDelete = () => {
+        if (returnItem) {
+            onDelete(returnItem.ID);
+        }
+        setShowDeleteConfirm(false);
+    };
+
+    const handleStatusChange = (newStatus: string) => {
+        if (returnItem) {
+            onStatusChange(returnItem.ID, newStatus);
+            // The modal will automatically close because the parent component
+            // should handle the state update and re-render
+        }
+        setShowStatusDropdown(false);
+    };
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -51,66 +65,6 @@ export default function ReturnsDetailModal({
     }, [showStatusDropdown]);
 
     if (!isOpen || !returnItem) return null;
-
-    // --- DATA NORMALIZATION ---
-    // Handles both uppercase (DB) and lowercase (Frontend) keys to prevent undefined errors
-    const ID = returnItem.ID || returnItem.id;
-    const STATUS = returnItem.STATUS || returnItem.status || 'Pending';
-    const REFERENCE_NO = returnItem.REFERENCE_NO || returnItem.reference_no || 'N/A';
-    const CREATED_AT = returnItem.CREATED_AT || returnItem.created_at;
-    const DELIVERY_REF = returnItem.DELIVERY_REFERENCE || returnItem.delivery_reference || 'N/A';
-    const TOTAL_ITEMS = returnItem.TOTAL_ITEMS || returnItem.total_items || 0;
-    const TOTAL_VALUE = returnItem.TOTAL_VALUE || returnItem.total_value || 0;
-    const RETURN_DATE = returnItem.RETURN_DATE || returnItem.return_date;
-    const SUPPLIER_NAME = returnItem.SUPPLIER_NAME || returnItem.supplier_name || 'Unknown';
-    const SUPPLIER_ID = returnItem.SUPPLIER_ID || returnItem.supplier_id;
-    const REMARKS = returnItem.REMARKS || returnItem.remarks;
-    const ITEMS = returnItem.ITEMS || returnItem.items || [];
-
-    const handleDelete = () => {
-        if (!ID) return;
-
-        router.delete(`/returns/${ID}`, {
-            onSuccess: () => {
-                toast.success('Return deleted successfully');
-                onDelete(ID);
-                setShowDeleteConfirm(false);
-                onClose();
-            },
-            onError: () => {
-                toast.error('Failed to delete return');
-                setShowDeleteConfirm(false);
-            }
-        });
-    };
-
-    const handleStatusChange = (newStatus: string) => {
-        if (!ID) return;
-
-        console.log(`Updating Status for ID: ${ID} to ${newStatus}`); // Debug log
-
-        router.put(`/returns/${ID}/status`,
-            { status: newStatus }, // Payload
-            {
-                preserveScroll: true, // Prevents page jumping
-                onSuccess: () => {
-                    toast.success(`Status updated to ${newStatus}`);
-                    onStatusChange(ID, newStatus);
-                    setShowStatusDropdown(false);
-                },
-                onError: (errors) => {
-                    console.error("Status update failed:", errors);
-                    // Shows the specific error message from the backend (e.g., "The status field must be a string")
-                    if (errors.status) {
-                        toast.error(errors.status);
-                    } else {
-                        toast.error("Failed to update status");
-                    }
-                }
-            }
-        );
-    };
-
 
     const isPending = returnItem.STATUS?.toLowerCase() === 'pending';
 
@@ -343,10 +297,13 @@ export default function ReturnsDetailModal({
                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent rounded-b-xl">
                         <div className="flex justify-between items-center">
                             <button
-                                onClick={onClose}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30"
                             >
-                                Close
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete Return
                             </button>
 
                             {/* UPDATED: Buttons for Pending Status */}
