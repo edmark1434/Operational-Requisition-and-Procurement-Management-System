@@ -16,7 +16,7 @@ export interface SuggestedVendor {
     matchPercentage: number;
 }
 
-export const getSuggestedSuppliers = (items: RequisitionItem[], services: RequisitionService[], vendors: Vendor[], categories: Category[], vendorCategories: CategoryVendor[] , orderType?: string,): SuggestedVendor[] => {
+export const getSuggestedSuppliers = (items: RequisitionItem[], services: RequisitionService[], vendors: Vendor[], categories: Category[], vendorCategories: CategoryVendor[], orderType?: string): SuggestedVendor[] => {
     // If no items or services selected, return empty
     const selectedItems = items;
     const selectedServices = services;
@@ -26,6 +26,7 @@ export const getSuggestedSuppliers = (items: RequisitionItem[], services: Requis
     }
 
     let categoryIds: number[] = [];
+    let matchPercentage = 0;
 
     // Get category IDs and names based on order type and selected items/services
     if (orderType === 'Items' && selectedItems.length > 0) {
@@ -39,6 +40,7 @@ export const getSuggestedSuppliers = (items: RequisitionItem[], services: Requis
         categoryIds = [...new Set(selectedServices
             .map(service => service.service.category_id)
         )];
+
     }
 
     const totalCategories = categoryIds.length;
@@ -54,7 +56,12 @@ export const getSuggestedSuppliers = (items: RequisitionItem[], services: Requis
         const matchingCategories = categories
             .filter(category => supplierCategoryIds.includes(category.id))
             .filter(category => categoryIds.includes(category.id));
-        const matchPercentage = Math.round((matchingCategories.length / totalCategories) * 100);
+
+        if (orderType === 'Items' && selectedItems.length > 0) {
+            matchPercentage = Math.round((items.filter(i => supplierCategoryIds.includes(i.item.category_id)).length / items.length) * 100);
+        } else if (orderType === 'Services' && selectedServices.length > 0) {
+            matchPercentage = Math.round((services.filter(s => supplierCategoryIds.includes(s.service.category_id)).length / services.length) * 100);
+        }
 
         return {
             vendor,

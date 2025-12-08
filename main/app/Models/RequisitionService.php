@@ -26,5 +26,8 @@ class RequisitionService extends Model
         return $this->belongsTo(Service::class, 'service_id');
     }
 
-    // item() relationship removed
+    public function req_order_services()
+    {
+        return $this->hasMany(RequisitionOrderService::class, 'req_service_id');
+    }
 }

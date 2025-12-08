@@ -1074,7 +1074,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => handleAddService(service)}
-                                                                            disabled={selectedServices.some(selected => selected.service_id === service.id)}
+                                                                            disabled={selectedServices.some(selected => selected.service_id === service.service_id)}
                                                                             className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                                                         >
                                                                             Add
@@ -1095,7 +1095,7 @@ export default function DeliveryAdd({ auth }: { auth: any }) {
                                                             </div>
                                                             <div className="divide-y divide-sidebar-border">
                                                                 {selectedServices.map((service, index) => (
-                                                                    <div key={service.service_id} className="p-4">
+                                                                    <div key={`${service.service_id}-${index}`} className="p-4">
                                                                         <div className="flex justify-between items-start mb-3">
                                                                             <div className="flex-1">
                                                                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{services.find(s => s.id === service.service_id)?.name || 'Unknown Service'}</p>

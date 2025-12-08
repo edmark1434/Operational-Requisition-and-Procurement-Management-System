@@ -5,6 +5,8 @@ import {
     RequisitionOrderItem,
     RequisitionService
 } from "@/pages/tabs/04-Purchases/PurchaseOrderForm";
+import { GroupedItem, groupRequisitionItems } from "@/pages/tabs/04-Purchases/utils/groupedItems";
+
 
 interface OrderItemsProps {
     formData: {
@@ -39,9 +41,69 @@ export default function OrderItems({
         }).format(amount);
     };
 
-    const getSelectedItems = () => {
-        return formData.ITEMS;
+    const availableReqItems = requisitionItems.filter(ri =>
+        selectedRequisition.map(r => r.id).includes(ri.req_id)
+    );
+
+    // Group them for display
+    const groupedItems = groupRequisitionItems(availableReqItems);
+
+    // Check if a grouped item is fully selected
+    const isGroupedItemSelected = (groupedItem: GroupedItem) => {
+        return groupedItem.reqItems.every(reqItem =>
+            formData.ITEMS.some(i => i.id === reqItem.id)
+        );
     };
+
+    // Toggle all reqItems in a group
+    const handleToggleGroupedItem = (groupedItem: GroupedItem) => {
+        const allSelected = isGroupedItemSelected(groupedItem);
+
+        if (allSelected) {
+            // Remove all reqItems in this group
+            groupedItem.reqItems.forEach(reqItem => {
+                onToggleItemSelection(reqItem.id);
+            });
+        } else {
+            // Add all reqItems in this group
+            groupedItem.reqItems.forEach(reqItem => {
+                if (!formData.ITEMS.some(i => i.id === reqItem.id)) {
+                    onToggleItemSelection(reqItem.id);
+                }
+            });
+        }
+    };
+
+    // Calculate the total quantity for a grouped item (from formData)
+    const getGroupedItemQuantity = (groupedItem: GroupedItem) => {
+        return groupedItem.reqItems.reduce((sum, reqItem) => {
+            const formItem = formData.ITEMS.find(i => i.id === reqItem.id);
+            return sum + (formItem?.quantity || 0);
+        }, 0);
+    };
+
+    // Update quantity proportionally across all reqItems in group
+    const handleUpdateGroupedQuantity = (groupedItem: GroupedItem, newTotal: number) => {
+        const currentTotal = getGroupedItemQuantity(groupedItem);
+        const originalTotal = groupedItem.total_quantity;
+
+        // Prevent going below original total
+        if (newTotal < originalTotal) return;
+
+        // Distribute the change proportionally
+        const delta = newTotal - currentTotal;
+        const distribution = Math.floor(delta / groupedItem.reqItems.length);
+        const remainder = delta % groupedItem.reqItems.length;
+
+        groupedItem.reqItems.forEach((reqItem, index) => {
+            const formItem = formData.ITEMS.find(i => i.id === reqItem.id);
+            if (formItem) {
+                const additionalQty = distribution + (index < remainder ? 1 : 0);
+                onUpdateItemQuantity(reqItem.id, formItem.quantity + additionalQty);
+            }
+        });
+    };
+
 
     const calculateSubtotal = () => {
         return formData.ITEMS
@@ -49,15 +111,17 @@ export default function OrderItems({
     };
 
     const calculateTotalItems = () => {
-        return formData.ITEMS
-            .reduce((total: number, item: any) => total + item.quantity, 0);
+        return groupedItems
+            .filter(gi => isGroupedItemSelected(gi))
+            .reduce((total: number, groupedItem: GroupedItem) => {
+                return total + getGroupedItemQuantity(groupedItem);
+            }, 0);
     };
 
     if (!selectedRequisition) {
         return null;
     }
 
-    const selectedItems = getSelectedItems();
     const subtotal = calculateSubtotal();
     const totalItems = calculateTotalItems();
 
@@ -73,7 +137,7 @@ export default function OrderItems({
                     Order Items
                 </h3>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedItems.length} of {requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length} item{requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).length > 1 ? 's' : ''} selected • {totalItems} total quantity
+                    {groupedItems.filter(gi => isGroupedItemSelected(gi)).length} of {groupedItems.length} item{groupedItems.length > 1 ? 's' : ''} selected • {totalItems} total quantity
                 </div>
             </div>
 
@@ -109,56 +173,65 @@ export default function OrderItems({
 
                 {/* Table Body */}
                 <div className="divide-y divide-sidebar-border max-h-96 overflow-y-auto">
-                    {requisitionItems.filter(ri => selectedRequisition.map(r => r.id).includes(ri.req_id)).map((item) => {
-                        const originalQty = originalQuantities[item.id] || item.quantity;
-                        const isIncreased = formData.ITEMS.find(i => i.id === item.id)?.quantity > originalQty;
-                        const itemTotal = (reqItemtoFormItem(item).quantity || item.quantity) * item.item.unit_price;
+                    {groupedItems.map((groupedItem) => {
+                        const isSelected = isGroupedItemSelected(groupedItem);
+                        const currentQty = getGroupedItemQuantity(groupedItem);
+                        const isIncreased = currentQty > groupedItem.total_quantity;
+                        const itemTotal = (isSelected ? currentQty : groupedItem.total_quantity) * groupedItem.unit_price;
+                        const isAlreadyOrdered = groupedItem.reqItems.some(reqItem =>
+                            requisitionOrderItems.some(i => i.req_item_id === reqItem.id)
+                        );
 
                         return (
                             <div
-                                key={item.id}
+                                key={`grouped-${groupedItem.item_id}`}
                                 className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors
-                                ${requisitionOrderItems.some(i => i.req_item_id === item.id)
-                                    ? 'opacity-50 bg-neutral-100 dark:bg-neutral-900 font-normal pointer-events-none cursor-not-allowed'
-                                    : formData.ITEMS.some(i => i.id === item.id)
-                                        ? 'bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100 dark:hover:bg-blue-900/20'
+                  ${isAlreadyOrdered
+                                    ? 'opacity-50 bg-neutral-100 dark:bg-neutral-900 pointer-events-none'
+                                    : isSelected
+                                        ? 'bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100'
                                         : 'hover:bg-gray-50 dark:hover:bg-sidebar'
                                 }`}
                             >
-                                {/* Select Checkbox */}
+                                {/* Checkbox */}
                                 <div className="col-span-1">
                                     <input
-                                        disabled={requisitionOrderItems.some(i => i.req_item_id === item.id)}
                                         type="checkbox"
-                                        checked={formData.ITEMS.some(i => i.id === item.id) || false}
-                                        onChange={() => onToggleItemSelection(item.id)}
+                                        checked={isSelected}
+                                        onChange={() => handleToggleGroupedItem(groupedItem)}
+                                        disabled={isAlreadyOrdered}
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                     />
                                 </div>
 
-                                {/* Item Details */}
+                                {/* Item Name */}
                                 <div className="col-span-4">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {item.item.name}
+                                        {groupedItem.item.name}
                                     </p>
+                                    {groupedItem.reqItems.length > 1 && (
+                                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                            📦 Merged from {groupedItem.reqItems.length} requisitions
+                                        </p>
+                                    )}
                                     {isIncreased && (
                                         <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                                            ⚠️ Increased from {originalQty}
+                                            ⚠️ Increased from {groupedItem.total_quantity}
                                         </p>
                                     )}
                                 </div>
 
                                 {/* Category */}
                                 <div className="col-span-1 text-center">
-                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-sidebar text-gray-600 dark:text-gray-400">
-                                        {categories.find(c => c.id === item.item.category_id)?.name || 'N/A'}
-                                    </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-sidebar text-gray-600 dark:text-gray-400">
+                    {categories.find(c => c.id === groupedItem.categoryId)?.name || 'N/A'}
+                  </span>
                                 </div>
 
                                 {/* Unit Price */}
                                 <div className="col-span-2 text-right">
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {formatCurrency(item.item.unit_price)}
+                                        {formatCurrency(groupedItem.unit_price)}
                                     </p>
                                 </div>
 
@@ -167,41 +240,40 @@ export default function OrderItems({
                                     <div className="flex items-center justify-center space-x-2">
                                         <button
                                             type="button"
-                                            onClick={() => onUpdateItemQuantity(item.id, reqItemtoFormItem(item).quantity - 1)}
-                                            disabled={reqItemtoFormItem(item).quantity <= originalQty}
-                                            className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                            title={item.quantity <= originalQty ? "Cannot decrease below requisition quantity" : "Decrease quantity"}
+                                            onClick={() => handleUpdateGroupedQuantity(groupedItem, currentQty - 1)}
+                                            disabled={!isSelected || currentQty <= groupedItem.total_quantity}
+                                            className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             -
                                         </button>
                                         <div className="text-center min-w-12">
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {reqItemtoFormItem(item).quantity || item.quantity}
-                                            </span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {isSelected ? currentQty : groupedItem.total_quantity}
+                      </span>
                                             {isIncreased && (
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                    was {originalQty}
+                                                <div className="text-xs text-gray-500">
+                                                    was {groupedItem.total_quantity}
                                                 </div>
                                             )}
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => onUpdateItemQuantity(item.id, reqItemtoFormItem(item).quantity + 1)}
-                                            className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
-                                            title="Increase quantity"
+                                            onClick={() => handleUpdateGroupedQuantity(groupedItem, currentQty + 1)}
+                                            disabled={!isSelected}
+                                            className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                                         >
                                             +
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Item Total */}
+                                {/* Total */}
                                 <div className="col-span-2 text-right">
                                     <p className="text-sm font-bold text-gray-900 dark:text-white">
                                         {formatCurrency(itemTotal)}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {reqItemtoFormItem(item).quantity || item.quantity} × {formatCurrency(item.item.unit_price)}
+                                        {isSelected ? currentQty : groupedItem.total_quantity} × {formatCurrency(groupedItem.unit_price)}
                                     </p>
                                 </div>
                             </div>
@@ -210,7 +282,7 @@ export default function OrderItems({
                 </div>
 
                 {/* Summary Section */}
-                {selectedItems.length > 0 && (
+                {groupedItems.filter(gi => isGroupedItemSelected(gi)).length > 0 && (
                     <>
                         {/* Grand Total Row */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-green-50 dark:bg-green-900/20 border-t border-sidebar-border">
@@ -223,13 +295,12 @@ export default function OrderItems({
                                 </p>
                             </div>
                         </div>
-
                         {/* Summary Breakdown */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
                             <div className="col-span-12">
                                 <div className="flex justify-between items-center text-sm">
                                     <div className="text-gray-600 dark:text-gray-400">
-                                        <span className="font-medium">{selectedItems.length}</span> item{selectedItems.length > 1 ? 's' : ''} selected •
+                                        <span className="font-medium">{groupedItems.filter(gi => isGroupedItemSelected(gi)).length}</span> item{groupedItems.filter(gi => isGroupedItemSelected(gi)).length > 1 ? 's' : ''} selected •
                                         <span className="font-medium"> {totalItems}</span> total quantity
                                     </div>
                                 </div>
