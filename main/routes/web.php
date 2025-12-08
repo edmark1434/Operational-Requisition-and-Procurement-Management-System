@@ -86,22 +86,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('deliveries/{id}/edit',[DeliveryController::class,"put"])->name('deliveryput');
     Route::delete('deliveries/{id}/delete',[DeliveryController::class,"delete"])->name('deliverydelete');
 
-    // --- RETURNS SECTION ---
-    // 1. Main List
-    Route::get('returns',[Returns::class,'index'])->name('returnsIndex');
+// --- RETURNS SECTION ---
 
-    // 2. Add Return Form (Uses ReturnsController for logic)
-    Route::get('returns/add',[ReturnsController::class,"create"])->name('returnsadd');
+    // 1. Main List Page
 
-    // 3. Store Return (Uses ReturnsController logic)
-    Route::post('returns',[ReturnsController::class,"store"])->name('returns.store');
-    Route::put('returns/{id}/update-status',[Returns::class,"updateStatus"])->name('returnsUpdateStatus');
+    // 1. Main List Page
+    Route::get('returns', [Returns::class, 'index'])->name('returnsIndex');
 
-    // 4. API to fetch Items (For the Dropdown)
+    // 2. Add Return Form
+    Route::get('returns/add', [ReturnsController::class, "create"])->name('returnsadd');
+
+    // 3. Store Return (Create)
+    Route::post('returns', [ReturnsController::class, "store"])->name('returns.store');
+
+    // 4. Update Status (FIXED)
+    // Changed PATCH to PUT and added '/status' to match your Requisitions/Purchases pattern
+    Route::put('returns/{id}/status', [ReturnsController::class, "updateStatus"]);
+    // 5. Delete Return
+    Route::delete('returns/{id}', [ReturnsController::class, "destroy"])->name('returns.destroy');
+
+    // 6. API for Dropdown Items
     Route::get('/api/delivery/{id}/items', [ReturnsController::class, 'getDeliveryItems']);
 
-    // 5. Edit Page
-    Route::get('returns/{id}/edit',[Returns::class,"edit"])->name('returnsedit');
+    // 7. Edit Page (Full View)
+    Route::get('returns/{id}/edit', [Returns::class, "edit"])->name('returnsedit');
     // -----------------------
 
     Route::get('audit',[Audit::class,'index'])->name('audit');
