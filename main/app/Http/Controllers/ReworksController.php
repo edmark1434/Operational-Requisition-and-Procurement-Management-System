@@ -36,24 +36,82 @@ class ReworksController extends Controller
         ]);
     }
 
+    // ... inside ReworksController class ...
+
+    // 4. Delete Rework (Cascading Delete)
+// 4. PERMANENTLY DELETE Rework
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            // 1. Get exact table names from Models
+            // This ensures we get 'rework_delivery' (singular) instead of guessing plural
+            $serviceTable = (new ReworkService())->getTable();   // Likely 'rework_services'
+            $deliveryTable = (new ReworkDelivery())->getTable(); // Is 'rework_delivery'
+
+            // 2. DISABLE Foreign Key Checks
+            // This allows us to delete the children without the database blocking us
+            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+
+            // 3. Delete Child Records using the CORRECT table names
+            DB::table($serviceTable)->where('rework_id', $id)->delete();
+            DB::table($deliveryTable)->where('rework_id', $id)->delete();
+
+            // 4. Delete Main Rework
+            $rework = Rework::find($id);
+            if ($rework) {
+                $rework->forceDelete();
+            }
+
+            // 5. Re-enable Checks
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Rework request deleted successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+            Log::error("Delete Rework Error: " . $e->getMessage());
+
+            // Return the actual error to the frontend so we can see it if it fails again
+            return back()->withErrors(['error' => 'Delete failed: ' . $e->getMessage()]);
+        }
+    }
+
     // 2. API: Get Services associated with a Delivery
+// In App\Http\Controllers\ReworksController.php
+
+// In App\Http\Controllers\ReworksController.php
+
     public function getDeliveryServices($deliveryId)
     {
         try {
-            // 1. Get Table Names Safely
+            // 1. Get Table Names
             $reworkServiceTable = (new ReworkService())->getTable();
             $reworkDeliveryTable = (new ReworkDelivery())->getTable();
             $reworkTable = (new Rework())->getTable();
 
-            // 2. Fetch Services that are currently in an ACTIVE Rework
-            // We EXCLUDE 'Rejected' or 'Cancelled' statuses here.
-            // This means if a rework was rejected, this query ignores it,
-            // effectively resetting the item to "Normal/Available".
+            // 2. Fetch Existing Reworks
+            // We need to verify that we are NOT picking up deleted reworks
             $existingReworks = DB::table($reworkServiceTable)
                 ->join($reworkDeliveryTable, "$reworkServiceTable.rework_id", '=', "$reworkDeliveryTable.rework_id")
                 ->join($reworkTable, "$reworkServiceTable.rework_id", '=', "$reworkTable.id")
                 ->where("$reworkDeliveryTable.old_delivery_id", $deliveryId)
-                ->whereNotIn("$reworkTable.status", ['Rejected', 'Cancelled']) // <--- THE FIX
+
+                // --- CRITICAL FIXES START HERE ---
+
+                // 1. Exclude 'Rejected' or 'Cancelled' statuses (Normal logic)
+                ->whereNotIn("$reworkTable.status", ['Rejected', 'Cancelled'])
+
+                // 2. EXCLUDE SOFT DELETED RECORDS
+                // This tells the query: "Only look at reworks where deleted_at is NULL"
+                ->whereNull("$reworkTable.deleted_at")
+
+                // ---------------------------------
+
                 ->select(
                     "$reworkServiceTable.service_id",
                     "$reworkTable.status"
@@ -72,7 +130,6 @@ class ReworksController extends Controller
 
             // 5. Map Data
             $services = $deliveryServices->map(function ($ds) use ($statusMap) {
-                // If status is 'Rejected', it wasn't in $statusMap (due to step 2), so this will be null.
                 $currentStatus = $statusMap[$ds->service_id] ?? null;
 
                 return [
@@ -80,7 +137,7 @@ class ReworksController extends Controller
                     'item_name' => $ds->service ? $ds->service->name : 'Service #'.$ds->service_id,
                     'unit_price' => $ds->hourly_rate,
                     'available_quantity' => 1,
-                    'rework_status' => $currentStatus, // Will be null if Rejected, allowing re-add
+                    'rework_status' => $currentStatus,
                 ];
             })->values();
 

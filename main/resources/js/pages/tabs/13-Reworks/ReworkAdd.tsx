@@ -70,6 +70,8 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         return Object.keys(newErrors).length === 0;
     };
 
+
+
     // 1. Fetch Services when Delivery is selected
     const handleDeliveryChange = async (deliveryId: string) => {
         const selectedDelivery = availableDeliveries.find(d => d.ID.toString() === deliveryId);
@@ -119,9 +121,10 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
         if (errors.services) setErrors(prev => ({ ...prev, services: '' }));
     };
 
-    // 3. Remove Service
-    const handleRemoveService = (serviceId: number) => {
-        setSelectedServices(prev => prev.filter(s => s.SERVICE_ID !== serviceId));
+    // 3. Remove Service (FIXED LOGIC)
+    const handleRemoveService = (serviceId: number | string) => {
+        // Using String() ensures we compare "5" vs 5 correctly so the delete always works
+        setSelectedServices(prev => prev.filter(s => String(s.SERVICE_ID) !== String(serviceId)));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -333,7 +336,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                     </div>
                                                     <div className="divide-y divide-sidebar-border">
                                                         {selectedServices.map((service) => (
-                                                            <div key={service.SERVICE_ID} className="p-4 flex justify-between items-center">
+                                                            <div key={service.SERVICE_ID} className="p-4 flex justify-between items-center group">
                                                                 <div className="flex-1">
                                                                     <p className="font-medium text-gray-900 dark:text-white">
                                                                         {service.SERVICE_NAME}
@@ -345,10 +348,12 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                                     </div>
                                                                 </div>
 
+                                                                {/* DELETE BUTTON */}
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleRemoveService(service.SERVICE_ID)}
-                                                                    className="ml-4 p-2 text-red-600 hover:text-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                                    className="ml-4 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all"
+                                                                    title="Remove service"
                                                                 >
                                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -403,6 +408,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                     type="button"
                                                     onClick={handleReset}
                                                     className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                                                    title="Reset Form"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -412,6 +418,7 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
                                                     type="button"
                                                     onClick={handleCancel}
                                                     className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                                                    title="Cancel and Go Back"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -421,7 +428,6 @@ export default function ReworkAdd({ auth, deliveries }: Props) {
 
                                             <button
                                                 type="submit"
-                                                // Prevent submit if no services selected
                                                 disabled={selectedServices.length === 0}
                                                 className={`flex-1 max-w-xs py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out ${
                                                     selectedServices.length === 0

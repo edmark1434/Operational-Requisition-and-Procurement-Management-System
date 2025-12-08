@@ -1,8 +1,8 @@
-import { Head, Link, router } from '@inertiajs/react'; // Added router
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Toaster, toast } from 'sonner'; // Added Toaster/toast
+import { Toaster, toast } from 'sonner';
 
 // Import components
 import ReworkStats from './ReworkStats';
@@ -20,16 +20,20 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/reworks',
     },
 ];
-interface Props{
+
+interface Props {
     reworkServiceData: any[];
     reworksData: any[];
     serviceData: any[];
 }
+
 export default function Reworks({reworkServiceData, reworksData, serviceData}: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedRework, setSelectedRework] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    // Initialize data
     const [reworks, setReworks] = useState(transformReworksData(reworkServiceData, reworksData, serviceData));
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
 
@@ -38,12 +42,23 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
         statuses
     } = useReworkFilters(reworks, searchTerm, statusFilter);
 
+    // --- FIX IS HERE: Delete Function now calls Backend API ---
     const handleDeleteRework = (id: number) => {
-        setReworks(prev => prev.filter(rework => rework.ID !== id));
-        setIsDetailModalOpen(false);
+        router.delete(`/reworks/${id}`, {
+            onSuccess: () => {
+                // Update local UI state
+                setReworks(prev => prev.filter(rework => rework.ID !== id));
+                setIsDetailModalOpen(false);
+                setSelectedRework(null);
+                toast.success('Rework request deleted successfully');
+            },
+            onError: (err) => {
+                console.error(err);
+                toast.error('Failed to delete rework request');
+            }
+        });
     };
 
-    // ADDED: Handle Status Change
     const handleStatusChange = (id: number, newStatus: string) => {
         // Optimistically update local state
         setReworks(prev =>
@@ -118,11 +133,12 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
                             window.location.href = `/reworks/${selectedRework.ID}/edit`;
                         }}
                         onDelete={handleDeleteRework}
-                        onStatusChange={handleStatusChange} // Added Prop
+                        onStatusChange={handleStatusChange}
                     />
                 )}
             </div>
-            {/* Added Toaster for notifications */}
+
+            {/* Toaster for notifications */}
             <Toaster />
         </AppLayout>
     );
