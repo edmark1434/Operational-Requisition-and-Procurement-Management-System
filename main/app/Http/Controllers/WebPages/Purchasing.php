@@ -63,7 +63,7 @@ class Purchasing extends Controller
                             'ID'          => $reqItem->id ?? null,
                             'ITEM_ID'     => $reqItem->item->id ?? null,
                             'NAME'        => $reqItem->item->name ?? null,
-                            'QUANTITY'    => $reqItem->quantity,
+                            'QUANTITY'    => $orderItem->quantity,
                             'UNIT_PRICE'  => $reqItem->item->unit_price ?? null,
                             'CATEGORY_ID' => $reqItem->item->category_id ?? null,
                             'SELECTED'    => true,
@@ -100,7 +100,8 @@ class Purchasing extends Controller
         });
 
         return Inertia::render($this->base_path . '/Purchases', [
-            'purchaseOrdersData' => $purchases->values()->toArray()  // ensure plain array
+            'purchaseOrdersData' => $purchases->values()->toArray(), // ensure plain array
+            'categories' => Category::all()
         ]);
     }
     public function create(){
@@ -118,9 +119,91 @@ class Purchasing extends Controller
             'categories' => Category::all(),
         ]);
     }
-    public function edit($id){
-        return Inertia::render($this->base_path .'/PurchaseOrderEdit', [
-            'purchaseId' => (int)$id
+    public function edit($id) {
+        $po = PurchaseOrder::with(['vendor'])->findOrFail($id);
+
+        $form = [
+            'REFERENCE_NO' => $po->ref_no,
+            'SUPPLIER_ID' => $po->vendor_id,
+            'PAYMENT_TYPE' => $po->payment_type,
+            'ORDER_TYPE' => $po->type,
+            'TOTAL_COST' => $po->total_cost,
+            'REMARKS' => $po->remarks,
+            'ITEMS' => [],
+            'SERVICES' => [],
+        ];
+
+        if ($po->type === 'Items') {
+            $requisitionItems = RequisitionItem::with('item', 'req_order_items.po_item')
+                ->whereHas('req_order_items', function($query) use ($po) {
+                    $query->whereHas('po_item', function($q) use ($po) {
+                        $q->where('po_id', $po->id);
+                    });
+                })
+                ->get();
+
+            $itemsByOrderItem = [];
+            foreach ($requisitionItems as $reqItem) {
+                foreach ($reqItem->req_order_items as $reqOrderItem) {
+                    $orderItemId = $reqOrderItem->po_item_id;
+                    $itemsByOrderItem[$orderItemId][] = $reqItem;
+                }
+            }
+
+            foreach ($itemsByOrderItem as $orderItemId => $reqItemsGroup) {
+                $orderItem = $reqItemsGroup[0]->req_order_items
+                    ->firstWhere('po_item_id', $orderItemId)
+                    ->po_item;
+
+                $totalQty = $orderItem->quantity ?? 1;
+                $count = count($reqItemsGroup);
+
+                if ($count === 1) {
+                    $reqItemsGroup[0]->quantity = $totalQty;
+                } else {
+                    $baseQty = intdiv($totalQty, $count);
+                    $remainder = $totalQty % $count;
+                    foreach ($reqItemsGroup as $index => $reqItem) {
+                        $reqItem->quantity = $baseQty + ($index === 0 ? $remainder : 0);
+                    }
+                }
+            }
+
+            $form['ITEMS'] = $requisitionItems;
+            $form['REQUISITION_IDS'] = $requisitionItems->pluck('req_id')->unique()->values()->all();
+        } else {
+            // Services PO
+            $requisitionServices = RequisitionService::with('service', 'req_order_services.po_service')
+                ->whereHas('req_order_services', function($query) use ($po) {
+                    $query->whereHas('po_service', function($q) use ($po) {
+                        $q->where('po_id', $po->id);
+                    });
+                })
+                ->get();
+
+            $form['SERVICES'] = $requisitionServices;
+            $form['REQUISITION_IDS'] = $requisitionServices->pluck('req_id')->unique()->values()->all();
+        }
+
+        return Inertia::render($this->base_path . '/PurchaseOrderEdit', [
+            'requisitions' => Requisition::whereIn('status', ['Approved', 'Partially Approved'])
+                ->orWhereIn('id', $form['REQUISITION_IDS'])
+                ->get(),
+            'requisitionItems' => RequisitionItem::with('item')->get(),
+            'requisitionServices' => RequisitionService::with('service')->get(),
+            'vendors' => Vendor::where('is_active', true)
+                ->orWhere('id', $form['SUPPLIER_ID'])
+                ->get(),
+            'vendorCategories' => CategoryVendor::with('vendor', 'category')->get(),
+            'purchaseOrders' => PurchaseOrder::whereNotIn('status', ['Issued', 'Delivered', 'Received'])->get(),
+            'orderItems' => OrderItem::with('item')->get(),
+            'orderServices' => OrderService::with('service')->get(),
+            'requisitionOrderItems' => RequisitionOrderItem::with('req_item', 'po_item')->get(),
+            'requisitionOrderServices' => RequisitionOrderService::with('req_service', 'po_service')->get(),
+            'categories' => Category::all(),
+            'purchaseId' => (int)$id,
+            'mode' => 'edit',
+            'form' => $form,
         ]);
     }
 }

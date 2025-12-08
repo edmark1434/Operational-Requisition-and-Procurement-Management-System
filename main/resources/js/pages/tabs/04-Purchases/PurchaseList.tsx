@@ -172,10 +172,11 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
 
     if (viewMode === 'compact') {
         return (
-            <div className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-3 hover:shadow-md transition-all duration-200 cursor-pointer group">
+            <div className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-3 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col">
+
                 {/* Compact Header */}
                 <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-start gap-1">
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                             {purchase.REFERENCE_NO}
                         </span>
@@ -187,9 +188,10 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
                             {isServiceOrder ? 'Services' : 'Items'}
                         </span>
                     </div>
+
                     <Link
                         href={`/purchases/${purchase.ID}/edit`}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1 self-center"
                     >
                         <Edit className="w-3 h-3" />
                     </Link>
@@ -208,7 +210,7 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
                 </div>
 
                 {/* Details */}
-                <div className="space-y-1">
+                <div className="space-y-1 flex-grow">
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
                         <span className="font-semibold text-gray-900 dark:text-white">
@@ -234,9 +236,10 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
 
     // Comfortable View
     return (
-        <div className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-4 hover:shadow-md transition-all duration-200 cursor-pointer group">
+        <div className="border border-sidebar-border rounded-lg bg-white dark:bg-sidebar-accent p-4 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col">
+
             {/* Header */}
-            <div className="flex justify-between items-start mb-3">
+            <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
                         {purchase.REFERENCE_NO}
@@ -249,7 +252,8 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
                         {isServiceOrder ? 'Services' : 'Items'}
                     </span>
                 </div>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 self-start">
                     <Link
                         href={`/purchases/${purchase.ID}/edit`}
                         className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1 rounded"
@@ -272,7 +276,7 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
             </div>
 
             {/* Items/Services List */}
-            <div className="mb-3">
+            <div className="mb-3 flex-grow">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {isServiceOrder ? 'Services' : 'Items'}:
                 </h4>
@@ -281,7 +285,7 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
                         <div key={item.ID} className="flex justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400 truncate">{item.NAME}</span>
                             <span className="text-gray-900 dark:text-white font-medium">
-                                {!isServiceOrder ? item.QUANTITY : ''} {isServiceOrder && item.QUANTITY ? 'hrs' : '×'} {!isServiceOrder ? formatCurrency(item.UNIT_PRICE) : formatCurrency(item.HOURLY_RATE)}
+                                {!isServiceOrder ? item.QUANTITY : ''} {!isServiceOrder && '×'} {!isServiceOrder ? formatCurrency(item.UNIT_PRICE) : formatCurrency(item.HOURLY_RATE)}
                                 {isServiceOrder && '/hr'}
                             </span>
                         </div>
@@ -295,15 +299,18 @@ function PurchaseCard({ purchase, onClick, viewMode }: {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between items-center pt-3 border-t border-sidebar-border">
+            <div className="flex justify-between items-center pt-3 border-t border-sidebar-border mt-auto h-12">
                 <div className="text-sm">
-                    <div className="font-bold text-green-600 dark:text-green-400">
-                        {formatCurrency(purchase.TOTAL_COST)}
-                    </div>
+                    {!isServiceOrder && (
+                        <div className="font-bold text-green-600 dark:text-green-400">
+                            {formatCurrency(purchase.TOTAL_COST)}
+                        </div>
+                    )}
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                         {new Date(purchase.CREATED_AT).toLocaleDateString()}
                     </div>
                 </div>
+
                 <button
                     onClick={onClick}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"

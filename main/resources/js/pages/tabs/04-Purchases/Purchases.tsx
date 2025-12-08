@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import {Head, Link, router} from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -12,6 +12,7 @@ import PurchaseDetailModal from './PurchaseDetailModal';
 // Import utilities
 import { usePurchaseFilters } from './hooks/usePurchaseFilters';
 import { purchaseOrdersData } from '@/pages/datasets/purchase_order';
+import {orderdelete, servicedelete} from "@/routes";
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -19,10 +20,20 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/purchases',
     },
 ];
-interface Prop{
-    purchaseOrdersData:any[]
+
+export interface Category {
+    id: number;
+    name: string;
+    description: string | null;
+    type: "Items" | "Services";
+    is_active: boolean;
 }
-export default function Purchases({purchaseOrdersData}:Prop) {
+
+interface Prop{
+    purchaseOrdersData:any[],
+    categories: Category[],
+}
+export default function Purchases({purchaseOrdersData, categories}:Prop) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [supplierFilter, setSupplierFilter] = useState('All');
@@ -32,7 +43,7 @@ export default function Purchases({purchaseOrdersData}:Prop) {
     const [purchases, setPurchases] = useState(purchaseOrdersData);
     const [viewMode, setViewMode] = useState<'comfortable' | 'compact' | 'condensed'>('comfortable');
     console.log("Purchases Data:", purchases);
-    const { 
+    const {
         filteredPurchases,
         statuses,
         suppliers,
@@ -40,6 +51,8 @@ export default function Purchases({purchaseOrdersData}:Prop) {
     } = usePurchaseFilters(purchases, searchTerm, statusFilter, supplierFilter, orderTypeFilter);
 
     const handleDeletePurchase = (id: number) => {
+        router.delete(orderdelete(id).url);
+        alert('Purchase order deleted successfully!');
         setPurchases(prev => prev.filter(purchase => purchase.ID !== id));
         setIsDetailModalOpen(false);
     };
@@ -120,6 +133,7 @@ export default function Purchases({purchaseOrdersData}:Prop) {
                         }}
                         onDelete={handleDeletePurchase}
                         onStatusChange={handleStatusChange}
+                        categories={categories}
                     />
                 )}
             </div>

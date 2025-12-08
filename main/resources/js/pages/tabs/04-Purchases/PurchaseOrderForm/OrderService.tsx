@@ -18,6 +18,9 @@ interface OrderServiceProps {
     requisitionServices: RequisitionService[];
     categories: Category[];
     requisitionOrderServices: RequisitionOrderService[];
+    form: {
+        SERVICES: any[];
+    };
 }
 
 export default function OrderService({
@@ -28,7 +31,8 @@ export default function OrderService({
                                          onToggleServiceSelection,
                                          requisitionServices,
                                          categories,
-                                         requisitionOrderServices
+                                         requisitionOrderServices,
+                                         form
                                      }: OrderServiceProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -44,7 +48,13 @@ export default function OrderService({
     );
 
     // Group them for display
-    const groupedServices = groupRequisitionServices(availableReqServices);
+    const groupedServices = groupRequisitionServices(availableReqServices, requisitionOrderServices);
+
+    // Build lookup: service_id → hasOrderedVersion?
+    const hasOrderedVersion = groupedServices.reduce((acc, g) => {
+        if (g.isOrdered) acc[g.service_id] = true;
+        return acc;
+    }, {} as Record<number, boolean>);
 
     // Check if a grouped service is fully selected
     const isGroupedServiceSelected = (groupedService: GroupedService) => {
@@ -135,7 +145,7 @@ export default function OrderService({
                             <div
                                 key={`grouped-service-${groupedService.service_id}`}
                                 className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors
-                                ${isAlreadyOrdered
+                                ${(isAlreadyOrdered && !form.SERVICES.some(s => s.service.id === groupedService.service_id))
                                     ? 'opacity-50 bg-neutral-100 dark:bg-neutral-900 font-normal pointer-events-none cursor-not-allowed'
                                     : isSelected
                                         ? 'bg-purple-50 dark:bg-purple-900/10 hover:bg-purple-100 dark:hover:bg-purple-900/20'
@@ -148,7 +158,7 @@ export default function OrderService({
                                         type="checkbox"
                                         checked={isSelected}
                                         onChange={() => handleToggleGroupedService(groupedService)}
-                                        disabled={isAlreadyOrdered}
+                                        disabled={isAlreadyOrdered && !form.SERVICES.some(s => s.service.id === groupedService.service_id)}
                                         className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                                     />
                                 </div>
@@ -164,6 +174,11 @@ export default function OrderService({
                                     {groupedService.reqServices.length > 1 && (
                                         <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
                                             📦 Merged from {groupedService.reqServices.length} requisitions
+                                        </p>
+                                    )}
+                                    {!isSelected && hasOrderedVersion[groupedService.service_id] && (
+                                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                            🔶 Not yet ordered
                                         </p>
                                     )}
                                 </div>
@@ -189,7 +204,6 @@ export default function OrderService({
                 {/* Summary Section */}
                 {groupedServices.filter(gs => isGroupedServiceSelected(gs)).length > 0 && (
                     <>
-                        {/* Summary Breakdown */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 dark:bg-sidebar border-t border-sidebar-border">
                             <div className="col-span-12">
                                 <div className="flex justify-between items-center text-sm">
