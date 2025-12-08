@@ -53,20 +53,6 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
                     : rework
             )
         );
-
-        // API Call
-        router.put(`/reworks/${id}/update-status`, { status: newStatus }, {
-            onSuccess: () => {
-                toast.success(`Rework #${id} updated to ${newStatus}`);
-                // Optional: reload data if needed, but optimistic update handles the UI
-            },
-            onError: (errors) => {
-                console.error('Error updating status:', errors);
-                toast.error('Failed to update status');
-                // Revert or reload could be added here
-            }
-        });
-
         // Close modal immediately
         setIsDetailModalOpen(false);
         setSelectedRework(null);

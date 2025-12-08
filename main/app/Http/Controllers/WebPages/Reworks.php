@@ -65,5 +65,10 @@ class Reworks extends Controller
             'reworkId' => (int)$id
         ]);
     }
+    public function updateStatus($id){
+        $rework = Rework::find($id);
+        $rework->status = request()->input('status');
+        $rework->save();
+    }
     
 }

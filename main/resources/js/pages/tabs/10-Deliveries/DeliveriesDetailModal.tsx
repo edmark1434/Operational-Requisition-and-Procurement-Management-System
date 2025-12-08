@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { DeliveriesIcons } from './utils/icons';
 import { getDeliveriesStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
+import deliveryItems from "@/pages/datasets/delivery_items";
+import { router, usePage } from "@inertiajs/react";
+import { deliveryeditStatus } from '@/routes';
+import { toast, Toaster } from 'sonner';
 
 // ... [Interfaces] ...
 export interface Item {
@@ -162,9 +166,20 @@ export default function DeliveriesDetailModal({
     };
 
     const handleStatusChange = (newStatus: string) => {
-        onStatusChange(delivery.id, newStatus);
-        setShowStatusDropdown(false);
-        onClose();
+        router.put(deliveryeditStatus.url(delivery.id), { status: newStatus },{
+            onSuccess:()=>{
+                toast(`Delivery ID ${delivery.id} status updated to ${newStatus}`);
+                onStatusChange(delivery.id, newStatus);
+                setTimeout(() => {
+                    setShowStatusDropdown(false);
+                    onClose(); // Auto-close the modal after status change
+                }, 1000);
+            },
+            onError:(errors)=>{
+                toast.error('Error updating status',errors);
+            }
+        });
+      
     };
 
     useEffect(() => {
@@ -639,6 +654,7 @@ export default function DeliveriesDetailModal({
                     </div>
                 </div>
             )}
+            <Toaster/>
         </>
     );
 }
@@ -720,8 +736,5 @@ function DeliveryStatusIcon({ status }: DeliveryStatusIconProps) {
 
 const statusOptions = [
     { value: 'Pending', label: 'Pending', description: 'Delivery is awaiting processing' },
-    { value: 'In Transit', label: 'In Transit', description: 'Delivery is on the way' },
     { value: 'Received', label: 'Received', description: 'Delivery has been received' },
-    { value: 'With Returns', label: 'With Returns', description: 'Delivery has some returned items' },
-    { value: 'Cancelled', label: 'Cancelled', description: 'Delivery has been cancelled' }
 ];

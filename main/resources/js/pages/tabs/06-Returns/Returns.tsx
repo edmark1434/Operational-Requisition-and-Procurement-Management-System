@@ -49,12 +49,30 @@ export default function Returns({
     } = useReturnsFilters(returns, searchTerm, statusFilter, dateFilter);
 
     const handleDeleteReturn = (id: number) => {
-        setReturns(prev => prev.filter(returnItem => returnItem.ID !== id));
-        setIsDetailModalOpen(false);
-    };
+        // FIXED: Using string interpolation instead of route() helper
+        router.delete(`/returns/${id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // 2. On Success: Update local state to remove item from UI immediately
+                setReturns(prev => prev.filter(returnItem => returnItem.ID !== id));
 
+                // 3. Close Modal and Reset Selection
+                setIsDetailModalOpen(false);
+                setSelectedReturn(null);
+
+                // 4. Show Success Notification
+                toast.success("Return deleted successfully");
+            },
+            onError: (errors) => {
+                console.error("Delete error:", errors);
+                toast.error("Failed to delete return. Please try again.");
+            }
+        });
+    };
     // UPDATED: Status Change Handler with explicit modal close
+// UPDATED: Status Change Handler
     const handleStatusChange = (id: number, newStatus: string) => {
+        // 1. Optimistic UI Update (Updates screen immediately)
         setReturns(prevReturns =>
             prevReturns.map(returnItem =>
                 returnItem.ID === id
@@ -62,16 +80,24 @@ export default function Returns({
                     : returnItem
             )
         );
-        router.put(`/returns/${id}/update-status`, { status: newStatus },{
+
+        // 2. Perform Request
+        // FIX: Changed URL from '/returns/${id}/update-status' to '/returns/${id}/status'
+        router.put(`/returns/${id}/status`, { status: newStatus }, {
             onSuccess: () => {
-                toast(`Return ID ${id} status updated to ${newStatus}`);
-                router.visit(returnsIndex.url());
+                toast.success(`Return #${id} status updated to ${newStatus}`);
+                // Optional: Refresh data from server to be 100% sure
+                // router.reload({ only: ['returnsData'] });
             },
             onError: (errors) => {
                 console.error('Error updating status:', errors);
+                toast.error("Failed to update status on server.");
+
+                // Optional: Revert UI change on error if needed
             }
         });
-        // Close modal immediately after status change
+
+        // 3. Close modal
         setIsDetailModalOpen(false);
         setSelectedReturn(null);
     };

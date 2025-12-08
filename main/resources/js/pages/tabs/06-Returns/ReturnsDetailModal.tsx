@@ -7,14 +7,14 @@ interface ReturnsDetailModalProps {
     returnItem: any;
     isOpen: boolean;
     onClose: () => void;
-    onEdit: () => void;
+    onEdit: (item: any) => void;
     onDelete: (id: number) => void;
     onStatusChange: (id: number, newStatus: string) => void;
 }
 
-// Helper function to capitalize status display
-const capitalizeStatus = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+const capitalizeStatus = (status: string | undefined) => {
+    if (!status) return 'Unknown';
+    return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
 };
 
 // Returns status options with capitalized labels
@@ -37,9 +37,15 @@ export default function ReturnsDetailModal({
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+// Inside ReturnsDetailModal.tsx
     const handleDelete = () => {
         if (returnItem) {
-            onDelete(returnItem.ID);
+            // Handle case sensitivity (Laravel sends 'id', your frontend might use 'ID')
+            const idToDelete = returnItem.id || returnItem.ID;
+
+            if (idToDelete) {
+                onDelete(idToDelete);
+            }
         }
         setShowDeleteConfirm(false);
     };
@@ -60,12 +66,9 @@ export default function ReturnsDetailModal({
                 setShowStatusDropdown(false);
             }
         };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
+        if (showStatusDropdown) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showStatusDropdown]);
 
     if (!isOpen || !returnItem) return null;
 

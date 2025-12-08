@@ -63,7 +63,6 @@ export default function ReturnEdit({ auth, returnId }: ReturnEditProps) {
                 alert('Return not found!');
                 return;
             }
-
             setFormData({
                 DELIVERY_ID: returnItem.DELIVERY_ID.toString(),
                 REFERENCE_NO: returnItem.REFERENCE_NO,
