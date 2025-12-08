@@ -2,19 +2,23 @@ import { useState, useEffect, useRef } from 'react';
 import { ReturnsIcons } from './utils/icons';
 import { getReturnsStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate, formatDateTime } from './utils/formatters';
+import { router } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { returnsIndex, returnsUpdateStatus } from '@/routes';
+import { on } from 'events';
 
 interface ReturnsDetailModalProps {
     returnItem: any;
     isOpen: boolean;
     onClose: () => void;
-    onEdit: (item: any) => void;
+    onEdit: () => void;
     onDelete: (id: number) => void;
     onStatusChange: (id: number, newStatus: string) => void;
 }
 
-const capitalizeStatus = (status: string | undefined) => {
-    if (!status) return 'Unknown';
-    return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
+// Helper function to capitalize status display
+const capitalizeStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
 // Returns status options with capitalized labels
@@ -46,11 +50,17 @@ export default function ReturnsDetailModal({
 
     const handleStatusChange = (newStatus: string) => {
         if (returnItem) {
-            onStatusChange(returnItem.ID, newStatus);
+            router.put(returnsUpdateStatus.url(returnItem.ID), { status: newStatus },{
+                onSuccess: () => {
+                    onStatusChange(returnItem.ID, newStatus);
+                    toast(`Return ID ${returnItem.ID} status updated to ${newStatus}`);
+                }
+            });
             // The modal will automatically close because the parent component
             // should handle the state update and re-render
         }
         setShowStatusDropdown(false);
+        onClose();
     };
 
     // Close dropdown when clicking outside
@@ -60,9 +70,12 @@ export default function ReturnsDetailModal({
                 setShowStatusDropdown(false);
             }
         };
-        if (showStatusDropdown) document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showStatusDropdown]);
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     if (!isOpen || !returnItem) return null;
 
