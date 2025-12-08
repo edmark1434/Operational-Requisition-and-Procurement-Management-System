@@ -60,6 +60,52 @@ class ReturnsController extends Controller
         ]);
     }
 
+
+
+    // 4. Update Status (Matches Route::put)
+    public function updateStatus(Request $request, $id)
+    {
+        // 1. Validate
+        $request->validate([
+            'status' => 'required|string',
+        ]);
+
+        // 2. Update
+        $return = Returns::findOrFail($id); // Ensure your Model is actually named "Returns" (plural)
+        $return->status = $request->status;
+        $return->save();
+
+        // 3. Return "Back"
+        return back()->with('success', 'Status updated successfully');
+    }
+
+    // 5. Delete Return (Matches Route::delete)
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            // 1. Delete the items first (foreign key cleanup)
+            DB::table('return_item')->where('return_id', $id)->delete();
+
+            // 2. Delete the pivot (delivery connection)
+            DB::table('return_delivery')->where('return_id', $id)->delete();
+
+            // 3. Delete the return itself
+            $return = Returns::findOrFail($id);
+            $return->delete();
+
+            DB::commit();
+
+            // 4. Redirect to the main list (Ensures valid page load)
+            return redirect()->route('returnsIndex')->with('success', 'Return deleted successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Delete failed: ' . $e->getMessage()]);
+        }
+    }
+
     // 2. API Endpoint: Fetch Items for a specific Delivery
     public function getDeliveryItems($deliveryId)
     {
