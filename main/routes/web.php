@@ -47,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/requisition/api/items/{categoryId}', [RequisitionController::class, 'getItemsByCategory']);
 
     Route::put('/requisitions/{id}/status', [RequisitionController::class, 'updateStatus']);
+    Route::get('/requisitions/{id}/release', [RequisitionController::class, 'updateInventoryStock'])->name('requisitions.release');
 
     // INVENTORY
     Route::get('inventory',[Inventory::class,'index'])->name('inventory');

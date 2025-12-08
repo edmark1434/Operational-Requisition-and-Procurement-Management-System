@@ -11,6 +11,7 @@ use App\Models\RequisitionItem;
 use App\Models\RequisitionService;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\Notification;
 use App\Models\Service;
 
 class RequisitionController extends Controller
@@ -459,5 +460,46 @@ class RequisitionController extends Controller
             ->orderBy('name')
             ->get();
         return response()->json($items);
+    }
+    public function updateInventoryStock($id)
+    {
+        $requisitionItems = RequisitionItem::where('req_id', $id)->get();
+
+        if ($requisitionItems->isEmpty()) {
+            return response()->json(["error" => "No items found for this requisition"], 404);
+        }
+
+        foreach ($requisitionItems as $reqItem) {
+
+            // Get item model
+            $item = Item::find($reqItem->item_id);
+
+            if (!$item) {
+                return response()->json(["error" => "Item not found: ID " . $reqItem->item_id], 404);
+            }
+
+            // Check stock
+            if ($item->current_stock < $reqItem->approved_qty) {
+                return response()->json([
+                    "error" => "Insufficient stock",
+                    "item_id" => $item->id,
+                    "current_stock" => $item->current_stock,
+                    "requested" => $reqItem->approved_qty
+                ], 400);
+            }
+            if(($item->current_stock - $reqItem->approved_qty) <= 0){
+                Notification::create([
+                    'user_id' => 1,
+                    'message' => "Out of stock for item: " . $item->name,
+                    'type' => 'error',
+                    'is_read' => false,
+                ]);
+            }
+            // Deduct stock
+            $item->current_stock -= $reqItem->approved_qty;
+            $item->save();
+        }
+
+        return response()->json(["message" => "All inventory stocks updated successfully."], 200);
     }
 }
