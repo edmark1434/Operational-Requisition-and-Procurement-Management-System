@@ -97,7 +97,7 @@ class Inventory extends Controller
                 'MAKE_ID' => $item->make_id,
                 'CATEGORY_ID' => $item->category_id,
                 'SUPPLIER_ID' => $item->vendor_id,
-                
+
             ];
         });
 
@@ -119,37 +119,53 @@ class Inventory extends Controller
         ]);
     }
     public function create(Request $request){
+        $currentStock = $request->input('CURRENT_STOCK');
+        $itemName = $request->input('NAME');
+
         Item::create([
             'barcode' => $request->input('BARCODE'),
-            'name' => $request->input('NAME'),
+            'name' => $itemName,
             'dimensions' => $request->input('DIMENSIONS'),
             'unit_price' => $request->input('UNIT_PRICE'),
-            'current_stock' => $request->input('CURRENT_STOCK'),
+            'current_stock' => $currentStock,
             'category_id' => $request->input('CATEGORY_ID'),
             'make_id' => $request->input('MAKE_ID'),
-            'vendor_id' => $request->input('SUPPLIER_ID')        
+            'vendor_id' => $request->input('SUPPLIER_ID')
         ]);
-        if($request->input('CURRENT_STOCK') <= 10){
+
+        // Check if we should send notifications
+        if($currentStock <= 10){
             $perm_id = Permission::where('name', 'View Items')->value('id');
             $users = UserPermission::where('perm_id', $perm_id)->get();
             $insertData = [];
+
             foreach($users as $user){
+                // Different message for empty vs low stock
+                if($currentStock == 0){
+                    $message = $itemName . " is out of stock!";
+                } else {
+                    $message = $itemName . " has low stocks (only " . $currentStock . " left)";
+                }
+
                 $insertData[] = [
-                    'message' => `The item `. $request->input('NAME') . ' has low stocks' ,
+                    'message' => $message,
                     'is_read' => false,
                     'user_id' => $user->user_id
                 ];
             }
+
             if(!empty($insertData)){
                 DB::table('notification')->insert($insertData);
             }
         }
-            $user = Auth::user();
-            AuditLog::create(attributes: [
-                    'description' => "Item created ".  $request->input('NAME'). " by ". $user->fullname,
-                    'user_id' => $user->id,
-                    'type_id' => 16
-                ]);
+
+        $user = Auth::user();
+        AuditLog::create(attributes: [
+            'description' => "Item created ".  $itemName . " by ". $user->fullname,
+            'user_id' => $user->id,
+            'type_id' => 16
+        ]);
+
         return redirect()->route('inventory')->with([
             'success' => true,
             'message' => 'Item added successfully'
@@ -198,38 +214,54 @@ class Inventory extends Controller
         ]);
     }
     public function update(Request $request,$id){
+        $currentStock = $request->input('CURRENT_STOCK');
+        $itemName = $request->input('NAME');
+
         Item::findOrFail($id)->update([
             'barcode' => $request->input('BARCODE'),
-            'name' => $request->input('NAME'),
+            'name' => $itemName,
             'dimensions' => $request->input('DIMENSIONS'),
             'unit_price' => $request->input('UNIT_PRICE'),
-            'current_stock' => $request->input('CURRENT_STOCK'),
+            'current_stock' => $currentStock,
             'category_id' => $request->input('CATEGORY_ID'),
             'make_id' => $request->input('MAKE_ID'),
-            'vendor_id' => $request->input('SUPPLIER_ID')        
+            'vendor_id' => $request->input('SUPPLIER_ID')
         ]);
-        if($request->input('CURRENT_STOCK') < 10){
+
+        // Check if we should send notifications
+        if($currentStock <= 10){
             $perm_id = Permission::where('name', 'View Items')->value('id');
             $users = UserPermission::where('perm_id', $perm_id)->get();
             $insertData = [];
+
             foreach($users as $user){
+                // Different message for empty vs low stock
+                if($currentStock == 0){
+                    $message = $itemName . " is out of stock!";
+                } else {
+                    $message = $itemName . " has low stocks (only " . $currentStock . " left)";
+                }
+
                 $insertData[] = [
-                    'message' => `The item `. $request->input('NAME') . ' has low stocks',
+                    'message' => $message,
                     'is_read' => false,
                     'user_id' => $user->user_id
                 ];
             }
-            $user = Auth::user();
-            $item = Item::findOrFail($id);
-            AuditLog::create(attributes: [
-                    'description' => "Item ". $item->name. " updated by ". $user->fullname,
-                    'user_id' => $user->id,
-                    'type_id' => 17
-                ]);
+
             if(!empty($insertData)){
                 DB::table('notification')->insert($insertData);
             }
         }
+
+        $user = Auth::user();
+        $item = Item::findOrFail($id);
+        AuditLog::create(attributes: [
+            'description' => "Item ". $item->name. " updated by ". $user->fullname,
+            'user_id' => $user->id,
+            'type_id' => 17
+        ]);
+
         return redirect()->route('inventory')->with([
             'success' => true,
             'message' => 'Item updated successfully'
