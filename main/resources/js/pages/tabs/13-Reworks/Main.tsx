@@ -1,7 +1,8 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react'; // Added router
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { Toaster, toast } from 'sonner'; // Added Toaster/toast
 
 // Import components
 import ReworkStats from './ReworkStats';
@@ -40,6 +41,35 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
     const handleDeleteRework = (id: number) => {
         setReworks(prev => prev.filter(rework => rework.ID !== id));
         setIsDetailModalOpen(false);
+    };
+
+    // ADDED: Handle Status Change
+    const handleStatusChange = (id: number, newStatus: string) => {
+        // Optimistically update local state
+        setReworks(prev =>
+            prev.map(rework =>
+                rework.ID === id
+                    ? { ...rework, STATUS: newStatus }
+                    : rework
+            )
+        );
+
+        // API Call
+        router.put(`/reworks/${id}/update-status`, { status: newStatus }, {
+            onSuccess: () => {
+                toast.success(`Rework #${id} updated to ${newStatus}`);
+                // Optional: reload data if needed, but optimistic update handles the UI
+            },
+            onError: (errors) => {
+                console.error('Error updating status:', errors);
+                toast.error('Failed to update status');
+                // Revert or reload could be added here
+            }
+        });
+
+        // Close modal immediately
+        setIsDetailModalOpen(false);
+        setSelectedRework(null);
     };
 
     const openDetailModal = (rework: any) => {
@@ -102,9 +132,12 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
                             window.location.href = `/reworks/${selectedRework.ID}/edit`;
                         }}
                         onDelete={handleDeleteRework}
+                        onStatusChange={handleStatusChange} // Added Prop
                     />
                 )}
             </div>
+            {/* Added Toaster for notifications */}
+            <Toaster />
         </AppLayout>
     );
 }
