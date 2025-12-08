@@ -15,10 +15,13 @@ class RequisitionItem extends Model
     public function requisition(){
         return $this->belongsTo(Requisition::class,'req_id');
     }
+
     public function item(){
         return $this->belongsTo(Item::class,'item_id');
     }
-    public function requisition_order_item(){
+
+    public function req_order_items()  //    public function requisition_order_item(){ old
+    {
         return $this->hasMany(RequisitionOrderItem::class, 'req_item_id');
     }
 }

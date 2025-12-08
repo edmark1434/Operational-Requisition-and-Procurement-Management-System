@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\OrderItem;
 use App\Models\OrderService;
 use App\Models\PurchaseOrder;
+use App\Models\Requisition;
 use App\Models\RequisitionOrderItem;
 use App\Models\RequisitionOrderService;
 use Illuminate\Http\Request;
@@ -48,34 +49,76 @@ class PurchaseOrderController extends Controller
         $poId = $po->id;
 
         if ($validated['ORDER_TYPE'] === 'Items') {
+            // Merge by ITEM_ID
+            $mergedItems = [];
+
             foreach ($validated['ITEMS'] as $reqItem) {
-                $orderItem = [
-                    'po_id' => $poId,
-                    'item_id' => $reqItem['ITEM_ID'],
-                    'quantity' => $reqItem['QUANTITY'],
-                ];
-                $createdOrderItem = OrderItem::query()->create($orderItem);
+                $itemId = $reqItem['ITEM_ID'];
+                $quantity = $reqItem['QUANTITY'];
+                $reqItemId = $reqItem['REQ_ITEM_ID'];
 
-                RequisitionOrderItem::query()->create([
-                    'po_item_id' => $createdOrderItem->id,
-                    'req_item_id' => $reqItem['REQ_ITEM_ID'],
-                ]);
+                if (!isset($mergedItems[$itemId])) {
+                    $mergedItems[$itemId] = [
+                        'quantity' => $quantity,
+                        'req_item_ids' => [$reqItemId],
+                    ];
+                } else {
+                    $mergedItems[$itemId]['quantity'] += $quantity;
+                    $mergedItems[$itemId]['req_item_ids'][] = $reqItemId;
+                }
             }
-        }
-        else {
+
+            foreach ($mergedItems as $itemId => $data) {
+                // Create one OrderItem per unique item
+                $createdOrderItem = OrderItem::query()->create([
+                    'po_id' => $poId,
+                    'item_id' => $itemId,
+                    'quantity' => $data['quantity'],
+                ]);
+
+                // Link all original requisition items
+                foreach ($data['req_item_ids'] as $reqItemId) {
+                    RequisitionOrderItem::query()->create([
+                        'po_item_id' => $createdOrderItem->id,
+                        'req_item_id' => $reqItemId,
+                    ]);
+                }
+            }
+        } else {
+            // Merge services by SERVICE_ID
+            $mergedServices = [];
+
             foreach ($validated['SERVICES'] as $reqService) {
-                $orderService = [
-                    'po_id' => $poId,
-                    'service_id' => $reqService['SERVICE_ID'],
-                ];
-                $createdOrderService = OrderService::query()->create($orderService);
+                $serviceId = $reqService['SERVICE_ID'];
+                $reqServiceId = $reqService['REQ_SERVICE_ID'];
 
-                RequisitionOrderService::query()->create([
-                    'po_service_id' => $createdOrderService->id,
-                    'req_service_id' => $reqService['REQ_SERVICE_ID'],
+                if (!isset($mergedServices[$serviceId])) {
+                    $mergedServices[$serviceId] = [
+                        'req_service_ids' => [$reqServiceId],
+                    ];
+                } else {
+                    $mergedServices[$serviceId]['req_service_ids'][] = $reqServiceId;
+                }
+            }
+
+            foreach ($mergedServices as $serviceId => $data) {
+                // Create one OrderService per unique service
+                $createdOrderService = OrderService::query()->create([
+                    'po_id' => $poId,
+                    'service_id' => $serviceId,
                 ]);
+
+                // Link all original requisition services
+                foreach ($data['req_service_ids'] as $reqServiceId) {
+                    RequisitionOrderService::query()->create([
+                        'po_service_id' => $createdOrderService->id,
+                        'req_service_id' => $reqServiceId,
+                    ]);
+                }
             }
         }
+
+        $this::markFullyOrderedRequisitions();
 
         AuditLog::query()->create([
             'description' => 'Purchase order created: ' . $finalPO['ref_no'],
@@ -179,4 +222,31 @@ class PurchaseOrderController extends Controller
 
         return back();
     }
+
+    public static function markFullyOrderedRequisitions()
+    {
+        $requisitions = Requisition::query()
+            ->whereIn('status', ['Approved', 'Partially Approved'])
+            ->with(['requisition_items.req_order_items', 'requisition_services.req_order_services'])
+            ->get();
+
+        foreach ($requisitions as $req) {
+            $hasItems = $req->requisition_items->count() > 0;
+            $hasServices = $req->requisition_services->count() > 0;
+
+            // Check if all items are ordered (if any items exist)
+            $allItemsOrdered = !$hasItems || $req->requisition_items->every(fn($item) => $item->req_order_items->count() > 0); // No items = automatically satisfied
+
+            // Check if all services are ordered (if any services exist)
+            $allServicesOrdered = !$hasServices || $req->requisition_services->every(fn($service) => $service->req_order_services->count() > 0); // No services = automatically satisfied
+
+            // Only mark as ordered if:
+            // 1. At least one type exists (items OR services)
+            // 2. All existing items/services are ordered
+            if (($hasItems || $hasServices) && $allItemsOrdered && $allServicesOrdered) {
+                $req->update(['status' => 'Ordered']);
+            }
+        }
+    }
+
 }
