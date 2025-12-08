@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ReworkStatusIcons } from './utils/icons';
-import { getReworkStatusColor, getPriceLevelColor } from './utils/styleUtils';
+import { getReworkStatusColor } from './utils/styleUtils';
 import { formatCurrency, formatDate } from './utils/formatters';
+import { router } from '@inertiajs/react';
+import { toast, Toaster } from 'sonner';
+import { reworksUpdateStatus } from '@/routes';
 
 interface ReworkDetailModalProps {
     rework: any;
@@ -9,16 +12,49 @@ interface ReworkDetailModalProps {
     onClose: () => void;
     onEdit: () => void;
     onDelete: (id: number) => void;
+    onStatusChange: (id: number, newStatus: string) => void;
 }
+
+// Helper to capitalize status display
+const capitalizeStatus = (status: string) => {
+    return status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
+};
+
+// UPDATED: Status Options to match Returns
+const statusOptions = [
+    {
+        value: 'Pending',
+        label: 'Pending',
+        description: 'Rework request is created'
+    },
+    {
+        value: 'Issued',
+        label: 'Issued',
+        description: 'When manager sends rework request to supplier'
+    },
+    {
+        value: 'Rejected',
+        label: 'Rejected',
+        description: 'When rework is rejected by supplier'
+    },
+    {
+        value: 'Delivered',
+        label: 'Delivered',
+        description: 'When services are reworked'
+    }
+];
 
 export default function ReworkDetailModal({
                                               rework,
                                               isOpen,
                                               onClose,
                                               onEdit,
-                                              onDelete
+                                              onDelete,
+                                              onStatusChange
                                           }: ReworkDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = () => {
         if (rework) {
@@ -26,6 +62,36 @@ export default function ReworkDetailModal({
         }
         setShowDeleteConfirm(false);
     };
+
+    const handleStatusChange = (newStatus: string) => {
+        if (rework) {
+            router.put(reworksUpdateStatus.url(rework.ID), { status: newStatus }, {
+                onSuccess: () => {
+                    toast(`Rework ID ${rework.ID} status updated to ${newStatus}`);
+                    onStatusChange(rework.ID, newStatus);
+                },
+                onError: (errors) => {
+                    toast.error('Error updating status:', errors);
+                }
+            });
+        }
+        setShowStatusDropdown(false);
+        onClose();
+    };
+
+    // Click outside to close dropdown
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowStatusDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     if (!isOpen) return null;
 
@@ -56,15 +122,80 @@ export default function ReworkDetailModal({
                             {/* Basic Info */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
+                                    {/* STATUS DROPDOWN SECTION */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Status
                                         </label>
-                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getReworkStatusColor(rework?.STATUS)}`}>
-                                            {ReworkStatusIcons[rework?.STATUS as keyof typeof ReworkStatusIcons]}
-                                            {rework?.STATUS}
+                                        <div className="flex items-center gap-2">
+                                            {/* Status Badge */}
+                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getReworkStatusColor(rework?.STATUS)}`}>
+                                                {/* Note: Ensure ReworkStatusIcons has keys for 'issued' and 'delivered' or handle fallbacks */}
+                                                {ReworkStatusIcons[rework?.STATUS?.toLowerCase() as keyof typeof ReworkStatusIcons] || ReworkStatusIcons.pending}
+                                                {rework?.STATUS}
+                                            </div>
+
+                                            {/* Dropdown Trigger */}
+                                            <div className="relative" ref={dropdownRef}>
+                                                <button
+                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                    Change Status
+                                                </button>
+
+                                                {/* Dropdown Menu */}
+                                                {showStatusDropdown && (
+                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                        <div className="p-3">
+                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                Update Status
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                {statusOptions.map((status) => (
+                                                                    <button
+                                                                        key={status.value}
+                                                                        onClick={() => handleStatusChange(status.value)}
+                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                            rework?.STATUS === status.value
+                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                : 'border border-transparent'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                                                                                rework?.STATUS === status.value
+                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                            }`}>
+                                                                                {rework?.STATUS === status.value && (
+                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                    </svg>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium text-gray-900 dark:text-white">
+                                                                                    {status.label}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                    {status.description}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
+
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Supplier
@@ -83,14 +214,6 @@ export default function ReworkDetailModal({
                                     </div>
                                 </div>
                                 <div className="space-y-4">
-                                    {/*<div>*/}
-                                    {/*    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">*/}
-                                    {/*        Total Cost*/}
-                                    {/*    </label>*/}
-                                    {/*    <p className={`text-lg font-bold ${getPriceLevelColor(rework?.TOTAL_COST || 0)}`}>*/}
-                                    {/*        {formatCurrency(rework?.TOTAL_COST || 0)}*/}
-                                    {/*    </p>*/}
-                                    {/*</div>*/}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Created Date
@@ -203,6 +326,7 @@ export default function ReworkDetailModal({
                     </div>
                 </div>
             )}
+            <Toaster/>
         </>
     );
 }

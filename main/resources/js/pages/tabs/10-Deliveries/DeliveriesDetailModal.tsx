@@ -7,7 +7,7 @@ import { router, usePage } from "@inertiajs/react";
 import { deliveryeditStatus } from '@/routes';
 import { toast, Toaster } from 'sonner';
 
-// Add proper TypeScript interfaces
+// ... [Interfaces] ...
 export interface Item {
     id: number;
     barcode: string | null;
@@ -67,7 +67,7 @@ export interface DeliveryService {
 }
 
 interface DeliveriesDetailModalProps {
-    delivery: Delivery; // <-- REQUIRED!
+    delivery: Delivery;
     deliveryItems: DeliveryItem[];
     deliveryServices: DeliveryService[];
     isOpen: boolean;
@@ -89,6 +89,10 @@ export default function DeliveriesDetailModal({
                                               }: DeliveriesDetailModalProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
     const [showStatusDropdown, setShowStatusDropdown] = useState<boolean>(false);
+
+    // State for image enlargement
+    const [isImageExpanded, setIsImageExpanded] = useState<boolean>(false);
+
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Combine delivery with its items and services
@@ -97,47 +101,47 @@ export default function DeliveriesDetailModal({
         items: delivery.items || deliveryItems || [],
         services: delivery.services || deliveryServices || []
     };
-    
+
     // Determine delivery type
-    const isServiceDelivery = combinedDelivery.type === 'Service Delivery' || 
-                             (combinedDelivery.type === undefined && combinedDelivery.services && combinedDelivery.services.length > 0);
-    const isItemDelivery = combinedDelivery.type === 'Item Purchase' || 
-                          (combinedDelivery.type === undefined && combinedDelivery.items && combinedDelivery.items.length > 0);
-    const isMixedDelivery = combinedDelivery.type === 'Mixed' || 
-                           (combinedDelivery.items && combinedDelivery.items.length > 0 && 
-                            combinedDelivery.services && combinedDelivery.services.length > 0);
-    
+    const isServiceDelivery = combinedDelivery.type === 'Service Delivery' ||
+        (combinedDelivery.type === undefined && combinedDelivery.services && combinedDelivery.services.length > 0);
+    const isItemDelivery = combinedDelivery.type === 'Item Purchase' ||
+        (combinedDelivery.type === undefined && combinedDelivery.items && combinedDelivery.items.length > 0);
+    const isMixedDelivery = combinedDelivery.type === 'Mixed' ||
+        (combinedDelivery.items && combinedDelivery.items.length > 0 &&
+            combinedDelivery.services && combinedDelivery.services.length > 0);
+
     // Calculate totals dynamically
     const calculateItemTotals = () => {
         if (!combinedDelivery.items || combinedDelivery.items.length === 0) return { totalItems: 0, totalItemValue: 0 };
-        
+
         const totalItems = combinedDelivery.items.reduce((sum, item) => sum + item.quantity, 0);
-        const totalItemValue = combinedDelivery.items.reduce((sum, item) => 
+        const totalItemValue = combinedDelivery.items.reduce((sum, item) =>
             sum + (item.quantity * parseFloat(item.unit_price?.toString() || '0')), 0);
-        
+
         return { totalItems, totalItemValue };
     };
-    
+
     const calculateServiceTotals = () => {
         if (!combinedDelivery.services || combinedDelivery.services.length === 0) return { totalServices: 0, totalServiceValue: 0 };
-        
+
         const totalServices = combinedDelivery.services.length;
         const totalServiceValue = combinedDelivery.services.reduce((sum, service) => {
             const hours = service.hours || 0;
             const rate = service.hourly_rate || service.service?.hourly_rate || 0;
             return sum + (hours * parseFloat(rate.toString()));
         }, 0);
-        
+
         return { totalServices, totalServiceValue };
     };
-    
+
     const itemTotals = calculateItemTotals();
     const serviceTotals = calculateServiceTotals();
     const totalItems = itemTotals.totalItems;
     const totalServices = serviceTotals.totalServices;
     const totalItemValue = itemTotals.totalItemValue;
     const totalServiceValue = serviceTotals.totalServiceValue;
-    
+
     // Get delivery type display
     const getDeliveryTypeDisplay = () => {
         if (combinedDelivery.type) return combinedDelivery.type;
@@ -146,12 +150,21 @@ export default function DeliveriesDetailModal({
         if (isItemDelivery) return 'Item Purchase';
         return 'Unknown';
     };
-    
+
+    // Helper to resolve image path for Laravel Storage
+    const getImageUrl = (path: string | null) => {
+        if (!path) return '';
+        if (path.startsWith('http') || path.startsWith('https')) return path;
+        const cleanPath = path.startsWith('/') ? path : `/${path}`;
+        if (cleanPath.startsWith('/storage')) return cleanPath;
+        return `/storage${cleanPath}`;
+    };
+
     const handleDelete = () => {
         onDelete(delivery.id);
         setShowDeleteConfirm(false);
     };
-    
+
     const handleStatusChange = (newStatus: string) => {
         router.put(deliveryeditStatus.url(delivery.id), { status: newStatus },{
             onSuccess:()=>{
@@ -168,29 +181,31 @@ export default function DeliveriesDetailModal({
         });
       
     };
-    
-    // Close dropdown when clicking outside
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setShowStatusDropdown(false);
             }
         };
-        
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
-    
+
     if (!isOpen || !delivery) return null;
-    
+
+    const imageUrl = getImageUrl(delivery.receipt_photo);
+
     return (
         <>
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-sidebar-border">
+            {/* MAIN MODAL WRAPPER */}
+            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300">
+                <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-sidebar-border shadow-2xl">
                     {/* Header - Sticky */}
-                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
+                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10 rounded-t-xl">
                         <div className="flex items-center justify-between">
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
@@ -216,11 +231,12 @@ export default function DeliveriesDetailModal({
                             </button>
                         </div>
                     </div>
-                    
+
                     {/* Content - Scrollable */}
                     <div className="flex-1 overflow-y-auto">
                         <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
-                            {/* Basic Information */}
+
+                            {/* Basic Info Section */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <div>
@@ -242,7 +258,7 @@ export default function DeliveriesDetailModal({
                                                     </svg>
                                                     Change Status
                                                 </button>
-                                                
+
                                                 {showStatusDropdown && (
                                                     <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
                                                         <div className="p-3">
@@ -327,7 +343,7 @@ export default function DeliveriesDetailModal({
                                             </p>
                                         </div>
                                     )}
-                                    
+
                                     {isServiceDelivery && (
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -338,7 +354,7 @@ export default function DeliveriesDetailModal({
                                             </p>
                                         </div>
                                     )}
-                                    
+
                                     {isMixedDelivery && (
                                         <>
                                             <div>
@@ -359,7 +375,7 @@ export default function DeliveriesDetailModal({
                                             </div>
                                         </>
                                     )}
-                                    
+
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Total Value
@@ -367,31 +383,57 @@ export default function DeliveriesDetailModal({
                                         <p className="text-lg font-bold text-green-600 dark:text-green-400">
                                             {formatCurrency(totalItemValue + totalServiceValue || delivery.total_cost)}
                                         </p>
-                                        {(isMixedDelivery && (totalItemValue > 0 && totalServiceValue > 0)) && (
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                Items: {formatCurrency(totalItemValue)} + Services: {formatCurrency(totalServiceValue)}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
-                            
-                            {/* Receipt Photo */}
-                            {delivery.receipt_photo && (
-                                <div className="border-t border-sidebar-border pt-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                        Receipt Photo
-                                    </h3>
-                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-sidebar-border p-4">
-                                        <img
-                                            src={delivery.receipt_photo}
-                                            alt="Delivery receipt"
-                                            className="max-w-full h-auto rounded-lg max-h-64 object-contain"
-                                        />
+
+                            {/* Receipt Photo - VIEW BUTTON OR EMPTY STATE */}
+                            <div className="border-t border-sidebar-border pt-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                    Receipt Photo
+                                </h3>
+                                {delivery.receipt_photo ? (
+                                    /* Button that opens the modal */
+                                    <button
+                                        onClick={() => setIsImageExpanded(true)}
+                                        className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-sidebar border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-all w-full md:w-auto group"
+                                    >
+                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-md text-blue-600 dark:text-blue-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                View Attached Receipt
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Click to view full image
+                                            </p>
+                                        </div>
+                                        <div className="ml-auto">
+                                            <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </div>
+                                    </button>
+                                ) : (
+                                    /* Empty State for No Photo */
+                                    <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 flex flex-col items-center justify-center text-center">
+                                        <div className="p-3 bg-gray-100 dark:bg-sidebar rounded-full mb-3">
+                                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" className="text-gray-400" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">No Receipt Attached</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            No image was uploaded for this delivery.
+                                        </p>
                                     </div>
-                                </div>
-                            )}
-                            
+                                )}
+                            </div>
+
                             {/* Supplier Information */}
                             {delivery.purchase_order && (
                                 <div className="border-t border-sidebar-border pt-6">
@@ -418,8 +460,8 @@ export default function DeliveriesDetailModal({
                                     </div>
                                 </div>
                             )}
-                            
-                            {/* ITEMS SECTION - Only show if delivery has items */}
+
+                            {/* ITEMS SECTION */}
                             {combinedDelivery.items && combinedDelivery.items.length > 0 && (
                                 <div className="border-t border-sidebar-border pt-6">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -453,8 +495,8 @@ export default function DeliveriesDetailModal({
                                     </div>
                                 </div>
                             )}
-                            
-                            {/* SERVICES SECTION - Only show if delivery has services */}
+
+                            {/* SERVICES SECTION */}
                             {combinedDelivery.services && combinedDelivery.services.length > 0 && (
                                 <div className="border-t border-sidebar-border pt-6">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -476,7 +518,7 @@ export default function DeliveriesDetailModal({
                                                 const hours = service.hours || 0;
                                                 const rate = service.hourly_rate || service.service?.hourly_rate || 0;
                                                 const total = hours * parseFloat(rate.toString());
-                                                
+
                                                 return (
                                                     <tr key={service.id} className="border-b border-sidebar-border last:border-b-0">
                                                         <td className="p-3 text-sm text-gray-900 dark:text-white">{service.service?.name || 'Unknown Service'}</td>
@@ -494,7 +536,7 @@ export default function DeliveriesDetailModal({
                                     </div>
                                 </div>
                             )}
-                            
+
                             {/* Remarks */}
                             {delivery.remarks && (
                                 <div className="border-t border-sidebar-border pt-6">
@@ -510,9 +552,9 @@ export default function DeliveriesDetailModal({
                             )}
                         </div>
                     </div>
-                    
+
                     {/* Footer with Actions */}
-                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
+                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent rounded-b-xl">
                         <div className="flex justify-between items-center">
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
@@ -536,11 +578,11 @@ export default function DeliveriesDetailModal({
                     </div>
                 </div>
             </div>
-            
+
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-[60] transition-all duration-300">
+                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border shadow-2xl">
                         <div className="p-6 border-b border-sidebar-border">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 Delete Delivery
@@ -566,12 +608,58 @@ export default function DeliveriesDetailModal({
                     </div>
                 </div>
             )}
+
+            {/* Image Viewer Modal (Lightbox) - With Transparent Blurred BG */}
+            {isImageExpanded && delivery.receipt_photo && (
+                <div
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[70] transition-all duration-300"
+                    onClick={() => setIsImageExpanded(false)}
+                >
+                    <div className="relative max-w-[90vw] max-h-[90vh]">
+                        <img
+                            src={imageUrl}
+                            alt="Receipt Full View"
+                            className="max-w-full max-h-[85vh] object-contain rounded-md shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+
+                        {/* Toolbar */}
+                        <div className="absolute top-4 right-4 flex gap-2">
+                            {/* Download Button */}
+                            <a
+                                href={imageUrl}
+                                download={`Receipt-${delivery.receipt_no}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all backdrop-blur-md"
+                                title="Download"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                            </a>
+
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setIsImageExpanded(false)}
+                                className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all backdrop-blur-md"
+                                title="Close"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <Toaster/>
         </>
     );
 }
 
-// Helper functions for delivery type
+// ... [Helper functions] ...
 function getDeliveryTypeColor(type: string): string {
     switch (type?.toLowerCase()) {
         case 'item purchase':
@@ -619,7 +707,6 @@ function getDeliveryIcon(type: string) {
     }
 }
 
-// Delivery Status Icon Component
 interface DeliveryStatusIconProps {
     status: string;
 }
@@ -647,7 +734,6 @@ function DeliveryStatusIcon({ status }: DeliveryStatusIconProps) {
     }
 }
 
-// Status options (add this constant)
 const statusOptions = [
     { value: 'Pending', label: 'Pending', description: 'Delivery is awaiting processing' },
     { value: 'Received', label: 'Received', description: 'Delivery has been received' },

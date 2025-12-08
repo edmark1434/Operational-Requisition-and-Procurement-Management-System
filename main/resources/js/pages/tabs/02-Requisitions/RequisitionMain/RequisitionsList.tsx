@@ -1,12 +1,11 @@
 import { Link } from '@inertiajs/react';
-// import { requisitionform } from '@/routes'; // (Assuming this is used elsewhere or commented out)
 import { StatusIcons } from './utils/icons';
 import { getStatusColor, getPriorityColor } from './utils/styleUtils';
 import { formatDate } from './utils/formatters';
 
 interface Requisition {
     id: number;
-    ref_no: string; // <--- ADDED THIS
+    ref_no: string;
     requestor: string;
     priority: string;
     type: string;
@@ -15,6 +14,10 @@ interface Requisition {
     remarks?: string;
     created_at: string;
     categories: string[];
+    items?: any[];
+    services?: any[];
+    items_count?: number;
+    services_count?: number;
 }
 
 interface RequisitionsListProps {
@@ -34,7 +37,6 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
             'received': 'Received',
             'completed': 'Completed'
         };
-        // Safety check if status is null/undefined
         return statusMap[status?.toLowerCase()] || status;
     };
 
@@ -57,30 +59,31 @@ export default function RequisitionsList({ requisitions, onRequisitionClick }: R
     }
 
     return (
-        <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
-            <div className="h-full overflow-y-auto">
-                {/* Column Headers */}
-                <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 border-b border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
-                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        REF NO.
-                    </div>
-                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        TYPE
-                    </div>
-                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        STATUS
-                    </div>
-                    <div className="col-span-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        DETAILS
-                    </div>
-                    <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        PRIORITY
-                    </div>
-                    <div className="col-span-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
-                        DATE
-                    </div>
+        <div className="flex flex-col flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
+            {/* Column Headers */}
+            <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 border-b border-sidebar-border bg-gray-50 dark:bg-sidebar-accent shrink-0 z-10">
+                <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    REF NO.
                 </div>
+                <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    TYPE
+                </div>
+                <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    STATUS
+                </div>
+                <div className="col-span-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    DETAILS
+                </div>
+                <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    PRIORITY
+                </div>
+                <div className="col-span-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
+                    DATE
+                </div>
+            </div>
 
+            {/* Scrollable List Body */}
+            <div className="flex-1 overflow-y-auto min-h-0">
                 <div className="p-4 lg:p-0">
                     <div className="space-y-3 lg:space-y-0">
                         {requisitions.map((requisition: any) => (
@@ -107,12 +110,8 @@ function RequisitionListItem({
     onClick: () => void;
     getStatusDisplayName: (status: string) => string;
 }) {
-    // 1. Normalize the data
     const id = requisition.id || requisition.ID;
-
-    // NEW: Extract Reference Number. Fallback to ID if reference is missing.
     const referenceNo = requisition.ref_no || requisition.REFERENCES_NO || `#${id}`;
-
     const status = requisition.status || requisition.STATUS;
     const type = requisition.type || requisition.TYPE;
     const priority = requisition.priority || requisition.PRIORITY;
@@ -124,28 +123,44 @@ function RequisitionListItem({
 
     const isServiceRequisition = type?.toLowerCase() === 'services';
 
+    // Calculate Counts
+    const itemsCount = requisition.items?.length || requisition.items_count || 0;
+    const servicesCount = requisition.services?.length || requisition.services_count || 0;
+
+    const displayCount = isServiceRequisition ? servicesCount : itemsCount;
+    const displayLabel = isServiceRequisition
+        ? (displayCount === 1 ? 'Job' : 'Jobs')
+        : (displayCount === 1 ? 'Item' : 'Items');
+
     return (
         <div onClick={onClick} className="border border-sidebar-border rounded-lg lg:border-0 lg:rounded-none lg:border-b bg-white dark:bg-sidebar p-4 lg:py-3 hover:shadow-md lg:hover:shadow-none transition-all duration-200 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 lg:hover:bg-gray-50 dark:lg:hover:bg-sidebar">
             <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center">
-                {/* REF # (CHANGED FROM ID TO REFERENCE NO) */}
                 <div className="col-span-2 mb-3 lg:mb-0">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-sidebar px-2 py-1 rounded border border-sidebar-border">
                          {referenceNo}
                     </span>
                 </div>
 
-                {/* TYPE */}
+                {/* TYPE with RESTORED ICONS */}
                 <div className="col-span-2 mb-3 lg:mb-0">
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
                         isServiceRequisition
                             ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
                             : 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                     }`}>
+                        {isServiceRequisition ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                        )}
                         {isServiceRequisition ? 'Services' : 'Items'}
                     </div>
                 </div>
 
-                {/* STATUS */}
                 <div className="col-span-2 mb-3 lg:mb-0">
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
                         {StatusIcons[status?.toLowerCase() as keyof typeof StatusIcons] || StatusIcons.pending}
@@ -153,11 +168,12 @@ function RequisitionListItem({
                     </div>
                 </div>
 
-                {/* DETAILS */}
+                {/* DETAILS with COUNT TAGS */}
                 <div className="col-span-3 mb-3 lg:mb-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {requestor}
                     </p>
+
                     {status?.toLowerCase() === 'rejected' && remarks ? (
                         <p className="text-xs text-red-600 dark:text-red-400 truncate mt-1 font-medium">
                             {remarks}
@@ -168,8 +184,12 @@ function RequisitionListItem({
                         </p>
                     )}
 
-                    {/* Categories */}
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {/* ITEM COUNT TAG */}
+                        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-1.5 py-0.5 rounded border border-sidebar-border font-medium">
+                            {displayCount} {displayLabel}
+                        </span>
+
                         {categories && categories.length > 0 ? (
                             <>
                                 {categories.slice(0, 2).map((category: string, index: number) => (
@@ -183,20 +203,15 @@ function RequisitionListItem({
                                     </span>
                                 )}
                             </>
-                        ) : (
-                            <span className="text-xs text-gray-400 italic">No categories</span>
-                        )}
+                        ) : null}
                     </div>
                 </div>
 
-                {/* PRIORITY */}
                 <div className="col-span-2 mb-3 lg:mb-0">
                     <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${getPriorityColor(priority)}`}>
                         {priority}
                     </div>
                 </div>
-
-                {/* DATE */}
                 <div className="col-span-1 flex items-center justify-between lg:justify-end">
                     <div className="text-right">
                         <p className="text-xs text-gray-500 dark:text-gray-500">
