@@ -104,8 +104,8 @@ class ReturnsController extends Controller
 
             DB::commit();
 
-            return redirect('/returns')->with('success', 'Return created successfully: ' . $refNo);
-
+// ReturnsController.php
+            return redirect()->route('returnsIndex')->with('success', 'Return deleted successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Error creating return: ' . $e->getMessage()]);
@@ -185,7 +185,7 @@ class ReturnsController extends Controller
 
             DB::commit();
 
-            return redirect()->route('returnsIndex')->with('success', 'Return deleted successfully');
+            return redirect()->route('returnsIndex')->with('success', 'Return created successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();

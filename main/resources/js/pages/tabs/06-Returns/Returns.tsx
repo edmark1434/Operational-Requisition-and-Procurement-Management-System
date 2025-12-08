@@ -49,10 +49,26 @@ export default function Returns({
     } = useReturnsFilters(returns, searchTerm, statusFilter, dateFilter);
 
     const handleDeleteReturn = (id: number) => {
-        setReturns(prev => prev.filter(returnItem => returnItem.ID !== id));
-        setIsDetailModalOpen(false);
-    };
+        // FIXED: Using string interpolation instead of route() helper
+        router.delete(`/returns/${id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // 2. On Success: Update local state to remove item from UI immediately
+                setReturns(prev => prev.filter(returnItem => returnItem.ID !== id));
 
+                // 3. Close Modal and Reset Selection
+                setIsDetailModalOpen(false);
+                setSelectedReturn(null);
+
+                // 4. Show Success Notification
+                toast.success("Return deleted successfully");
+            },
+            onError: (errors) => {
+                console.error("Delete error:", errors);
+                toast.error("Failed to delete return. Please try again.");
+            }
+        });
+    };
     // UPDATED: Status Change Handler with explicit modal close
 // UPDATED: Status Change Handler
     const handleStatusChange = (id: number, newStatus: string) => {
