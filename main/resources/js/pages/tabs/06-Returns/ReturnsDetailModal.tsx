@@ -9,16 +9,14 @@ interface ReturnsDetailModalProps {
     returnItem: any;
     isOpen: boolean;
     onClose: () => void;
-    // These now just update the UI *after* the modal does the work
     onEdit: (item: any) => void;
     onDelete: (id: number) => void;
     onStatusChange: (id: number, newStatus: string) => void;
 }
 
-// Helper safely handles undefined/null status
 const capitalizeStatus = (status: string | undefined) => {
     if (!status) return 'Unknown';
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
 };
 
 const statusOptions = [
@@ -53,7 +51,8 @@ export default function ReturnsDetailModal({
 
     if (!isOpen || !returnItem) return null;
 
-    // --- DATA NORMALIZATION (Fixes undefined errors) ---
+    // --- DATA NORMALIZATION ---
+    // Handles both uppercase (DB) and lowercase (Frontend) keys to prevent undefined errors
     const ID = returnItem.ID || returnItem.id;
     const STATUS = returnItem.STATUS || returnItem.status || 'Pending';
     const REFERENCE_NO = returnItem.REFERENCE_NO || returnItem.reference_no || 'N/A';
@@ -67,16 +66,13 @@ export default function ReturnsDetailModal({
     const REMARKS = returnItem.REMARKS || returnItem.remarks;
     const ITEMS = returnItem.ITEMS || returnItem.items || [];
 
-    // --- ACTIONS ---
-
     const handleDelete = () => {
         if (!ID) return;
 
-        // Perform the delete request directly here
         router.delete(`/returns/${ID}`, {
             onSuccess: () => {
                 toast.success('Return deleted successfully');
-                onDelete(ID); // Update parent UI
+                onDelete(ID);
                 setShowDeleteConfirm(false);
                 onClose();
             },
@@ -90,21 +86,28 @@ export default function ReturnsDetailModal({
     const handleStatusChange = (newStatus: string) => {
         if (!ID) return;
 
-        // METHOD: PUT
-        // URL: /returns/{id}/status (Manual string, no Ziggy)
-        router.put(`/returns/${ID}/status`, { status: newStatus }, {
-            onSuccess: () => {
-                toast.success(`Status updated to ${newStatus}`);
+        console.log(`Updating Status for ID: ${ID} to ${newStatus}`); // Debug log
 
-                // Update the UI immediately without waiting for full reload if needed
-                onStatusChange(ID, newStatus);
-                setShowStatusDropdown(false);
-            },
-            onError: (errors) => {
-                console.error(errors);
-                toast.error("Failed to update status");
+        router.put(`/returns/${ID}/status`,
+            { status: newStatus }, // Payload
+            {
+                preserveScroll: true, // Prevents page jumping
+                onSuccess: () => {
+                    toast.success(`Status updated to ${newStatus}`);
+                    onStatusChange(ID, newStatus);
+                    setShowStatusDropdown(false);
+                },
+                onError: (errors) => {
+                    console.error("Status update failed:", errors);
+                    // Shows the specific error message from the backend (e.g., "The status field must be a string")
+                    if (errors.status) {
+                        toast.error(errors.status);
+                    } else {
+                        toast.error("Failed to update status");
+                    }
+                }
             }
-        });
+        );
     };
 
     return (
@@ -136,20 +139,22 @@ export default function ReturnsDetailModal({
                     <div className="flex-1 overflow-y-auto">
                         <div className="p-6 space-y-8 bg-white dark:bg-sidebar">
 
-                            {/* Status & References */}
+                            {/* Status Section */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    {/* Status Dropdown */}
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                                             Current Status
                                         </label>
                                         <div className="flex items-center gap-3">
+                                            {/* Status Badge */}
                                             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${getReturnsStatusColor(STATUS)}`}>
-                                                {ReturnsIcons[STATUS.toLowerCase() as keyof typeof ReturnsIcons] || null}
+                                                {/* Uses ReturnsIcons safely */}
+                                                {ReturnsIcons[String(STATUS).toLowerCase() as keyof typeof ReturnsIcons] || null}
                                                 {capitalizeStatus(STATUS)}
                                             </div>
 
+                                            {/* Change Status Button */}
                                             <div className="relative" ref={dropdownRef}>
                                                 <button
                                                     onClick={() => setShowStatusDropdown(!showStatusDropdown)}
@@ -161,6 +166,7 @@ export default function ReturnsDetailModal({
                                                     </svg>
                                                 </button>
 
+                                                {/* Status Dropdown Menu */}
                                                 {showStatusDropdown && (
                                                     <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-sidebar border border-sidebar-border rounded-xl shadow-xl z-20 overflow-hidden ring-1 ring-black ring-opacity-5">
                                                         <div className="p-2 space-y-1">
@@ -223,7 +229,7 @@ export default function ReturnsDetailModal({
                                     </div>
                                 </div>
 
-                                {/* Financials */}
+                                {/* Financial Summary */}
                                 <div className="bg-gray-50 dark:bg-sidebar-accent rounded-lg p-5 border border-sidebar-border">
                                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                         <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,7 +263,6 @@ export default function ReturnsDetailModal({
                                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 uppercase tracking-wider">
                                     Return Details
                                 </h3>
-
                                 <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-xs text-gray-500 dark:text-gray-400">Supplier Name</label>
@@ -321,7 +326,7 @@ export default function ReturnsDetailModal({
                     <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent rounded-b-xl flex justify-between items-center">
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -338,7 +343,7 @@ export default function ReturnsDetailModal({
                             </button>
                             <button
                                 onClick={() => onEdit(returnItem)}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
