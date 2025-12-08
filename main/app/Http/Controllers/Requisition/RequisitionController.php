@@ -489,7 +489,7 @@ class RequisitionController extends Controller
             }
             if(($item->current_stock - $reqItem->approved_qty) <= 0){
                 Notification::create([
-                    'user_id' => 1,
+                    'user_id' => 2,
                     'message' => "Out of stock for item: " . $item->name,
                     'type' => 'error',
                     'is_read' => false,
