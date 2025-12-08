@@ -60,7 +60,7 @@ class Dashboard extends Controller
                 }),
             ];
 });
-        $deliveries = Delivery::with(['item','purchaseOrder'])->get()->map(function ($delivery) {
+        $deliveries = Delivery::with(['deliveryItems.item','purchaseOrder'])->get()->map(function ($delivery) {
             return [
                 'ID' => $delivery->id,
                 'DELIVERY_DATE' => $delivery->delivery_date,
@@ -73,7 +73,8 @@ class Dashboard extends Controller
                 'SUPPLIER_ID' => $delivery->purchaseOrder->vendor->id,
                 'SUPPLIER_NAME' => $delivery->purchaseOrder->vendor->name,
                 'TYPE' => $delivery->type,
-                'ITEMS' => $delivery->items->map(function ($item) {
+                'ITEMS' => $delivery->deliveryItems->map(function ($item) {
+                    $item = $item->item;
                     return [
                         'ID' => $item->id,
                         'ITEM_ID' => $item->id,
@@ -86,15 +87,15 @@ class Dashboard extends Controller
             ];
         });
 
-        $returns = Returns::with(['delivery.purchaseOrder.vendor'])->get()->map(function ($ret) {
+        $returns = Returns::with(['originalDelivery.oldDelivery.purchaseOrder.vendor'])->get()->map(function ($ret) {
             return [
                 'ID' => $ret->id,
                 'CREATED_AT' => $ret->created_at,
                 'RETURN_DATE'=> $ret->return_date,
                 'STATUS' => $ret->status,
                 'REMARKS'=> $ret->remarks,
-                'DELIVERY_ID'=> $ret->delivery_id,
-                'SUPPLIER_NAME' => $ret->delivery->purchaseOrder->vendor->name];
+                'DELIVERY_ID'=> $ret->originalDelivery->old_delivery_id,
+                'SUPPLIER_NAME' => $ret->originalDelivery->oldDelivery->purchaseOrder->vendor->name];
         });
 
         $reworks = Rework::with(
