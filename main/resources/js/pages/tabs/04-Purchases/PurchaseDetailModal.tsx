@@ -28,6 +28,10 @@ export default function PurchaseDetailModal({
     // 1. Define safePurchase to prevent crashes during close animation
     const safePurchase = purchase || {};
 
+    // --- FIX: Check for both 'pending' and 'pending_approval' ---
+    const statusLower = (safePurchase.STATUS || '').toLowerCase();
+    const isPending = statusLower === 'pending' || statusLower === 'pending_approval';
+
     const handleDelete = () => {
         if (safePurchase.ID) {
             onDelete(safePurchase.ID);
@@ -39,27 +43,23 @@ export default function PurchaseDetailModal({
         if (!safePurchase.ID) return;
 
         // --- OPTIMISTIC UPDATE START ---
-
-        // 1. Close the dropdown IMMEDIATELY (Don't wait for server)
         setShowStatusDropdown(false);
-
-        // 2. Update the parent UI IMMEDIATELY
         onStatusChange(safePurchase.ID, newStatus);
-
-        // 3. If you want to close the ENTIRE modal on click, uncomment the line below:
-        // onClose();
-
         // --- OPTIMISTIC UPDATE END ---
 
-        // 4. Send request in background (Fire and Forget)
+        // 4. Send request in background
         router.put(`/purchases/${safePurchase.ID}/status`, { status: newStatus }, {
             preserveScroll: true,
-            // We removed onSuccess because we already updated the UI above.
             onError: (errors) => {
                 console.error("Status update failed", errors);
-                // Optional: You could add a toast here saying "Update failed"
             }
         });
+    };
+
+    // --- NEW: Handle Issue Action ---
+    const handleIssue = () => {
+        handleStatusChange('issued');
+        onClose();
     };
 
     // Close dropdown when clicking outside
@@ -101,7 +101,6 @@ export default function PurchaseDetailModal({
         <>
             <Transition appear show={isOpen} as={Fragment}>
                 <Dialog as="div" className="relative z-50" onClose={onClose}>
-                    {/* Backdrop Animation */}
                     <Transition.Child
                         as={Fragment}
                         enter="ease-out duration-300"
@@ -116,7 +115,6 @@ export default function PurchaseDetailModal({
 
                     <div className="fixed inset-0 overflow-y-auto">
                         <div className="flex min-h-full items-center justify-center p-4 text-center">
-                            {/* Modal Panel Animation */}
                             <Transition.Child
                                 as={Fragment}
                                 enter="ease-out duration-300"
@@ -128,7 +126,7 @@ export default function PurchaseDetailModal({
                             >
                                 <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-xl bg-white dark:bg-sidebar text-left align-middle shadow-xl transition-all border border-sidebar-border flex flex-col max-h-[90vh]">
 
-                                    {/* Header - Sticky */}
+                                    {/* Header */}
                                     <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -159,7 +157,7 @@ export default function PurchaseDetailModal({
                                         </div>
                                     </div>
 
-                                    {/* Content - Scrollable */}
+                                    {/* Content */}
                                     <div className="flex-1 overflow-y-auto">
                                         <div className="p-6 space-y-6 bg-white dark:bg-sidebar">
                                             {/* Order Summary */}
@@ -334,32 +332,32 @@ export default function PurchaseDetailModal({
                                             <div className="border-t border-sidebar-border pt-6">
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                                     Requisition Information
-                                                </h3>                                
-                                                {orderItems.map((item: any) => (
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                    <div>
-                                                        <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
-                                                        <p className="font-medium">{item.REQUESTOR}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-600 dark:text-gray-400">Priority:</span>
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                                            item.PRIORITY === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                                item.PRIORITY === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                                        }`}>
+                                                </h3>
+                                                {orderItems.map((item: any, index: number) => (
+                                                    <div key={index} className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                        <div>
+                                                            <span className="text-gray-600 dark:text-gray-400">Requestor:</span>
+                                                            <p className="font-medium">{item.REQUESTOR}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-600 dark:text-gray-400">Priority:</span>
+                                                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                                item.PRIORITY === 'Urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                    item.PRIORITY === 'High' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                                        'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                            }`}>
                                                             {item.PRIORITY}
                                                         </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-600 dark:text-gray-400">Requisition Date:</span>
+                                                            <p>{item.REQUISITION_DATE ? formatDate(item.REQUISITION_DATE) : 'N/A'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-600 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
+                                                            <p>{orderItems.length}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <span className="text-gray-600 dark:text-gray-400">Requisition Date:</span>
-                                                        <p>{item.REQUISITION_DATE ? formatDate(item.REQUISITION_DATE) : 'N/A'}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-600 dark:text-gray-400">{isServiceOrder ? 'Services' : 'Items'}:</span>
-                                                        <p>{orderItems.length}</p>
-                                                    </div>
-                                                </div>
                                                 ))}
                                             </div>
 
@@ -439,7 +437,7 @@ export default function PurchaseDetailModal({
                                                             {safePurchase.CREATED_AT ? formatDate(safePurchase.CREATED_AT) : 'N/A'}
                                                         </p>
                                                     </div>
-                            
+
                                                 </div>
                                                 {safePurchase.REMARKS && (
                                                     <div className="mt-4">
@@ -468,6 +466,7 @@ export default function PurchaseDetailModal({
                                                 Delete Order
                                             </button>
                                             <div className="flex gap-3">
+
                                                 <button
                                                     onClick={onClose}
                                                     className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
@@ -483,6 +482,18 @@ export default function PurchaseDetailModal({
                                                     </svg>
                                                     Edit Order
                                                 </button>
+                                                {/* Issue Button placed here (last) */}
+                                                {isPending && (
+                                                    <button
+                                                        onClick={handleIssue}
+                                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                                        </svg>
+                                                        Issue Purchase Order
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
