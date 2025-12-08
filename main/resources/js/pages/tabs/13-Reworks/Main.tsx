@@ -3,6 +3,7 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Toaster, toast } from 'sonner';
+import { usePage } from '@inertiajs/react';
 
 // Import components
 import ReworkStats from './ReworkStats';
@@ -32,6 +33,9 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedRework, setSelectedRework] = useState<any>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    const { props } = usePage();
+    const permissionsList = props.user_permission as string[];
 
     // Initialize data
     const [reworks, setReworks] = useState(transformReworksData(reworkServiceData, reworksData, serviceData));
@@ -90,6 +94,8 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reworks</h1>
+
+                    { permissionsList.includes('Create Rework') &&
                     <Link
                         href="/reworks/add"
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -99,6 +105,8 @@ export default function Reworks({reworkServiceData, reworksData, serviceData}: P
                         </svg>
                         Add New Rework
                     </Link>
+                    }
+
                 </div>
 
                 {/* Stats */}
