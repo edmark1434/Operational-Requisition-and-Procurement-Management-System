@@ -154,65 +154,57 @@ export default function ReturnsDetailModal({
                                                 {capitalizeStatus(STATUS)}
                                             </div>
 
-                                            {/* Only show status dropdown if NOT pending (since pending has buttons below) or allow override */}
-                                            {!isPending && (
-                                                <div className="relative" ref={dropdownRef}>
-                                                    <button
-                                                        onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                                                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                        </svg>
-                                                        Change Status
-                                                    </button>
+                                            {/* Change Status Button */}
+                                            <div className="relative" ref={dropdownRef}>
+                                                <button
+                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                >
+                                                    Change Status
+                                                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
 
-                                                    {showStatusDropdown && (
-                                                        <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
-                                                            <div className="p-3">
-                                                                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
-                                                                    Update Status
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    {statusOptions.map((status) => (
-                                                                        <button
-                                                                            key={status.value}
-                                                                            onClick={() => handleStatusChange(status.value)}
-                                                                            className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
-                                                                                returnItem?.STATUS === status.value
-                                                                                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                                                                                    : 'border border-transparent'
-                                                                            }`}
-                                                                        >
-                                                                            <div className="flex items-center gap-3 flex-1">
-                                                                                <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
-                                                                                    returnItem?.STATUS === status.value
-                                                                                        ? 'bg-blue-600 dark:bg-blue-400'
-                                                                                        : 'bg-gray-300 dark:bg-gray-600'
-                                                                                }`}>
-                                                                                    {returnItem?.STATUS === status.value && (
-                                                                                        <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                                        </svg>
-                                                                                    )}
-                                                                                </div>
-                                                                                <div className="flex-1">
-                                                                                    <div className="font-medium text-gray-900 dark:text-white">
-                                                                                        {status.label}
-                                                                                    </div>
-                                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                                                                        {status.description}
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
+                                                {/* Status Dropdown Menu */}
+                                                {showStatusDropdown && (
+                                                    <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-sidebar border border-sidebar-border rounded-xl shadow-xl z-20 overflow-hidden ring-1 ring-black ring-opacity-5">
+                                                        <div className="p-2 space-y-1">
+                                                            {statusOptions.map((opt) => (
+                                                                <button
+                                                                    key={opt.value}
+                                                                    onClick={() => handleStatusChange(opt.value)}
+                                                                    className={`w-full text-left px-3 py-2.5 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-lg ${
+                                                                        STATUS === opt.value
+                                                                            ? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                                                                            : ''
+                                                                    }`}
+                                                                >
+                                                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                                                                        STATUS === opt.value
+                                                                            ? 'border-blue-600 dark:border-blue-400 bg-blue-600 dark:bg-blue-400'
+                                                                            : 'border-gray-300 dark:border-gray-600'
+                                                                    }`}>
+                                                                        {STATUS === opt.value && (
+                                                                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-medium text-gray-900 dark:text-white">
+                                                                            {opt.label}
+                                                                        </div>
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                                            {opt.description}
+                                                                        </div>
+                                                                    </div>
+                                                                </button>
+                                                            ))}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -330,54 +322,34 @@ export default function ReturnsDetailModal({
                         </div>
                     </div>
 
-                    {/* Footer with Actions */}
-                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent rounded-b-xl">
-                        <div className="flex justify-between items-center">
+                    {/* Footer Actions */}
+                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent rounded-b-xl flex justify-between items-center">
+                        <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete Return
+                        </button>
+
+                        <div className="flex gap-3">
                             <button
                                 onClick={onClose}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors"
                             >
                                 Close
                             </button>
-
-                            {/* UPDATED: Buttons for Pending Status */}
-                            <div className="flex gap-3">
-                                {isPending ? (
-                                    <>
-                                        {/* Edit Button (Optional, can keep if editing is allowed while pending) */}
-                                        <button
-                                            onClick={onEdit}
-                                            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
-                                        >
-                                            Edit
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleStatusChange('Rejected')}
-                                            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                                        >
-                                            Reject Slip
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleStatusChange('Issued')}
-                                            className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                                        >
-                                            Issue Slip
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button
-                                        onClick={onEdit}
-                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit Return
-                                    </button>
-                                )}
-                            </div>
+                            <button
+                                onClick={() => onEdit(returnItem)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit Details
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -385,16 +357,20 @@ export default function ReturnsDetailModal({
 
             {/* Delete Confirmation Modal Overlay */}
             {showDeleteConfirm && (
-                // UPDATED: Added backdrop-blur-sm
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border shadow-xl">
-                        <div className="p-6 border-b border-sidebar-border">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Delete Return
-                            </h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Are you sure you want to delete return "{returnItem.REFERENCE_NO}"? This action cannot be undone.
-                            </p>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border shadow-2xl p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Return?</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Are you sure you want to delete <span className="font-mono font-medium text-gray-700 dark:text-gray-300">{REFERENCE_NO}</span>? This action cannot be undone.
+                                </p>
+                            </div>
                         </div>
                         <div className="flex justify-end gap-3 mt-6">
                             <button

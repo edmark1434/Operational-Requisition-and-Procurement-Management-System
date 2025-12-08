@@ -95,15 +95,12 @@ export default function ReworkDetailModal({
 
     if (!isOpen) return null;
 
-    const isPending = rework?.STATUS?.toLowerCase() === 'pending';
-
     return (
         <>
-            {/* UPDATED: Added backdrop-blur-sm */}
-            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-sidebar-border shadow-2xl">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white dark:bg-sidebar rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-sidebar-border">
                     {/* Header - Sticky */}
-                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10 rounded-t-xl">
+                    <div className="flex-shrink-0 p-6 border-b border-sidebar-border bg-white dark:bg-sidebar sticky top-0 z-10">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 Rework #{rework?.ID} Details
@@ -138,66 +135,64 @@ export default function ReworkDetailModal({
                                                 {rework?.STATUS}
                                             </div>
 
-                                            {/* Only show Dropdown if NOT Pending */}
-                                            {!isPending && (
-                                                <div className="relative" ref={dropdownRef}>
-                                                    <button
-                                                        onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                                                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                        </svg>
-                                                        Change Status
-                                                    </button>
+                                            {/* Dropdown Trigger */}
+                                            <div className="relative" ref={dropdownRef}>
+                                                <button
+                                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                    Change Status
+                                                </button>
 
-                                                    {/* Dropdown Menu */}
-                                                    {showStatusDropdown && (
-                                                        <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
-                                                            <div className="p-3">
-                                                                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
-                                                                    Update Status
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    {statusOptions.map((status) => (
-                                                                        <button
-                                                                            key={status.value}
-                                                                            onClick={() => handleStatusChange(status.value)}
-                                                                            className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                {/* Dropdown Menu */}
+                                                {showStatusDropdown && (
+                                                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-20">
+                                                        <div className="p-3">
+                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                                                Update Status
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                {statusOptions.map((status) => (
+                                                                    <button
+                                                                        key={status.value}
+                                                                        onClick={() => handleStatusChange(status.value)}
+                                                                        className={`w-full text-left px-3 py-3 text-sm flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-sidebar-accent transition-colors rounded-md ${
+                                                                            rework?.STATUS === status.value
+                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                                                : 'border border-transparent'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
                                                                                 rework?.STATUS === status.value
-                                                                                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                                                                                    : 'border border-transparent'
-                                                                            }`}
-                                                                        >
-                                                                            <div className="flex items-center gap-3 flex-1">
-                                                                                <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
-                                                                                    rework?.STATUS === status.value
-                                                                                        ? 'bg-blue-600 dark:bg-blue-400'
-                                                                                        : 'bg-gray-300 dark:bg-gray-600'
-                                                                                }`}>
-                                                                                    {rework?.STATUS === status.value && (
-                                                                                        <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                                        </svg>
-                                                                                    )}
+                                                                                    ? 'bg-blue-600 dark:bg-blue-400'
+                                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                            }`}>
+                                                                                {rework?.STATUS === status.value && (
+                                                                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                                    </svg>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium text-gray-900 dark:text-white">
+                                                                                    {status.label}
                                                                                 </div>
-                                                                                <div className="flex-1">
-                                                                                    <div className="font-medium text-gray-900 dark:text-white">
-                                                                                        {status.label}
-                                                                                    </div>
-                                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                                                                        {status.description}
-                                                                                    </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                                                                    {status.description}
                                                                                 </div>
                                                                             </div>
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
                                                             </div>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -277,7 +272,7 @@ export default function ReworkDetailModal({
                     </div>
 
                     {/* Footer with Actions */}
-                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent rounded-b-xl">
+                    <div className="flex-shrink-0 p-6 border-t border-sidebar-border bg-gray-50 dark:bg-sidebar-accent">
                         <div className="flex justify-between items-center">
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
@@ -288,44 +283,15 @@ export default function ReworkDetailModal({
                                 </svg>
                                 Delete Rework
                             </button>
-
-                            {/* UPDATED: Buttons for Pending Status */}
-                            <div className="flex gap-3">
-                                {isPending ? (
-                                    <>
-                                        <button
-                                            onClick={onEdit}
-                                            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-sidebar border border-sidebar-border rounded-lg hover:bg-gray-50 dark:hover:bg-sidebar-accent"
-                                        >
-                                            Edit
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleStatusChange('Rejected')}
-                                            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                                        >
-                                            Reject Slip
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleStatusChange('Issued')}
-                                            className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                                        >
-                                            Issue Slip
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button
-                                        onClick={onEdit}
-                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit Rework
-                                    </button>
-                                )}
-                            </div>
+                            <button
+                                onClick={onEdit}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit Rework
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -333,9 +299,8 @@ export default function ReworkDetailModal({
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                // UPDATED: Added backdrop-blur-sm
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border shadow-xl">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white dark:bg-sidebar rounded-xl max-w-md w-full border border-sidebar-border">
                         <div className="p-6 border-b border-sidebar-border">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 Delete Rework
