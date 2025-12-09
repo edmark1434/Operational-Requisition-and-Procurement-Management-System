@@ -82,7 +82,7 @@ interface DeliveriesListProps {
 function determineDeliveryType(items: DeliveryItem[], services: DeliveryService[]): string {
     const hasItems = items && items.length > 0;
     const hasServices = services && services.length > 0;
-    
+
     if (hasItems && hasServices) {
         return 'Mixed';
     } else if (hasServices) {
@@ -103,14 +103,14 @@ function calculateDynamicTotals(delivery: Delivery) {
     let totalItems = 0;
     let totalServices = 0;
     let totalValue = 0;
-    
+
     // Calculate from items
     if (delivery.items && delivery.items.length > 0) {
         totalItems = delivery.items.reduce((sum, item) => sum + item.quantity, 0);
-        totalValue += delivery.items.reduce((sum, item) => 
+        totalValue += delivery.items.reduce((sum, item) =>
             sum + (item.quantity * parseFloat(item.unit_price.toString())), 0);
     }
-    
+
     // Calculate from services
     if (delivery.services && delivery.services.length > 0) {
         totalServices = delivery.services.length;
@@ -120,7 +120,7 @@ function calculateDynamicTotals(delivery: Delivery) {
             return sum + (hours * parseFloat(rate.toString()));
         }, 0);
     }
-    
+
     return {
         totalItems,
         totalServices,
@@ -134,7 +134,7 @@ function calculateDynamicTotals(delivery: Delivery) {
 function getDisplayText(items: DeliveryItem[], services: DeliveryService[]): string {
     const itemCount = items?.length || 0;
     const serviceCount = services?.length || 0;
-    
+
     if (itemCount > 0 && serviceCount > 0) {
         return `${itemCount} item${itemCount > 1 ? 's' : ''}, ${serviceCount} service${serviceCount > 1 ? 's' : ''}`;
     } else if (itemCount > 0) {
@@ -148,7 +148,7 @@ function getDisplayText(items: DeliveryItem[], services: DeliveryService[]): str
 // Helper function to get delivery icon
 function getDeliveryIcon(type: string, items: DeliveryItem[], services: DeliveryService[]) {
     const deliveryType = type || determineDeliveryType(items, services);
-    
+
     switch (deliveryType.toLowerCase()) {
         case 'item purchase':
             return <ShoppingBag className="w-3 h-3" />;
@@ -185,14 +185,14 @@ function formatStatusDisplay(status: string): string {
 // Add this helper function to format delivery type display and get color
 function formatDeliveryTypeDisplay(type: string, items: DeliveryItem[], services: DeliveryService[]): string {
     if (type) return type;
-    
+
     const determinedType = determineDeliveryType(items, services);
     return determinedType || 'Item Purchase';
 }
 
 function getDeliveryTypeColor(type: string, items: DeliveryItem[], services: DeliveryService[]): string {
     const deliveryType = type || determineDeliveryType(items, services);
-    
+
     switch (deliveryType.toLowerCase()) {
         case 'item purchase':
             return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
@@ -218,7 +218,7 @@ export default function DeliveriesList({
                                            viewMode,
                                            isLoading = false
                                        }: DeliveriesListProps) {
-    
+
     // Combine items and services into deliveries
     const enhancedDeliveries = deliveries.map(delivery => ({
         ...delivery,
@@ -236,7 +236,7 @@ export default function DeliveriesList({
             </div>
         );
     }
-    
+
     if (enhancedDeliveries.length === 0) {
         return (
             <div className="flex-1 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar dark:bg-sidebar">
@@ -380,7 +380,7 @@ interface DeliveryCardProps {
 
 function DeliveryCard({ delivery, onClick, viewMode }: DeliveryCardProps) {
     const totals = calculateDynamicTotals(delivery);
-    
+
     if (viewMode === 'compact') {
         return (
             <div
@@ -458,7 +458,7 @@ function DeliveryCard({ delivery, onClick, viewMode }: DeliveryCardProps) {
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-sidebar px-2 py-1 rounded">
-                            {delivery.receipt_no}
+                            {delivery.ref_no}
                         </span>
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDeliveryTypeColor(delivery.type, delivery.items, delivery.services)}`}>
                             {getDeliveryIcon(delivery.type, delivery.items, delivery.services)}
@@ -501,7 +501,7 @@ function DeliveryCard({ delivery, onClick, viewMode }: DeliveryCardProps) {
                         {totals.displayText}
                     </span>
                 </div>
-                
+
                 {/* Total Cost */}
                 <div className="flex justify-between items-center pt-2 border-t border-sidebar-border">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Total Value:</span>

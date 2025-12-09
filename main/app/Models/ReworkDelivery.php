@@ -37,4 +37,5 @@ class ReworkDelivery extends Model
     {
         return $this->belongsTo(Delivery::class, 'new_delivery_id');
     }
+
 }
