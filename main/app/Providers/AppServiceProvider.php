@@ -5,7 +5,7 @@ use App\Models\UserPermission;
 use Inertia\Inertia;
 
 use Illuminate\Support\ServiceProvider;
-
+use Illuminate\Support\Facades\URL;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -21,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (config('app.env') !== 'local') {
+            URL::forceScheme('https');
+        }
         Inertia::share([
             'auth' => fn () => auth()->user(),
 
