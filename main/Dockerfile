@@ -1,5 +1,5 @@
 # Stage 1: PHP + Composer
-FROM php:8.4-fpm-alpine AS php-build
+FROM php:8.4-cli-alpine AS php-build
 
 WORKDIR /var/www/html
 
@@ -19,10 +19,8 @@ RUN apk add --no-cache \
 # Install composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy project
 COPY . .
 
-# Install PHP dependencies FIRST
 RUN composer install --no-dev --optimize-autoloader
 
 
@@ -31,17 +29,16 @@ FROM node:20-alpine AS node-build
 
 WORKDIR /app
 
-COPY package*.json ./
-
-RUN npm install
+RUN apk add --no-cache php php-cli
 
 COPY . .
 
+RUN npm install
 RUN npm run build
 
 
 # Stage 3: Final image
-FROM php:8.4-fpm-alpine
+FROM php:8.4-cli-alpine
 
 WORKDIR /var/www/html
 
@@ -56,6 +53,6 @@ COPY --from=node-build /app/public/build /var/www/html/public/build
 
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-EXPOSE 9000
+EXPOSE 10000
 
-CMD ["php-fpm"]
+CMD php artisan serve --host=0.0.0.0 --port=10000
