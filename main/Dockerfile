@@ -1,28 +1,8 @@
-# Stage 1: Build frontend assets
-FROM node:20-alpine AS node-build
+# Stage 1: PHP + Composer
+FROM php:8.4-fpm-alpine AS php-build
 
-WORKDIR /app
-
-# Copy package files first to install dependencies
-COPY package*.json ./
-
-# Install Node dependencies
-RUN npm install
-
-# Copy all frontend and Tailwind files
-COPY tailwind.config.js postcss.config.js ./
-COPY resources/js ./resources/js
-
-# Build frontend (React + Tailwind)
-RUN npm run build
-
-# Stage 2: PHP Laravel
-FROM php:8.4-fpm-alpine
-
-# Set working directory
 WORKDIR /var/www/html
 
-# Install PHP extensions required for Laravel
 RUN apk add --no-cache \
     bash \
     git \
@@ -32,28 +12,56 @@ RUN apk add --no-cache \
     libzip-dev \
     oniguruma-dev \
     curl \
-    npm \
     nodejs \
+    npm \
     && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
 
-# Copy the entire Laravel project
-COPY . .
-
-# Copy built frontend assets from stage 1
-COPY --from=node-build /app/public/js ./public/js
-COPY --from=node-build /app/public/css ./public/css
-
-# Install Composer
+# Install composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copy project
+COPY . .
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions for Laravel storage and cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Stage 2: Build frontend (Vite)
+FROM node:20-alpine AS node-build
 
-# Expose port 9000 for PHP-FPM
-EXPOSE 9000
+WORKDIR /app
 
-# Start PHP-FPM
-CMD ["php-fpm"]
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+# Stage 3: Nginx + PHP-FPM
+FROM php:8.4-fpm-alpine
+
+WORKDIR /var/www/html
+
+# Install Nginx
+RUN apk add --no-cache nginx supervisor
+
+# PHP extensions
+RUN apk add --no-cache postgresql-dev libzip-dev oniguruma-dev \
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
+
+# Copy PHP & app code
+COPY --from=php-build /var/www/html /var/www/html
+# Copy Vite build
+COPY --from=node-build /app/public/build /var/www/html/public/build
+
+# Nginx config
+COPY ./docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+
+# Supervisor config
+COPY ./docker/supervisor/supervisord.conf /etc/supervisord.conf
+
+# Storage permissions
+RUN chown -R www-data:www-data storage bootstrap/cache
+
+EXPOSE 80
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
