@@ -1,27 +1,8 @@
-# Stage 1: Build frontend
-FROM node:20-alpine AS node-build
+# Stage 1: PHP + Composer
+FROM php:8.4-fpm-alpine AS php-build
 
-WORKDIR /app
-
-# Install PHP CLI so Wayfinder can run artisan
-RUN apk add --no-cache php-cli bash git
-
-# Copy entire Laravel project
-COPY . .
-
-# Install Node dependencies
-RUN npm install
-
-# Build frontend
-RUN npm run build
-
-# Stage 2: PHP Laravel
-FROM php:8.4-fpm-alpine
-
-# Set working directory
 WORKDIR /var/www/html
 
-# Install PHP extensions required for Laravel
 RUN apk add --no-cache \
     bash \
     git \
@@ -31,26 +12,50 @@ RUN apk add --no-cache \
     libzip-dev \
     oniguruma-dev \
     curl \
-    npm \
     nodejs \
+    npm \
     && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
 
-# Copy the entire Laravel project
-COPY . .
-
-COPY --from=node-build /app/public/build ./public/build
-
-# Install Composer
+# Install composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install PHP dependencies
+# Copy project
+COPY . .
+
+# Install PHP dependencies FIRST
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions for Laravel storage and cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expose port 9000 for PHP-FPM
+# Stage 2: Build frontend
+FROM node:20-alpine AS node-build
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+
+# Stage 3: Final image
+FROM php:8.4-fpm-alpine
+
+WORKDIR /var/www/html
+
+RUN apk add --no-cache \
+    postgresql-dev \
+    libzip-dev \
+    oniguruma-dev \
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
+
+COPY --from=php-build /var/www/html /var/www/html
+COPY --from=node-build /app/public/build /var/www/html/public/build
+
+RUN chown -R www-data:www-data storage bootstrap/cache
+
 EXPOSE 9000
 
-# Start PHP-FPM
 CMD ["php-fpm"]
