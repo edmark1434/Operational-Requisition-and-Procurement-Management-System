@@ -15,6 +15,7 @@ RUN apk add --no-cache \
     nodejs \
     npm \
     curl \
+    curl \
     && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
 
 # Install Composer
@@ -26,6 +27,7 @@ COPY . .
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
+# Install frontend dependencies
 # Install frontend dependencies
 RUN npm install
 RUN npm run build
