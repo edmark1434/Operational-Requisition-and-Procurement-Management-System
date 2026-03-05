@@ -12,6 +12,7 @@ RUN npm install
 # Copy all frontend and Tailwind files
 COPY tailwind.config.js postcss.config.js ./
 COPY resources/js ./resources/js
+COPY tailwind.config.js postcss.config.js ./
 
 # Build frontend (React + Tailwind)
 RUN npm run build
