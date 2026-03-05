@@ -1,7 +1,9 @@
-# Stage 1: Build frontend assets
-FROM node:18-alpine AS node-build
+FROM node:20-alpine AS node-build
 
 WORKDIR /app
+
+# Install PHP CLI + build tools
+RUN apk add --no-cache php-cli bash git python3 make g++ curl
 
 # Copy package files
 COPY package*.json ./
@@ -9,13 +11,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy frontend source
+# Copy frontend source + configs
 COPY resources ./resources
 COPY vite.config.* ./
 COPY tailwind.config.* ./
 COPY postcss.config.* ./
+COPY .env.docker .env
 
-# Build assets
+# Build frontend assets (Wayfinder plugin can run PHP now)
 RUN npm run build
 
 # Stage 2: PHP Laravel
