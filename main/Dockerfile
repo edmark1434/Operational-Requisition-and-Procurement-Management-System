@@ -1,5 +1,4 @@
-# Stage 1: PHP + Composer
-FROM php:8.4-cli-alpine AS php-build
+FROM php:8.4-fpm-alpine
 
 WORKDIR /var/www/html
 
@@ -16,43 +15,18 @@ RUN apk add --no-cache \
     npm \
     && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
 
-# Install composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
 
-
-# Stage 2: Build frontend
-FROM node:20-alpine AS node-build
-
-WORKDIR /app
-
-RUN apk add --no-cache php php-cli
-
-COPY . .
-
 RUN npm install
+
 RUN npm run build
-
-
-# Stage 3: Final image
-FROM php:8.4-cli-alpine
-
-WORKDIR /var/www/html
-
-RUN apk add --no-cache \
-    postgresql-dev \
-    libzip-dev \
-    oniguruma-dev \
-    && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
-
-COPY --from=php-build /var/www/html /var/www/html
-COPY --from=node-build /app/public/build /var/www/html/public/build
 
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-EXPOSE 10000
+EXPOSE 9000
 
-CMD php artisan serve --host=0.0.0.0 --port=10000
+CMD ["php-fpm"]
