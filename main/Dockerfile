@@ -16,7 +16,6 @@ COPY resources ./resources
 COPY vite.config.* ./
 COPY tailwind.config.* ./
 COPY postcss.config.* ./
-COPY .env.docker .env
 
 # Build frontend assets (Wayfinder plugin can run PHP now)
 RUN npm run build
