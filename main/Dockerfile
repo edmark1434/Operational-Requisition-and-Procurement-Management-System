@@ -1,23 +1,18 @@
+# Stage 1: Build frontend
 FROM node:20-alpine AS node-build
 
 WORKDIR /app
 
-# Install PHP CLI + build tools
-RUN apk add --no-cache php-cli bash git python3 make g++ curl
+# Install PHP CLI so Wayfinder can run artisan
+RUN apk add --no-cache php-cli bash git
 
-# Copy package files
-COPY package*.json ./
+# Copy entire Laravel project
+COPY . .
 
-# Install dependencies
+# Install Node dependencies
 RUN npm install
 
-# Copy frontend source + configs
-COPY resources ./resources
-COPY vite.config.* ./
-COPY tailwind.config.* ./
-COPY postcss.config.* ./
-
-# Build frontend assets (Wayfinder plugin can run PHP now)
+# Build frontend
 RUN npm run build
 
 # Stage 2: PHP Laravel
