@@ -54,10 +54,10 @@ COPY --from=php-build /var/www/html /var/www/html
 COPY --from=node-build /app/public/build /var/www/html/public/build
 
 # Nginx config
-COPY ./docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 
 # Supervisor config
-COPY ./docker/supervisor/supervisord.conf /etc/supervisord.conf
+COPY ./supervisor/supervisord.conf /etc/supervisord.conf
 
 # Storage permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
