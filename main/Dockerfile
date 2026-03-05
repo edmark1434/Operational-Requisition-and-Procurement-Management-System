@@ -43,8 +43,8 @@ RUN mkdir -p /etc/ssl/private \
        -keyout /etc/ssl/private/server.key \
        -out /etc/ssl/certs/server.crt
 
-# Copy your Nginx config
-COPY nginx/default.conf
+# Copy your Nginx config into the image
+COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 
 # Expose HTTPS port
 EXPOSE 443
