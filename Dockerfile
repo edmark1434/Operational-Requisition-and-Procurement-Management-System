@@ -1,16 +1,17 @@
-# Stage 1: Build assets
+# Stage 1: Build frontend assets
 FROM node:20-alpine AS node-build
 
 WORKDIR /app
 
-# Copy frontend assets
+# Copy package files first to install dependencies
 COPY package*.json ./
-COPY tailwind.config.js ./
-COPY postcss.config.js ./
-COPY resources/js ./resources/js
 
 # Install Node dependencies
 RUN npm install
+
+# Copy all frontend and Tailwind files
+COPY tailwind.config.js postcss.config.js ./
+COPY resources/js ./resources/js
 
 # Build frontend (React + Tailwind)
 RUN npm run build
@@ -35,7 +36,7 @@ RUN apk add --no-cache \
     nodejs \
     && docker-php-ext-install pdo pdo_pgsql pgsql zip mbstring bcmath
 
-# Copy Laravel project
+# Copy the entire Laravel project
 COPY . .
 
 # Copy built frontend assets from stage 1
@@ -48,10 +49,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions
+# Set permissions for Laravel storage and cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expose port 9000 (php-fpm)
+# Expose port 9000 for PHP-FPM
 EXPOSE 9000
 
 # Start PHP-FPM
