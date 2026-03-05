@@ -42,11 +42,9 @@ export default function ItemAdd({ auth,CATEGORY_OPTIONS,categorySuppliers,SUPPLI
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [filteredSuppliers, setFilteredSuppliers] = useState(SUPPLIER_OPTIONS);
-    console.log(categorySuppliers);
-    console.log(CATEGORY_OPTIONS);
+
     // Filter suppliers based on selected category
     useEffect(() => {
-        console.log(formData.CATEGORY)
         if (formData.CATEGORY) {
             // Find the category ID from CATEGORY_OPTIONS
             const selectedCategory = CATEGORY_OPTIONS.find(cat => cat.NAME === formData.CATEGORY);

@@ -58,7 +58,6 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
         setIsLoading(true);
 
         try {
-            console.log('Looking for user with ID:', userId);
 
             // Find the user to edit
             const transformedUsers = usersList.map(user => {
@@ -98,8 +97,6 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
             const userPermissions = user_perm
                 .filter(p => p.USER_ID === userId)
                 .map(p => p.PERMISSION_ID.toString());
-            console.log(userPermissions);
-            console.log(user_perm);
             // Parse full name into components
             const nameParts = originalUser.fullname.split(' ').filter((part:string) => part.trim() !== '');
 
@@ -133,12 +130,6 @@ export default function UserEdit({ auth, userId,usersList,roles,permissions,user
                 PERMISSIONS: userPermissions // ADDED: Load existing permissions
             });
 
-            console.log(' ', {
-                userId,
-                username: user.username,
-                fullname: user.fullname,
-                permissions: userPermissions
-            });
 
         } catch (error) {
             console.error('Error loading user data:', error);

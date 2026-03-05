@@ -35,14 +35,6 @@ export const useDeliveriesFilters = (
     ];
 
     const filteredDeliveries = useMemo(() => {
-        console.log('Filtering deliveries...', {
-            total: deliveries.length,
-            searchTerm,
-            statusFilter,
-            typeFilter,
-            dateFilter
-        });
-
         return deliveries.filter(delivery => {
             // 1. Search filter
             if (searchTerm && searchTerm.trim() !== '') {
@@ -125,7 +117,6 @@ export const useDeliveriesFilters = (
         });
     }, [deliveries, searchTerm, statusFilter, typeFilter, dateFilter]);
 
-    console.log('Filtered results:', filteredDeliveries.length);
 
     return {
         filteredDeliveries,

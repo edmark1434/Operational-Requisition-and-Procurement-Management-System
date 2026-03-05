@@ -42,7 +42,6 @@ export default function ContactEdit({ auth, contactId,contactDetails,SUPPLIER_OP
     useEffect(() => {
         setFormData(contactDetails);
         setIsLoading(false);
-        console.log(contactDetails);
     }, [contactId]);
 
     const handleVendorChange = (vendorId: string) => {

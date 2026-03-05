@@ -103,7 +103,6 @@ export default function UserAdd({roles,permissions,role_perm}:Prop) {
     setFormData(prev => {
         if (field === "ROLE_ID") {
             const autoPerms = getPermissionsByRole(value);
-            console.log(autoPerms);
             return {
                 ...prev,
                 ROLE_ID: value,

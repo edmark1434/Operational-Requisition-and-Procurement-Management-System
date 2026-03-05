@@ -19,7 +19,6 @@ export const transformReturnsData = (  returnsData: any[] = [],
         const itemsWithDetails = returnItems.map(ri => {
             const item = itemsData.find(i => i.ID === ri.ITEM_ID);
             const deliveryItem = delivery?.ITEMS.find((d: any) => d.ITEM_ID === ri.ITEM_ID);
-            console.log('Item',returnItem);
             return {
                 ID: ri.ID,
                 ITEM_ID: ri.ITEM_ID,

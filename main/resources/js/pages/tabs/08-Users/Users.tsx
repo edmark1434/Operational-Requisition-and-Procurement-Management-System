@@ -51,7 +51,6 @@ export default function Users({usersList,permissions,rolesList,role_perm,success
     const { props } = usePage();
     const permissionsList = props.user_permission as string[];
 
-    console.log(permissionsList); // ["create_item", "edit_item", "delete_item"]
     // Load users on component mount
     useEffect(() => {
         loadUsers();

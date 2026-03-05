@@ -153,7 +153,6 @@ function SidebarSeparator() {
 export function AppSidebar() {
     // Use usePage to directly access props
     const { props } = usePage();
-    console.log('All props from usePage:', props);
 
     // Get permissions from props - try different possible property names
     const userPermissions =
@@ -163,14 +162,12 @@ export function AppSidebar() {
         props.user?.permissions ||
         [];
 
-    console.log('Extracted permissions:', userPermissions);
 
     // Filter function - always show Dashboard
     const filterItemsByPermission = (items: any[]): NavItem[] => {
         return items.filter(item => {
             // Always show Dashboard (requiredPermission is null)
             if ( item.requiredPermission === null ) {
-                console.log(`Always showing: ${item.title}`);
                 return true;
             }
 
@@ -178,7 +175,6 @@ export function AppSidebar() {
             if (!item.requiredPermission) return true;
 
             const hasPermission = userPermissions.includes(item.requiredPermission);
-            console.log(`Checking ${item.title}: ${item.requiredPermission} - ${hasPermission}`);
             return hasPermission;
         }).map(({ requiredPermission, ...item }) => item);
     };
@@ -195,8 +191,6 @@ export function AppSidebar() {
     const hasGroup3 = group3NavItems.length > 0;
     const hasGroup4 = group4NavItems.length > 0;
 
-    console.log('Group 1 items after filter:', group1NavItems.map(i => i.title));
-    console.log('Group 3 items after filter:', group3NavItems.map(i => i.title));
 
     // Only show separators if both adjacent groups have items
     const showSeparator1 = hasGroup1 && hasGroup2;

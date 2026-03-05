@@ -69,7 +69,6 @@ export default function RoleAdd({ auth,permissions }: Props ) {
                 ...formData,
                 PERMISSIONS: Array.from(selectedPermissions)
             };
-            console.log(roleDataToAdd);
             router.post(`/roles/added`, roleDataToAdd, {
             onError: () => {
                 alert('Error in adding the forms');

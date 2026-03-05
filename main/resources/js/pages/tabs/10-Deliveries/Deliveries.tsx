@@ -124,7 +124,6 @@ export default function Deliveries() {
         }
 
         // In a real application, you would also make an API call here
-        console.log(`Updating delivery ${deliveryId} status to ${newStatus}`);
         // Example API call:
         // updateDeliveryStatus(deliveryId, newStatus);
     };

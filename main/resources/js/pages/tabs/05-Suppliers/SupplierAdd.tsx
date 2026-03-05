@@ -86,7 +86,6 @@ export default function SupplierAdd({auth,suppliersData,categoriesData}:Prop) {
                 ...formData,
                 
             };
-            console.log(supplierData);
             router.post(suppliercreate(), supplierData);
         }
     };

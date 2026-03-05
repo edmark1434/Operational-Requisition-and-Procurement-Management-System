@@ -43,7 +43,6 @@ export default function ReturnEdit({
             initialDeliveryId = String(serverReturnData.deliveries[0].id);
         }
 
-        console.log("Resolved Delivery ID:", initialDeliveryId); // Debug Log
 
         return {
             DELIVERY_ID: initialDeliveryId,

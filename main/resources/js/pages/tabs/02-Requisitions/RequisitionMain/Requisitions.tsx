@@ -110,7 +110,6 @@ export default function Requisitions({
 
         // If awaiting pickup → validate first
         if (newStatus === 'awaiting_pickup') {
-            console.log("Releasing for pickup");
 
             try {
                 const response = await fetch(`/requisitions/${id}/release`);

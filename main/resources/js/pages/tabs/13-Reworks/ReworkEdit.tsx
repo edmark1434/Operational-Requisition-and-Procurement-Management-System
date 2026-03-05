@@ -116,7 +116,6 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
                 SERVICES: selectedServices,
                 UPDATED_AT: new Date().toISOString()
             };
-            console.log('Updated Rework:', updatedRework);
             alert('Rework updated successfully!');
             router.visit(reworks().url);
         }
@@ -128,7 +127,6 @@ export default function ReworkEdit({ auth, reworkId }: ReworkEditProps) {
     };
 
     const handleDelete = () => {
-        console.log('Deleting rework:', reworkId);
         alert('Rework deleted successfully!');
         setShowDeleteConfirm(false);
         router.visit(reworks().url);
