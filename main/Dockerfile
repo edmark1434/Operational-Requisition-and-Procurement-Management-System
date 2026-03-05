@@ -30,12 +30,14 @@ FROM node:20-alpine AS node-build
 
 WORKDIR /app
 
+# Install PHP + required extensions in Node stage
+RUN apk add --no-cache php8 php8-cli php8-phar php8-mbstring php8-zip php8-pdo php8-pdo_pgsql composer bash git curl
+
 COPY package*.json ./
 RUN npm install
 
 COPY . .
 RUN npm run build
-
 # Stage 3: Nginx + PHP-FPM
 FROM php:8.4-fpm-alpine
 
