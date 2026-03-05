@@ -3,18 +3,19 @@ FROM node:20-alpine AS node-build
 
 WORKDIR /app
 
-# Copy package files first to install dependencies
+# Copy package files
 COPY package*.json ./
 
-# Install Node dependencies
+# Install dependencies
 RUN npm install
 
-# Copy all frontend and Tailwind files
-COPY tailwind.config.js postcss.config.js ./
-COPY resources/js ./resources/js
-COPY tailwind.config.js postcss.config.js ./
+# Copy frontend source
+COPY resources ./resources
+COPY vite.config.* ./
+COPY tailwind.config.* ./
+COPY postcss.config.* ./
 
-# Build frontend (React + Tailwind)
+# Build assets
 RUN npm run build
 
 # Stage 2: PHP Laravel
@@ -40,9 +41,7 @@ RUN apk add --no-cache \
 # Copy the entire Laravel project
 COPY . .
 
-# Copy built frontend assets from stage 1
-COPY --from=node-build /app/public/js ./public/js
-COPY --from=node-build /app/public/css ./public/css
+COPY --from=node-build /app/public/build ./public/build
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
